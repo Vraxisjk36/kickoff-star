@@ -8,6 +8,7 @@ import type { InternationalWorld } from './international'
 import type { TrainingSession } from './training'
 import type { TrainingIntensity } from './energy'
 import type { YouthWorld } from '../types/youthWorld'
+import { assessLegacyRoute, type LegacyRouteChoice } from './youthSaveV5'
 
 // Locked scope: local-only save data (IndexedDB), 3 save slots per device.
 //
@@ -107,9 +108,13 @@ export async function writeSave(save: SaveGame): Promise<void> {
   await set(slotKey(save.slotId), { ...save, schemaVersion: SAVE_SCHEMA_VERSION })
 }
 
-export async function readSave(slot: SaveSlotId): Promise<SaveGame | undefined> {
+export async function readSave(slot: SaveSlotId, routeChoice?:LegacyRouteChoice): Promise<SaveGame | undefined> {
   const raw = await get(slotKey(slot))
-  return raw ? migrateSave(raw) : undefined
+  if(!raw)return undefined
+  const assessment=assessLegacyRoute(raw)
+  if(assessment.needsRouteChoice&&!routeChoice)throw new Error('V5_ROUTE_CHOICE_REQUIRED')
+  if(routeChoice&&raw.youthWorld){raw.youthWorld={...raw.youthWorld,pathway:{...raw.youthWorld.pathway,route:routeChoice,sundayClubId:routeChoice==='school'?null:raw.youthWorld.pathway?.sundayClubId??null}};raw.player={...raw.player,youthRoute:routeChoice}}
+  return migrateSave(raw)
 }
 
 export async function deleteSave(slot: SaveSlotId): Promise<void> {
@@ -117,5 +122,6 @@ export async function deleteSave(slot: SaveSlotId): Promise<void> {
 }
 
 export async function listSaves(): Promise<(SaveGame | undefined)[]> {
-  return Promise.all([0, 1, 2].map((slot) => readSave(slot as SaveSlotId)))
+  return Promise.all([0,1,2].map(async slot=>{try{return await readSave(slot as SaveSlotId)}catch(e){if(e instanceof Error&&e.message==='V5_ROUTE_CHOICE_REQUIRED'){const raw=await get(slotKey(slot));return raw as SaveGame}throw e}}))
 }
+export async function legacyRouteAssessment(slot:SaveSlotId){const raw=await get(slotKey(slot));return raw?assessLegacyRoute(raw):null}

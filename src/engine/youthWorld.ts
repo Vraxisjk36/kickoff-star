@@ -193,8 +193,9 @@ function initialScouting(academies: AcademyClub[]): YouthScoutingProfile {
   }
 }
 
-function generateSundayClubs(r: () => number): SundayLeagueClub[] {
-  const roots = ['City Stars','Young Lions','Athletic Juniors','United Youth','Community FC','Dynamos','Rovers','Sporting','Warriors','Future Stars','Township United','Olympians']
+function generateSundayClubs(r: () => number,country='eng'): SundayLeagueClub[] {
+  const ROOTS:Record<string,string[]>={eng:['City Stars','Young Lions','Athletic Juniors','United Youth','Community FC','Dynamos','Rovers','Sporting','Warriors','Future Stars','Town FC','Olympians'],rsa:['Mzansi Stars','Township United','Young Bucks','Amazulu Juniors','Community Aces','Diski United','Ubuntu Rovers','Kasi Chiefs','Young Brazilians','Future Stars','City Warriors','Development XI'],bra:['Jovens FC','Estrela','Atletico Junior','Uniao Youth','Futuro FC','Sporting Juniors'],arg:['Juniors Unidos','Barrio FC','Atletico Juvenil','Estrella Sur','Deportivo Youth'],nga:['Naija Stars','Lagos Juniors','United Youth','Community Eagles','Future FC'],gha:['Accra Stars','Young Lions','Community XI','Future Stars','United Juniors']}
+  const roots=ROOTS[country]??ROOTS.eng
   return Array.from({ length: 16 }, (_, i) => ({
     id: `sunday-${i + 1}`,
     name: `${DISTRICTS[i % DISTRICTS.length].name.replace(' Region','')} ${roots[i % roots.length]}`,
@@ -250,7 +251,7 @@ export function createYouthWorld(seed: string, selectedSchoolId: string | null =
   return {
     version:1, seed, seasonYear, currentWeek:1, selectedSchoolId,
     districts:DISTRICTS, schools, schoolSquads,
-    sundayClubs:generateSundayClubs(r),
+    sundayClubs:generateSundayClubs(r,country),
     academyClubs,
     scouting:initialScouting(academyClubs),
     competitionWorld:{ interSchools:null,reserveLeague:null,regionalSchools:null,minorSchoolCup:null,sundayLeague:null,nationalChampionship:null,statBooks:{} },

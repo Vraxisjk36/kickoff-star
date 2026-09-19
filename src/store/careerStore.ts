@@ -117,7 +117,9 @@ interface CareerStore {
   sendMoneyHome: (amount: number) => { ok: boolean; bondGain?: number }
   /** P32: apply the outcome of a street / small-sided game. */
   applyStreetGameResult: (result: { attributeGains: Record<string, number>; confidence: number; energyCost: number; injury: { severity: string; weeksOut: number; description: string } | null }) => void
+  setYouthRoute: (route: 'school' | 'grassroots') => void
   setSchool: (schoolId: string) => void
+  setGrassrootsClub: (clubId: string, clubName: string) => void
   completeTrials: (role: SquadRole, trialPerformance: number) => void
   /** competitionId routes the result: 'sundayLeague' updates the league table; cup ids update their bracket; 'international' the nation's campaign; 'schoolFriendlies' nothing. shootoutWonByPlayer is only set for drawn knockout ties. */
   applyMatchResult: (rating: number, goals: number, assists: number, finalMatchStamina: number, injury: { severity: string; weeksOut: number; description: string } | null, opponentId: string, playerGoalsScored: number, opponentGoalsScored: number, playerWasHome: boolean, squad: import('../engine/squad').SquadPlayer[] | undefined, opponentName: string | undefined, competitionId: string, shootoutWonByPlayer?: boolean, redCarded?: boolean, matchStats?: { tackle: number; interception: number; header: number; keyPass: number; save: number }, playerWonMotm?: boolean, participation?: { minutes: number; started: boolean }) => void
@@ -194,7 +196,8 @@ function reviewAcademyOpportunities(player: Player, calendar: CalendarState): Pl
 function migratePlayer(player: Player): Player {
   return {
     ...player,
-    grassrootsPath: player.grassrootsPath ?? (player.squadRole === 'released' ? 'sunday' : 'school'),
+    youthRoute: player.youthRoute ?? (player.grassrootsPath === 'sunday' ? 'grassroots' : 'school'),
+    grassrootsPath: player.grassrootsPath ?? (player.youthRoute === 'grassroots' ? 'sunday' : 'school'),
     pathway: player.pathway ?? initYouthPathway(player),
     trainingMomentum: player.trainingMomentum ?? 0,
     matchRatings: player.matchRatings ?? [],
@@ -311,7 +314,8 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     // Phase 28: every career opens with a cast — family, a friend, a coach, a rival.
     player = {
       ...player,
-      grassrootsPath: player.grassrootsPath ?? 'school',
+      youthRoute: player.youthRoute,
+      grassrootsPath: player.youthRoute === 'grassroots' ? 'sunday' : 'school',
       sundayLeague: undefined, sundaySquad: undefined, leagueGoals: [], sundayContract: undefined, lastSundayOfferSeason: undefined, sundayContractsVersion: 1,
       pathway: player.pathway ?? initYouthPathway(player),
       relationships: player.relationships ?? initialCast(),
@@ -383,8 +387,8 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     // chosen school's name for the player's team.
     const school = player.schoolId ? getSchool(player.schoolId) : undefined
     const schoolName = school?.name ?? 'Your School'
-    const isSchoolPath = player.grassrootsPath !== 'sunday'
-    const teamName = isSchoolPath ? schoolName : generateTeam(2).name
+    const isSchoolPath = player.youthRoute ? player.youthRoute === 'school' : player.grassrootsPath !== 'sunday'
+    const teamName = isSchoolPath ? schoolName : (player.grassrootsClubName ?? generateTeam(2).name)
     const squad = player.squad ?? generateSquad(2)
     const world = isSchoolPath ? initSchoolLeagueWorld(teamName) : initLeagueWorld(teamName)
     const playerTeam = world.divisions[world.playerDivision].teams.find((t) => t.id === world.playerTeamId)!
@@ -1466,10 +1470,31 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     void getState().saveCurrent()
   },
 
+  setYouthRoute: (route) => {
+    const { player } = getState()
+    if (!player) return
+    setState({ player: {
+      ...player,
+      youthRoute: route,
+      grassrootsPath: route === 'school' ? 'school' : 'sunday',
+      schoolId: route === 'school' ? player.schoolId : null,
+      grassrootsClubId: route === 'grassroots' ? player.grassrootsClubId ?? null : null,
+      grassrootsClubName: route === 'grassroots' ? player.grassrootsClubName ?? null : null,
+    } })
+    void getState().saveCurrent()
+  },
+
   setSchool: (schoolId) => {
     const { player } = getState()
     if (!player) return
-    setState({ player: { ...player, schoolId } })
+    setState({ player: { ...player, youthRoute:'school', grassrootsPath:'school', schoolId, grassrootsClubId:null, grassrootsClubName:null } })
+    void getState().saveCurrent()
+  },
+
+  setGrassrootsClub: (clubId, clubName) => {
+    const { player } = getState()
+    if (!player) return
+    setState({ player: { ...player, youthRoute:'grassroots', grassrootsPath:'sunday', schoolId:null, grassrootsClubId:clubId, grassrootsClubName:clubName } })
     void getState().saveCurrent()
   },
 
@@ -1487,13 +1512,15 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       ...player,
       attributes: { ...player.attributes, values } as Player['attributes'],
       squadRole: role,
-      grassrootsPath: role === 'released' ? 'sunday' : 'school',
-      pathway: { ...(player.pathway??initYouthPathway(player)), schoolSquad:role==='released'?'released':role==='reserves'?(performance<.5?'development':'reserve'):'first', sundayInterest:role==='released'?100:0, sundayStatus:role==='released'?'registered':'undiscovered' },
+      grassrootsPath: player.youthRoute === 'grassroots' ? 'sunday' : 'school',
+      pathway: player.youthRoute === 'grassroots'
+        ? { ...(player.pathway??initYouthPathway(player)), schoolSquad:'released', sundayInterest:100, sundayStatus:role==='released'?'squad-offer':'registered' }
+        : { ...(player.pathway??initYouthPathway(player)), schoolSquad:role==='released'?'released':role==='reserves'?(performance<.5?'development':'reserve'):'first', sundayInterest:0, sundayStatus:'undiscovered' },
       squadRoleSetWeek: player.totalWeeksElapsed ?? 0,
       trialWeekCompleted: 3,
       careerClock: { ...player.careerClock, phase: 'grassroots-season' },
       competitionCareer: recordSelectionResult(player.competitionCareer, {
-        competitionId: 'schoolTrials', season: calendar?.currentWeek.seasonYear ?? 1, round: 4,
+        competitionId: player.youthRoute === 'grassroots' ? 'grassrootsTrials' : 'schoolTrials', season: calendar?.currentWeek.seasonYear ?? 1, round: 4,
         entrants: 60, survivors: 20, score: Math.round(performance * 100),
         outcome: role === 'released' ? 'cut' : 'selected',
       }),
@@ -1501,7 +1528,11 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     updatedPlayer = withStory(updatedPlayer, calendar, {
       kind: 'selection', eyebrow: 'Final squad reveal',
       title: role === 'released' ? 'YOU HAVE BEEN CUT' : role === 'starting-xi' ? 'STARTING XI' : role === 'bench' ? 'YOU MADE THE SQUAD' : 'DEVELOPMENT SQUAD',
-      body: role === 'released' ? 'The school coaches made their decision. Your next route is Sunday football, where strong performances can reopen the academy pathway.' : `The coaches selected you for the ${role === 'starting-xi' ? 'starting eleven' : role}. You will represent your school in the local league and Regional Schools Cup.`,
+      body: role === 'released'
+        ? `The ${player.youthRoute === 'grassroots' ? 'club' : 'school'} coaches made their decision. Your route has not changed—you can trial again with another ${player.youthRoute === 'grassroots' ? 'grassroots club' : 'school'}.`
+        : player.youthRoute === 'grassroots'
+          ? `The coaches selected you for the ${role === 'starting-xi' ? 'starting eleven' : role}. You will represent your club in the grassroots league and cup.`
+          : `The coaches selected you for the ${role === 'starting-xi' ? 'starting eleven' : role}. You will represent your school in the local league and Regional Schools Cup.`,
       detail: `Trial score: ${Math.round(performance * 100)}. The selection was earned from your performance, ability, fitness and coach trust.`,
     })
     setState({ player: updatedPlayer })

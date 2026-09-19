@@ -24,7 +24,7 @@ import type { YouthWorld } from '../types/youthWorld'
 //      from the first drill, wiping real progress with no warning. Now
 //      checkpointed after every completed drill so a reload resumes instead
 //      of restarting.
-export const SAVE_SCHEMA_VERSION = 4
+export const SAVE_SCHEMA_VERSION = 5
 
 export type SaveSlotId = 0 | 1 | 2
 
@@ -57,7 +57,24 @@ export interface SaveGame {
   pendingTraining: PendingTrainingSnapshot | null
   /** V4 persistent generated youth-football world. Null for pre-V4 saves until initialized. */
   youthWorld: YouthWorld | null
+  /** V5 integrated systems persisted with the career. */
+  youthV5: YouthV5Runtime
 }
+
+export interface YouthV5Runtime {
+  gazetteStories: import('./gazetteV4').GazetteStory[]
+  regionalCamp: unknown | null
+  nationalPathway: unknown | null
+  festival: unknown | null
+  octoberCompetition: unknown | null
+  grassrootsContract: unknown | null
+  scholarshipWindow: unknown | null
+  youthOffers: unknown[]
+  academyNegotiation: unknown | null
+  academySeason: unknown | null
+  careerSummary: unknown | null
+}
+export const EMPTY_YOUTH_V5:YouthV5Runtime={gazetteStories:[],regionalCamp:null,nationalPathway:null,festival:null,octoberCompetition:null,grassrootsContract:null,scholarshipWindow:null,youthOffers:[],academyNegotiation:null,academySeason:null,careerSummary:null}
 
 const slotKey = (slot: SaveSlotId) => `kickoff-star-save-${slot}`
 
@@ -73,15 +90,17 @@ function migrateSave(raw: SaveGame & { schemaVersion?: number }): SaveGame {
       international: (raw as SaveGame).international ?? null,
       pendingTraining: null,
       youthWorld: null,
+      youthV5: { ...EMPTY_YOUTH_V5 },
     }
   }
   if (raw.schemaVersion < 3) {
-    return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, pendingTraining: null, youthWorld: null }
+    return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, pendingTraining: null, youthWorld: null, youthV5:{...EMPTY_YOUTH_V5} }
   }
   if (raw.schemaVersion < 4) {
-    return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, youthWorld: null }
+    return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, youthWorld: null, youthV5:{...EMPTY_YOUTH_V5} }
   }
-  return { ...raw, youthWorld: raw.youthWorld ?? null }
+  if(raw.schemaVersion < 5)return { ...raw, schemaVersion:SAVE_SCHEMA_VERSION, youthWorld:raw.youthWorld??null, youthV5:{...EMPTY_YOUTH_V5} }
+  return { ...raw, youthWorld: raw.youthWorld ?? null, youthV5:raw.youthV5??{...EMPTY_YOUTH_V5} }
 }
 
 export async function writeSave(save: SaveGame): Promise<void> {

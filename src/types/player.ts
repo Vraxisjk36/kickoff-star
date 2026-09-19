@@ -16,6 +16,8 @@ export interface CareerClock {
 }
 
 export interface Player {
+  /** V4 AAB match-only fatigue scaling; populated by playerForMatch. */
+  matchEnergyMultiplier?: number
   id: string
   name: string
   position: Position

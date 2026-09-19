@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
-import { listSaves, type SaveGame, type SaveSlotId } from '../engine/save'
+import { listSaves, legacyRouteAssessment, type SaveGame, type SaveSlotId } from '../engine/save'
 
 interface Props {
   onBack: () => void
-  onLoad: (slot: SaveSlotId) => void
+  onLoad: (slot: SaveSlotId, routeChoice?:'school'|'grassroots') => void
 }
 
 export default function LoadCareerScreen({ onBack, onLoad }: Props) {
   const [saves, setSaves] = useState<(SaveGame | undefined)[] | null>(null)
+  const [migration,setMigration]=useState<SaveSlotId|null>(null)
 
   useEffect(() => { listSaves().then(setSaves) }, [])
 
@@ -30,7 +31,7 @@ export default function LoadCareerScreen({ onBack, onLoad }: Props) {
               }
               const p = save.player
               return (
-                <button key={slot} type="button" onClick={() => onLoad(slot as SaveSlotId)} className="w-full text-left rounded-2xl border border-ks-border bg-white/[0.025] p-5 active:scale-[0.99]">
+                <button key={slot} type="button" onClick={async()=>{const s=slot as SaveSlotId;const a=await legacyRouteAssessment(s);if(a?.needsRouteChoice)setMigration(s);else onLoad(s)}} className="w-full text-left rounded-2xl border border-ks-border bg-white/[0.025] p-5 active:scale-[0.99]">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="text-xs text-ks-gold tracking-widest">SLOT {slot + 1}</div>
@@ -46,6 +47,7 @@ export default function LoadCareerScreen({ onBack, onLoad }: Props) {
           </div>
         )}
       </div>
+      {migration!==null&&<div className="fixed inset-0 bg-black/90 z-50 flex items-end"><div className="w-full rounded-t-3xl border border-ks-border bg-[#0f0f0d] p-6"><div className="text-ks-gold text-xs tracking-widest">V5 CAREER MIGRATION</div><h2 className="text-2xl font-black mt-2">Choose your pathway</h2><p className="text-sm text-ks-muted mt-2">This save comes from the old dual-route career. V5 separates the paths permanently. Choose which career this save should continue as.</p><div className="grid grid-cols-2 gap-3 mt-5"><button className="rounded-xl bg-ks-gold text-black p-4 font-black" onClick={()=>onLoad(migration,'school')}>SCHOOL</button><button className="rounded-xl border border-ks-gold text-ks-gold p-4 font-black" onClick={()=>onLoad(migration,'grassroots')}>GRASSROOTS</button></div><button className="w-full mt-3 text-ks-muted p-3" onClick={()=>setMigration(null)}>Cancel</button></div></div>}
     </main>
   )
 }

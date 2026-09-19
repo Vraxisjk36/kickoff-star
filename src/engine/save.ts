@@ -72,7 +72,7 @@ export interface YouthV5Runtime {
   scholarshipWindow: import('./schoolScholarshipsV5').ScholarshipWindow | null
   youthOffers: import('./youthAcademyV4').AcademyOfferV4[]
   academyNegotiation: import('./academyNegotiationV4').AcademyNegotiation | null
-  academySeason: import('./academyCareerV4').AcademyCareerState | null
+  academySeason: import('./academyCareerV4').AcademySeason | null
   careerSummary: import('./careerEndV4').CareerSummary | null
 }
 export const EMPTY_YOUTH_V5:YouthV5Runtime={gazetteStories:[],regionalCamp:null,nationalPathway:null,festival:null,octoberCompetition:null,grassrootsContract:null,scholarshipWindow:null,youthOffers:[],academyNegotiation:null,academySeason:null,careerSummary:null}

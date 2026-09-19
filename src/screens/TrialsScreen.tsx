@@ -20,6 +20,7 @@ interface TrialsScreenProps {
   player: Player
   school: School
   onComplete: (role: SquadRole, performance: number) => void
+  route?: 'school' | 'grassroots'
 }
 
 type Phase = 'week-intro' | 'drills' | 'showcase' | 'reaction' | 'week-done' | 'feedback' | 'reveal'
@@ -39,7 +40,7 @@ const SHOWCASE_PROMPT: Record<number, { situation: string; label: string; ceilin
   2: { situation: 'Trial match, last minute. It breaks to you eight yards out. This is the moment they decide on.', label: 'finish it', ceiling: 0.45 },
 }
 
-export default function TrialsScreen({ player, school, onComplete }: TrialsScreenProps) {
+export default function TrialsScreen({ player, school, onComplete, route = 'school' }: TrialsScreenProps) {
   const [trial, setTrial] = useState<TrialState>(() => initTrialState(school.id, generateRival(school)))
   const [weekIdx, setWeekIdx] = useState(0)
   const [phase, setPhase] = useState<Phase>('week-intro')
@@ -141,7 +142,7 @@ export default function TrialsScreen({ player, school, onComplete }: TrialsScree
   if (phase === 'week-intro') {
     return (
       <Shell>
-        <div className="font-display tracking-widest text-[11px] text-ks-gold uppercase mb-2">{school.name} · trials</div>
+        <div className="font-display tracking-widest text-[11px] text-ks-gold uppercase mb-2">{school.name} · {route === 'grassroots' ? 'club trials' : 'school trials'}</div>
         <div className="flex gap-1.5 mb-5">
           {TRIAL_WEEKS.map((w, i) => (
             <div key={w.week} className={`h-1 rounded-full flex-1 ${i < weekIdx ? 'bg-ks-gold/50' : i === weekIdx ? 'bg-ks-gold' : 'bg-ks-border'}`} />
@@ -283,7 +284,7 @@ export default function TrialsScreen({ player, school, onComplete }: TrialsScree
           onClick={() => onComplete(role, trial.performanceScore)}
           className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-3.5 text-sm shadow-[0_0_25px_rgba(212,175,55,0.3)]"
         >
-          {role === 'released' ? 'try another school →' : 'start your season'}
+          {role === 'released' ? `try another ${route === 'grassroots' ? 'club' : 'school'} →` : 'start your season'}
         </button>
       </div>
     </Shell>

@@ -52,6 +52,7 @@ on:
       - 'scripts/auditV5RouteCalendar.ts'
       - 'scripts/auditV5ProductSurface.ts'
       - 'scripts/auditV5PlayerWorld.ts'
+      - 'scripts/auditV5FixtureProgression.ts'
       - 'scripts/auditV5MasterScope.ts'
       - 'src/engine/youthFestivalV5.ts'
       - 'src/engine/grassrootsContractsV5.ts'
@@ -102,5 +103,7 @@ jobs:
       - name: V5 master-scope reachability audit
         run: npx tsx scripts/auditV5MasterScope.ts
 
+      - name: Fixture progression behavioral audit
+        run: npx tsx scripts/auditV5FixtureProgression.ts
       - name: Production build
         run: npm run build

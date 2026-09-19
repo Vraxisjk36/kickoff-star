@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { SCHOOLS, type School } from '../engine/schools'
+import type { School } from '../engine/schools'
+import type { YouthSchool } from '../types/youthWorld'
+import { useCareerStore } from '../store/careerStore'
 
 function DiffMeter({ label, value, max = 1.4 }: { label: string; value: number; max?: number }) {
   const pct = Math.round((value / max) * 100)
@@ -14,6 +16,10 @@ function DiffMeter({ label, value, max = 1.4 }: { label: string; value: number; 
 }
 
 export default function SchoolSelection({ onChoose }: { onChoose: (school: School) => void }) {
+  const world=useCareerStore(s=>s.youthWorld)
+  const player=useCareerStore(s=>s.player)
+  const local=(world?.schools??[]).filter(s=>s.districtId===(world?.schools[0]?.districtId??'north')).slice(0,3)
+  const schools:School[]=local.map((s:YouthSchool,i)=>({id:s.id,name:s.name,blurb:i===0?'A leading local school with strong competition for places and high exposure.':i===1?'A balanced local programme with a realistic route into the first team.':'A developing local programme where minutes are easier to earn but exposure is lower.',strengths:[],trialDifficulty:Math.max(.9,Math.min(1.15,.9+(s.footballRating-38)/100)),scoutExposure:s.scoutExposure,squadPlaceOdds:Math.max(.95,Math.min(1.1,1.1-(s.footballRating-38)/150))}))
   const [selected, setSelected] = useState<School | null>(null)
 
   return (
@@ -21,12 +27,12 @@ export default function SchoolSelection({ onChoose }: { onChoose: (school: Schoo
       <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 60% 40% at 50% 0%, rgba(212,175,55,0.07), transparent 60%), linear-gradient(180deg,#0a0a09,#050504)' }} />
 
       <div className="relative z-10 max-w-md mx-auto w-full flex flex-col flex-1">
-        <div className="font-display tracking-widest text-[11px] text-ks-gold uppercase mb-2">choose your school</div>
+        <div className="font-display tracking-widest text-[11px] text-ks-gold uppercase mb-2">choose your school · {(player?.nationality??'eng').toUpperCase()}</div>
         <h1 className="font-display text-ks-ink text-2xl tracking-wide mb-1">Where will you make your name?</h1>
         <p className="text-ks-muted text-xs mb-6">Each school changes how hard the trials are and how many scouts watch you.</p>
 
         <div className="flex flex-col gap-3 flex-1">
-          {SCHOOLS.map((school) => (
+          {schools.map((school) => (
             <button
               key={school.id}
               onClick={() => setSelected(school)}

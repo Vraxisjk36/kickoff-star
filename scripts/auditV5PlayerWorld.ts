@@ -36,6 +36,9 @@ assert(!club.toLowerCase().includes('top scorers'),'league-wide scorers leaked i
 assert(league.includes('competition leaders'),'League lost competition-wide leaders')
 
 // Selection screen must use the generated live world, never a static three-school constant.
+const store=fs.readFileSync('src/store/careerStore.ts','utf8')
+assert(store.includes("createYouthWorld(player.id, cleanPlayer.schoolId, 1, route, player.nationality??'eng')"),'pathway selection drops nationality and rebuilds the wrong country world')
+
 const schoolScreen=fs.readFileSync('src/screens/SchoolSelection.tsx','utf8')
 assert(schoolScreen.includes('world?.schools'),'School selection is not driven by live Youth World')
 assert(!schoolScreen.includes('SCHOOLS.map'),'School selection regressed to static starter schools')

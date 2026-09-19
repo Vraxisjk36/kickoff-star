@@ -39,3 +39,24 @@ export function leaderboard(book:CompetitionStatBook,metric:'goals'|'assists'|'r
   const ps=Object.values(book.players)
   return [...ps].sort((a,b)=>metric==='rating'?avg(b)-avg(a):(b[metric] as number)-(a[metric] as number)||avg(b)-avg(a)).slice(0,limit)
 }
+
+
+function statHash(s:string){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+function statPick<T>(xs:T[],seed:string,offset=0):T|undefined{return xs.length?xs[(statHash(seed+'|'+offset)%xs.length)]:undefined}
+
+/** Build deterministic NPC stat lines from an already-resolved fixture.
+ * This never changes the scoreline; it attributes that scoreline to persistent players.
+ */
+export function npcLinesForResult(args:{fixtureId:string;homeTeamId:string;awayTeamId:string;homeGoals:number;awayGoals:number;homePlayers:{id:string;name:string;position:Position}[];awayPlayers:{id:string;name:string;position:Position}[]}):MatchStatLine[]{
+ const out:MatchStatLine[]=[]
+ const side=(teamId:string,players:typeof args.homePlayers,goals:number,conceded:number,salt:string)=>{
+  const starters=players.slice(0,11),gk=starters.find(p=>p.position==='GK')
+  for(const p of starters)out.push({playerId:p.id,name:p.name,teamId,position:p.position,started:true,minutes:90,goals:0,assists:0,cleanSheet:conceded===0,saves:p.position==='GK'?Math.max(0,Math.round(2+statHash(args.fixtureId+'|save|'+salt)%5-conceded*.35)):0,tackles:p.position==='CB'||p.position==='FB'?1+statHash(args.fixtureId+'|tk|'+p.id)%5:statHash(args.fixtureId+'|tk|'+p.id)%3,keyPasses:['CM','WM','WG'].includes(p.position)?statHash(args.fixtureId+'|kp|'+p.id)%4:statHash(args.fixtureId+'|kp|'+p.id)%2,rating:5.8, potm:false})
+  const attackers=starters.filter(p=>p.position!=='GK')
+  for(let i=0;i<goals;i++){const scorer=statPick(attackers,args.fixtureId+'|goal|'+salt,i);if(scorer){const l=out.find(x=>x.playerId===scorer.id)!;l.goals++;l.rating+=.55}const assister=statPick(attackers.filter(p=>p.id!==scorer?.id),args.fixtureId+'|assist|'+salt,i);if(assister&&statHash(args.fixtureId+'|hasassist|'+salt+'|'+i)%100<72){const l=out.find(x=>x.playerId===assister.id)!;l.assists++;l.rating+=.32}}
+  if(gk&&conceded===0){const l=out.find(x=>x.playerId===gk.id)!;l.rating+=.35}
+ }
+ side(args.homeTeamId,args.homePlayers,args.homeGoals,args.awayGoals,'h');side(args.awayTeamId,args.awayPlayers,args.awayGoals,args.homeGoals,'a')
+ const best=[...out].sort((a,b)=>b.rating-a.rating||b.goals-a.goals||b.assists-a.assists)[0];if(best)best.potm=true
+ return out
+}

@@ -64,16 +64,16 @@ export interface SaveGame {
 
 export interface YouthV5Runtime {
   gazetteStories: import('./gazetteV4').GazetteStory[]
-  regionalCamp: unknown | null
-  nationalPathway: unknown | null
-  festival: unknown | null
-  octoberCompetition: unknown | null
-  grassrootsContract: unknown | null
-  scholarshipWindow: unknown | null
-  youthOffers: unknown[]
-  academyNegotiation: unknown | null
-  academySeason: unknown | null
-  careerSummary: unknown | null
+  regionalCamp: import('./regionalSelectionV4').RegionalCamp | null
+  nationalPathway: import('./nationalPathwayV4').NationalSelection | null
+  festival: import('./youthFestivalV5').FestivalState | null
+  octoberCompetition: import('./youthFestivalV5').OctoberLeagueState | null
+  grassrootsContract: import('./grassrootsContractsV5').GrassrootsContract | null
+  scholarshipWindow: import('./schoolScholarshipsV5').ScholarshipWindow | null
+  youthOffers: import('./youthAcademyV4').AcademyOfferV4[]
+  academyNegotiation: import('./academyNegotiationV4').AcademyNegotiation | null
+  academySeason: import('./academyCareerV4').AcademyCareerState | null
+  careerSummary: import('./careerEndV4').CareerSummary | null
 }
 export const EMPTY_YOUTH_V5:YouthV5Runtime={gazetteStories:[],regionalCamp:null,nationalPathway:null,festival:null,octoberCompetition:null,grassrootsContract:null,scholarshipWindow:null,youthOffers:[],academyNegotiation:null,academySeason:null,careerSummary:null}
 

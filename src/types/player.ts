@@ -33,7 +33,12 @@ export interface Player {
   careerClock: CareerClock
 
   // Grassroots trials fields (Football Engine Spec Section: Grassroots opening)
+  /** V4→V5 rebuild: the player's exclusive pre-academy route. grassrootsPath
+      remains as a compatibility adapter for V4 competition code. */
+  youthRoute?: 'school' | 'grassroots'
   schoolId: string | null
+  grassrootsClubId?: string | null
+  grassrootsClubName?: string | null
   trialWeekCompleted: 0 | 1 | 2 | 3
   /** The active grassroots route. Selected players represent their school;
       Sunday football is the fallback route after release/elimination. */

@@ -28,6 +28,7 @@ function simulate(seed:string,route:Route){
  const profile=n%4===0?{averageRating:6.45,minutes:520,training:61,discipline:70,energy:66,positionCompetition:72}:n%4===1?{averageRating:6.85,minutes:760,training:69,discipline:76,energy:70,positionCompetition:64}:n%4===2?{averageRating:7.15,minutes:980,training:76,discipline:82,energy:74,positionCompetition:57}:{averageRating:7.55,minutes:1280,training:84,discipline:88,energy:79,positionCompetition:48}
  const review=reviewAcademyRole('rotation',profile)
  const developed={...season,proPathwayScore:review.proPathwayScore,releaseRisk:review.releaseRisk}
+ if(seed.endsWith('3')) console.log('strong-profile-debug',{profile,review})
  const pro=proContractEligible(developed,18,63)
  const summary=buildCareerSummary({reason:pro?'professional-contract':'graduated-without-academy',age:18,finalOverall:63,peakOverall:65,matches:82,goals:19,assists:14,trophies:[],awards:[],representativeCaps:camp.finalSquadIds.includes('user')?3:0})
  return{route,events:calendar.events.length,regional:camp.finalSquadIds.includes('user'),pro,legacy:summary.legacyScore}

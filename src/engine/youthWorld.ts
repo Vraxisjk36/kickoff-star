@@ -67,7 +67,7 @@ function makeSquads(r: () => number, school: YouthSchool): YouthSchoolSquads {
 function schoolIdentity(index: number, country='eng') {
   const pool=COUNTRY_SCHOOLS[country]??COUNTRY_SCHOOLS.eng
   const prefix=pool[index%pool.length]
-  const suffix = SCHOOL_SUFFIX[Math.floor(index / SCHOOL_PREFIX.length) % SCHOOL_SUFFIX.length]
+  const suffix = SCHOOL_SUFFIX[Math.floor(index / pool.length) % SCHOOL_SUFFIX.length]
   return { id: `${prefix}-${suffix}-${index}`.toLowerCase().replace(/[^a-z0-9]+/g, '-'), name: `${prefix} ${suffix}` }
 }
 

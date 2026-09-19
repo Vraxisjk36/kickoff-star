@@ -35,6 +35,7 @@ import StreetGameScreen from './StreetGameScreen'
 import StreetInvite from './StreetInvite'
 import RestDayScreen from './RestDayScreen'
 import MatchDayScreen from './MatchDayScreen'
+import PreMatchLineup from './PreMatchLineup'
 import type { HubTab } from '../components/navItems'
 
 type Mode =
@@ -42,6 +43,7 @@ type Mode =
   | { kind: 'decision'; decision: Decision }
   | { kind: 'training' }
   | { kind: 'rest' }
+  | { kind: 'lineup'; opponent: Team; isHome: boolean; competitionId: string; competitionLabel: string; isKnockout: boolean }
   | { kind: 'matchday'; opponent: Team; isHome: boolean; competitionId: string; competitionLabel: string; isKnockout: boolean }
   | { kind: 'match'; opponent: Team; isHome: boolean; competitionId: string; competitionLabel: string; isKnockout: boolean }
   | { kind: 'shootout'; opponent: Team; isHome: boolean; competitionId: string; isKnockout: boolean; matchResult: { rating: number; goals: number; assists: number; won: boolean; drew: boolean; finalMatchStamina: number; injury: { severity: string; weeksOut: number; description: string } | null; wasSubbed: boolean; redCarded: boolean; playerScore: number; opponentScore: number; motm?: { playerWon: boolean; winnerName: string; winnerRating: number; winnerPosition: string }; squad?: import('../engine/squad').SquadPlayer[]; matchStats: { tackle: number; interception: number; header: number; keyPass: number; save: number } } }
@@ -134,7 +136,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
   const clubTeam = playerDivision.teams.find((t) => t.id === activeWorld.playerTeamId)!
   // On international duty you walk out for your NATION, not your club.
   const nationTeam = international ? internationalTeamById(international).get(international.nationTeamId) : undefined
-  const inIntlMode = (mode.kind === 'matchday' || mode.kind === 'match' || mode.kind === 'summary') && mode.competitionId === 'international'
+  const inIntlMode = (mode.kind === 'lineup' || mode.kind === 'matchday' || mode.kind === 'match' || mode.kind === 'summary') && mode.competitionId === 'international'
   const playerTeam = inIntlMode && nationTeam ? nationTeam : clubTeam
   const pending = nextUnresolvedEvent(calendar)
 
@@ -166,7 +168,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
         const nationIsHome = fx.homeTeamId === international.nationTeamId
         const opponent = byId.get(nationIsHome ? fx.awayTeamId : fx.homeTeamId)
         if (!opponent) { resolveCurrentEvent(); return }
-        setMode({ kind: 'matchday', opponent, isHome: nationIsHome, competitionId: 'international', competitionLabel: international.stage === 'finals' ? 'International Finals' : 'International Qualifier', isKnockout: international.stage === 'finals' })
+        setMode({ kind: 'lineup', opponent, isHome: nationIsHome, competitionId: 'international', competitionLabel: international.stage === 'finals' ? 'International Finals' : 'International Qualifier', isKnockout: international.stage === 'finals' })
         return
       }
 
@@ -183,7 +185,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
         const isHome = fixture.homeTeamId === activeWorld.playerTeamId
         const opponent = playerDivision.teams.find((t) => t.id === (isHome ? fixture.awayTeamId : fixture.homeTeamId))
         if (!opponent) { resolveCurrentEvent(); return }
-        setMode({ kind: 'matchday', opponent, isHome, competitionId: 'sundayLeague', competitionLabel: isInAcademy ? 'League' : player.youthRoute === 'school' ? 'Inter-Schools League' : 'Grassroots League', isKnockout: false })
+        setMode({ kind: 'lineup', opponent, isHome, competitionId: 'sundayLeague', competitionLabel: isInAcademy ? 'League' : player.youthRoute === 'school' ? 'Inter-Schools League' : 'Grassroots League', isKnockout: false })
         return
       }
 
@@ -191,7 +193,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
         // Friendlies: an ad-hoc opponent near the player's level; nothing at
         // stake but sharpness, reputation and scout eyes.
         const opponent = generateTeam(Math.max(1, Math.min(10, playerTeam.prestige + (rand() < 0.5 ? -1 : 1))))
-        setMode({ kind: 'matchday', opponent, isHome: rand() < 0.5, competitionId: 'schoolFriendlies', competitionLabel: 'School Friendly', isKnockout: false })
+        setMode({ kind: 'lineup', opponent, isHome: rand() < 0.5, competitionId: 'schoolFriendlies', competitionLabel: 'School Friendly', isKnockout: false })
         return
       }
 
@@ -204,7 +206,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
       const opponent = cupWorld.teams.find((t) => t.id === (isHome ? cupFixture.awayTeamId : cupFixture.homeTeamId))
       if (!opponent) { resolveCurrentEvent(); return }
       const isKnockout = cupWorld.stage === 'knockout'
-      setMode({ kind: 'matchday', opponent, isHome, competitionId: comp.competitionId, competitionLabel: CUP_CONFIGS[comp.competitionId]?.label ?? 'Cup', isKnockout })
+      setMode({ kind: 'lineup', opponent, isHome, competitionId: comp.competitionId, competitionLabel: CUP_CONFIGS[comp.competitionId]?.label ?? 'Cup', isKnockout })
       return
     }
     // Phase 15: the school slot now draws from the state-gated life-event pool
@@ -275,6 +277,9 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
   }
   if (mode.kind === 'rest') {
     return <RestDayScreen player={player} onChoose={handleRestChoice} />
+  }
+  if (mode.kind === 'lineup') {
+    return <PreMatchLineup player={player} team={playerTeam} opponent={mode.opponent} isHome={mode.isHome} onContinue={() => setMode({ kind: 'matchday', opponent: mode.opponent, isHome: mode.isHome, competitionId: mode.competitionId, competitionLabel: mode.competitionLabel, isKnockout: mode.isKnockout })} />
   }
   if (mode.kind === 'matchday') {
     return (

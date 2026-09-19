@@ -228,7 +228,7 @@ export interface KnockoutCompetitionState {
   championId: string | null
 }
 
-export interface YouthCompetitionStatLine {playerId:string;name:string;teamId:string;position:Position;apps:number;goals:number;assists:number;cleanSheets:number;ratingTotal:number}
+export interface YouthCompetitionStatLine {playerId:string;name:string;teamId:string;position:Position;apps:number;starts:number;minutes:number;goals:number;assists:number;cleanSheets:number;saves:number;tackles:number;keyPasses:number;ratingTotal:number;potm:number}
 export interface YouthCompetitionStatBook {competitionId:string;players:Record<string,YouthCompetitionStatLine>}
 
 export interface YouthCompetitionWorld {

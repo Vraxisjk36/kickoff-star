@@ -24,7 +24,7 @@ function simulate(seed:string,route:Route){
    camp=advanceRegionalCamp(camp)
  }
  const academy=world.academyClubs[0],season=buildAcademySeason(academy,world.academyClubs,2030,17)
- const n=Number(seed.match(/(\\d+)$/)?.[1]??0)
+ const n=Number(seed.split('-').at(-1)??0)
  const profile=n%4===0?{averageRating:6.45,minutes:520,training:61,discipline:70,energy:66,positionCompetition:72}:n%4===1?{averageRating:6.85,minutes:760,training:69,discipline:76,energy:70,positionCompetition:64}:n%4===2?{averageRating:7.15,minutes:980,training:76,discipline:82,energy:74,positionCompetition:57}:{averageRating:7.55,minutes:1280,training:84,discipline:88,energy:79,positionCompetition:48}
  const review=reviewAcademyRole('rotation',profile)
  const developed={...season,proPathwayScore:review.proPathwayScore,releaseRisk:review.releaseRisk}

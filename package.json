@@ -13,7 +13,8 @@
     "audit:v4-ui": "node --import tsx scripts/auditV4Integration.ts",
     "preview": "vite preview",
     "audit:v4-v5": "node --import tsx scripts/auditV4V5Foundation.ts",
-    "audit:v4-v5-routes": "node --import tsx scripts/auditV4V5Routes.ts"
+    "audit:v4-v5-routes": "node --import tsx scripts/auditV4V5Routes.ts",
+    "audit:v4-v5-competition": "node --import tsx scripts/auditV4V5CompetitionAuthority.ts"
   },
   "dependencies": {
     "@capacitor-community/admob": "^8.0.0",

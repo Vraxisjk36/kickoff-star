@@ -31,8 +31,8 @@ const DISTRICTS = [
   { id:'west',name:'West Region' },{ id:'central',name:'Central Region' },
 ]
 
-const SCHOOL_PREFIX = ['Westview', 'Greenwood', 'Riverside', 'Kingsway', 'Northridge', 'Parkside', 'Hillcrest', 'Lakeside', 'St Andrews', 'Central', 'Oakridge', 'Morningside', 'Fairmont', 'Newlands', 'Rocklands', 'Silverstream']
-const SCHOOL_SUFFIX = ['High', 'Secondary', 'College', 'Academy']
+const COUNTRY_SCHOOLS:Record<string,string[]>={eng:['Westview','Greenwood','Riverside','Kingsway','Northridge','Parkside','Hillcrest','Lakeside','St Andrews','Central'],rsa:['Mamelodi','Soweto','Tshwane','Alexandra','Diepsloot','Katlehong','Atteridgeville','Ga-Rankuwa','Mdantsane','Khayelitsha'],bra:['Santos','Paulista','Carioca','Ipanema','Campinas','Bahia'],arg:['Rosario','Cordoba','Mendoza','La Plata','Santa Fe'],fra:['Lyonnais','Marseille','Bordeaux','Lille','Nantes'],ger:['Rhein','Munich','Dortmund','Hamburg','Leipzig'],esp:['Valencia','Sevilla','Bilbao','Catalunya','Madrid'],nga:['Lagos','Abuja','Kano','Ibadan','Enugu'],gha:['Accra','Kumasi','Tamale','Cape Coast'],usa:['Brooklyn','Austin','Miami','Seattle','Phoenix']}
+const SCHOOL_SUFFIX = ['High','Secondary','College','Academy']
 const FIRST = ['Liam','Musa','Teboho','Jayden','Aiden','Kabelo','Ethan','Siyanda','Noah','Lethabo','Reece','Kamo','Luke','Thabo','Daniel','Aphiwe','Neo','Marcus','Kofi','Sam']
 const LAST = ['Mokoena','Jacobs','Smith','Maseko','Dlamini','Adams','Nkosi','Williams','Mahlangu','Brown','Ndlovu','Mthembu','Peters','Molefe','Naidoo','Clarke','Mensah','Daniels','Khumalo','Botha']
 const POSITIONS: Position[] = ['GK','CB','CB','FB','FB','CM','CM','WM','WG','WG','ST']
@@ -64,21 +64,21 @@ function makeSquads(r: () => number, school: YouthSchool): YouthSchoolSquads {
   }
 }
 
-function schoolIdentity(index: number) {
-  if (index === 0) return { id: 'westview', name: 'Westview High' }
-  if (index === 1) return { id: 'greenwood', name: 'Greenwood High' }
-  if (index === 2) return { id: 'riverside', name: 'Riverside High' }
-  const prefix = SCHOOL_PREFIX[index % SCHOOL_PREFIX.length]
+function schoolIdentity(index: number, country='eng') {
+  const pool=COUNTRY_SCHOOLS[country]??COUNTRY_SCHOOLS.eng
+  const prefix=pool[index%pool.length]
   const suffix = SCHOOL_SUFFIX[Math.floor(index / SCHOOL_PREFIX.length) % SCHOOL_SUFFIX.length]
   return { id: `${prefix}-${suffix}-${index}`.toLowerCase().replace(/[^a-z0-9]+/g, '-'), name: `${prefix} ${suffix}` }
 }
 
-function generateSchools(r: () => number): YouthSchool[] {
+function generateSchools(r: () => number,country='eng'): YouthSchool[] {
   const schools = Array.from({ length: 640 }, (_, i) => {
-    const identity = schoolIdentity(i)
+    const identity = schoolIdentity(i,country)
     const district = DISTRICTS[Math.floor(i / 80) % DISTRICTS.length]
-    const prestigeBase = i === 0 ? 82 : i === 1 ? 67 : i === 2 ? 49 : 45 + Math.round(r() * 38)
-    const rating = clamp(Math.round(prestigeBase * .62 + 22 + (r() - .5) * 10), 48, 82)
+    const prestigeBase = i === 0 ? 78 : i === 1 ? 62 : i === 2 ? 48 : 40 + Math.round(r() * 38)
+    // School football uses a youth scale: elite school XIs live around the mid-50s,
+    // ordinary teams in the 40s. Senior/pro-looking 65-80 OVR schools were a V4 leak.
+    const rating = clamp(Math.round(38 + prestigeBase * .18 + (r() - .5) * 8), 36, 58)
     const school: YouthSchool = {
       ...identity,
       districtId: district.id,
@@ -241,9 +241,9 @@ export function initialPathway(route: 'school' | 'grassroots' = 'school'): Youth
   }
 }
 
-export function createYouthWorld(seed: string, selectedSchoolId: string | null = null, seasonYear = 1, route: 'school' | 'grassroots' = 'school'): YouthWorld {
-  const r = seeded(seed)
-  const schools = generateSchools(r)
+export function createYouthWorld(seed: string, selectedSchoolId: string | null = null, seasonYear = 1, route: 'school' | 'grassroots' = 'school', country='eng'): YouthWorld {
+  const r = seeded(seed+'|'+country)
+  const schools = generateSchools(r,country)
   const schoolSquads: Record<string, YouthSchoolSquads> = {}
   for (const school of schools) schoolSquads[school.id] = makeSquads(r, school)
   const academyClubs = generateAcademyClubs(r)

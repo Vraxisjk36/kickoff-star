@@ -4,7 +4,7 @@ import { spendXp, positionCostMultiplier } from '../engine/xp'
 import { computeCurrentAbility, toOvr } from '../engine/rating'
 import type { CalendarState } from '../types/calendar'
 import type { DecisionResult } from '../types/decision'
-import { readSave, writeSave, EMPTY_CUPS, type SaveSlotId, type CupWorlds } from '../engine/save'
+import { readSave, writeSave, EMPTY_CUPS, EMPTY_YOUTH_V5, type SaveSlotId, type CupWorlds, type YouthV5Runtime } from '../engine/save'
 import { nextUnresolvedEvent, markResolved, advanceWeek, activeCompetitionForWeek, internationalRoundForWeek, SEASON_WEEKS } from '../engine/calendar'
 import { initCupById, batchSimCupStage, advanceCupStage, recordCupPlayerResult, playerCupFixture } from '../engine/cup'
 import { initInternationalWorld, isCallUpEligible, formQualifiesForSelection, batchSimQualifyingRound, batchSimFinalsRound, advanceInternationalStage, recordNationResult, internationalTeamById, nationFixture, type InternationalWorld } from '../engine/international'
@@ -48,6 +48,7 @@ interface CareerStore {
   cups: CupWorlds
   international: InternationalWorld | null
   youthWorld: YouthWorld | null
+  youthV5: YouthV5Runtime
   activeSlot: SaveSlotId | null
   /** P53 — in-progress training session, checkpointed after every completed
       drill so a mobile reload mid-session resumes instead of silently
@@ -205,6 +206,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   cups: { ...EMPTY_CUPS },
   international: null,
   youthWorld: null,
+  youthV5: { ...EMPTY_YOUTH_V5 },
   activeSlot: null,
   pendingTraining: null,
 

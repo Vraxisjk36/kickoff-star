@@ -51,6 +51,7 @@ on:
       - 'scripts/auditRepresentativeV4.ts'
       - 'scripts/auditV5RouteCalendar.ts'
       - 'scripts/auditV5ProductSurface.ts'
+      - 'scripts/auditV5PlayerWorld.ts'
       - 'src/engine/youthFestivalV5.ts'
       - 'src/engine/grassrootsContractsV5.ts'
       - 'src/engine/schoolScholarshipsV5.ts'
@@ -93,6 +94,9 @@ jobs:
 
       - name: V5 whole-product surface audit
         run: npx tsx scripts/auditV5ProductSurface.ts
+
+      - name: Behavioral player-world audit
+        run: npx tsx scripts/auditV5PlayerWorld.ts
 
       - name: Production build
         run: npm run build

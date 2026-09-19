@@ -34,4 +34,7 @@ const runs=Array.from({length:24},(_,i)=>simulate(`career-${i}`,i%2?'school':'gr
 assert(runs.every(r=>r.events>20))
 assert(runs.some(r=>r.route==='school')&&runs.some(r=>r.route==='grassroots'))
 assert(runs.every(r=>r.legacy>0))
+assert(runs.some(r=>r.pro),'strong academy careers must be able to reach a professional contract')
+const weakSeason={...buildAcademySeason(createYouthWorld('weak-pro',null,1,'school','eng').academyClubs[0],createYouthWorld('weak-pro',null,1,'school','eng').academyClubs,2030,18),proPathwayScore:48,releaseRisk:58}
+assert.equal(proContractEligible(weakSeason,18,61),false,'average/weak academy careers must not receive automatic pro contracts')
 console.log('V5 career simulation audit passed',{careers:runs.length,school:runs.filter(r=>r.route==='school').length,grassroots:runs.filter(r=>r.route==='grassroots').length,regionalSelections:runs.filter(r=>r.regional).length,proContracts:runs.filter(r=>r.pro).length})

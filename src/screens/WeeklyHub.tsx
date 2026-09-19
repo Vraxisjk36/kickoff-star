@@ -63,7 +63,10 @@ export default function WeeklyHub({
   const isAcademy = player.careerClock.phase === 'academy'
   const offerCount = (player.contractOffers ?? []).length
   const activeLabel = NAV_ITEMS.find((n) => n.tab === tab)?.label ?? ''
-  const latestGazette = player.gazetteIssues && player.gazetteIssues.length > 0 ? player.gazetteIssues[player.gazetteIssues.length - 1] : null
+  const youthV5 = useCareerStore((s) => s.youthV5)
+  const latestLegacyGazette = player.gazetteIssues && player.gazetteIssues.length > 0 ? player.gazetteIssues[player.gazetteIssues.length - 1] : null
+  const worldStories = youthV5.gazetteStories.slice(-8)
+  const latestGazette = worldStories.length ? { weekNumber: calendar.currentWeek.weekNumber, seasonYear: player.careerClock.grassrootsSeason ?? 1, masthead: worldStories[worldStories.length-1].headline, articles: worldStories.slice().reverse().map(s=>({kind:s.category==='result'?'recap':s.category,headline:s.headline,body:s.body})) } : latestLegacyGazette
 
   return (
     <div className="min-h-screen bg-ks-black flex flex-col">

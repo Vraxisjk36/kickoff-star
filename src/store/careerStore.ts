@@ -266,7 +266,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       clubGlory: {},
       nationalGlory: {},
     }
-    const youthWorld = initializeCompetitionWorld(createYouthWorld(player.id, player.schoolId))
+    const youthWorld = initializeCompetitionWorld(createYouthWorld(player.id, player.schoolId, 1, 'school', player.nationality??'eng'))
     setState({ player, calendar, league: null, academyLeague: null, cups: { ...EMPTY_CUPS }, international: null, youthWorld, youthV5:{...EMPTY_YOUTH_V5}, activeSlot: slot, pendingTraining: null })
     await writeSave({ schemaVersion: 5, slotId: slot, savedAt: new Date().toISOString(), player, calendar, league: null, academyLeague: null, cups: { ...EMPTY_CUPS }, international: null, pendingTraining: null, youthWorld, youthV5:{...EMPTY_YOUTH_V5} })
   },
@@ -1408,7 +1408,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   setGrassrootsClub: (clubId) => {
     const { player, youthWorld } = getState()
     if (!player || player.youthRoute !== 'grassroots') return
-    const world = youthWorld ?? initializeCompetitionWorld(createYouthWorld(player.id, null, 1, 'grassroots'))
+    const world = youthWorld ?? initializeCompetitionWorld(createYouthWorld(player.id, null, 1, 'grassroots', player.nationality??'eng'))
     if (!world.sundayClubs.some((club) => club.id === clubId)) return
     setState({
       player: { ...player, schoolId: null, grassrootsClubId: clubId },
@@ -1420,7 +1420,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   setSchool: (schoolId) => {
     const { player, youthWorld } = getState()
     if (!player || player.youthRoute !== 'school') return
-    const baseWorld = youthWorld ? { ...youthWorld, selectedSchoolId: schoolId, pathway: { ...youthWorld.pathway, route: 'school' as const, sundayClubId: null } } : createYouthWorld(player.id, schoolId, 1, 'school')
+    const baseWorld = youthWorld ? { ...youthWorld, selectedSchoolId: schoolId, pathway: { ...youthWorld.pathway, route: 'school' as const, sundayClubId: null } } : createYouthWorld(player.id, schoolId, 1, 'school', player.nationality??'eng')
     const nextWorld = initializeCompetitionWorld(baseWorld)
     setState({ player: { ...player, schoolId }, youthWorld: nextWorld })
     void getState().saveCurrent()
@@ -1436,7 +1436,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     for (const k of Object.keys(values)) {
       values[k] = clamp(Math.round((values[k] + band) * 10) / 10, 1, player.potential - 1)
     }
-    const baseWorld = youthWorld ?? createYouthWorld(player.id, player.schoolId)
+    const baseWorld = youthWorld ?? createYouthWorld(player.id, player.schoolId, 1, player.youthRoute==='grassroots'?'grassroots':'school', player.nationality??'eng')
     const youthTrial = applyTrialOutcome(baseWorld, performance, 3)
     const updatedPlayer: Player = {
       ...player,

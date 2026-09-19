@@ -20,7 +20,7 @@ export function recordCompetitionStats(book:CompetitionStatBook,lines:MatchStatL
   const players={...book.players}
   for(const l of lines){
     const p=players[l.playerId]??{playerId:l.playerId,name:l.name,teamId:l.teamId,position:l.position,apps:0,starts:0,minutes:0,goals:0,assists:0,cleanSheets:0,saves:0,tackles:0,keyPasses:0,ratingTotal:0,potm:0}
-    players[l.playerId]={...p,apps:p.apps+1,starts:p.starts+(l.started?1:0),minutes:p.minutes+l.minutes,goals:p.goals+l.goals,assists:p.assists+l.assists,cleanSheets:p.cleanSheets+(l.cleanSheet?1:0),saves:p.saves+l.saves,tackles:p.tackles+l.tackles,keyPasses:p.keyPasses+l.keyPasses,ratingTotal:p.ratingTotal+l.rating,potm:p.potm+(l.potm?1:0)}
+    players[l.playerId]={...p,apps:(p.apps??0)+1,starts:(p.starts??0)+(l.started?1:0),minutes:(p.minutes??0)+l.minutes,goals:(p.goals??0)+l.goals,assists:(p.assists??0)+l.assists,cleanSheets:(p.cleanSheets??0)+(l.cleanSheet?1:0),saves:(p.saves??0)+l.saves,tackles:(p.tackles??0)+l.tackles,keyPasses:(p.keyPasses??0)+l.keyPasses,ratingTotal:(p.ratingTotal??0)+l.rating,potm:(p.potm??0)+(l.potm?1:0)}
   }
   return{...book,players}
 }

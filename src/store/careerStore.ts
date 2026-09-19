@@ -1400,7 +1400,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       squadRole: null,
       careerClock: { ...player.careerClock, phase: route === 'school' ? 'school-trials' : 'grassroots-trials' },
     }
-    const world = initializeCompetitionWorld(createYouthWorld(player.id, cleanPlayer.schoolId, 1, route))
+    const world = initializeCompetitionWorld(createYouthWorld(player.id, cleanPlayer.schoolId, 1, route, player.nationality??'eng'))
     setState({ player: cleanPlayer, youthWorld: world, league: null, cups: { ...EMPTY_CUPS } })
     void getState().saveCurrent()
   },

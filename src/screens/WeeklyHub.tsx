@@ -66,7 +66,7 @@ export default function WeeklyHub({
   const youthV5 = useCareerStore((s) => s.youthV5)
   const latestLegacyGazette = player.gazetteIssues && player.gazetteIssues.length > 0 ? player.gazetteIssues[player.gazetteIssues.length - 1] : null
   const worldStories = youthV5.gazetteStories.slice(-8)
-  const latestGazette = worldStories.length ? { weekNumber: calendar.currentWeek.weekNumber, seasonYear: player.careerClock.grassrootsSeason ?? 1, masthead: worldStories[worldStories.length-1].headline, articles: worldStories.slice().reverse().map(s=>({kind:(s.category==='result'?'recap':s.category==='scouting'?'spotlight':s.category==='career'?'filler':s.category) as import('../engine/gazette').GazetteArticle['kind'],headline:s.headline,body:s.body})) } : latestLegacyGazette
+  const latestGazette: import('../engine/gazette').GazetteIssue|null = worldStories.length ? { id:`v5-gazette-${calendar.currentWeek.weekNumber}`, weekNumber: calendar.currentWeek.weekNumber, seasonYear: player.careerClock.grassrootsSeason ?? 1, masthead: worldStories[worldStories.length-1].headline, articles: worldStories.slice().reverse().map(s=>({kind:(s.category==='result'?'recap':s.category==='scouting'?'spotlight':s.category==='career'?'filler':s.category) as import('../engine/gazette').GazetteArticle['kind'],headline:s.headline,body:s.body})) } : latestLegacyGazette
 
   return (
     <div className="min-h-screen bg-ks-black flex flex-col">

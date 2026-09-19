@@ -215,7 +215,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     if (!save) return
     const migratedPlayer = migratePlayer(save.player)
     const youthWorld = save.youthWorld ?? initializeCompetitionWorld(createYouthWorld(migratedPlayer.id, migratedPlayer.schoolId))
-    setState({ player: migratedPlayer, calendar: save.calendar, league: save.league ?? null, academyLeague: save.academyLeague ?? null, cups: save.cups ?? { ...EMPTY_CUPS }, international: save.international ?? null, youthWorld, activeSlot: slot, pendingTraining: save.pendingTraining ?? null })
+    setState({ player: migratedPlayer, calendar: save.calendar, league: save.league ?? null, academyLeague: save.academyLeague ?? null, cups: save.cups ?? { ...EMPTY_CUPS }, international: save.international ?? null, youthWorld, youthV5:save.youthV5??{...EMPTY_YOUTH_V5}, activeSlot: slot, pendingTraining: save.pendingTraining ?? null })
   },
 
   startNewCareer: async (player, calendar, slot) => {
@@ -261,14 +261,14 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       nationalGlory: {},
     }
     const youthWorld = initializeCompetitionWorld(createYouthWorld(player.id, player.schoolId))
-    setState({ player, calendar, league: null, academyLeague: null, cups: { ...EMPTY_CUPS }, international: null, youthWorld, activeSlot: slot, pendingTraining: null })
-    await writeSave({ schemaVersion: 4, slotId: slot, savedAt: new Date().toISOString(), player, calendar, league: null, academyLeague: null, cups: { ...EMPTY_CUPS }, international: null, pendingTraining: null, youthWorld })
+    setState({ player, calendar, league: null, academyLeague: null, cups: { ...EMPTY_CUPS }, international: null, youthWorld, youthV5:{...EMPTY_YOUTH_V5}, activeSlot: slot, pendingTraining: null })
+    await writeSave({ schemaVersion: 5, slotId: slot, savedAt: new Date().toISOString(), player, calendar, league: null, academyLeague: null, cups: { ...EMPTY_CUPS }, international: null, pendingTraining: null, youthWorld, youthV5:{...EMPTY_YOUTH_V5} })
   },
 
   saveCurrent: async () => {
-    const { player, calendar, league, academyLeague, cups, international, youthWorld, activeSlot, pendingTraining } = getState()
+    const { player, calendar, league, academyLeague, cups, international, youthWorld, youthV5, activeSlot, pendingTraining } = getState()
     if (!player || !calendar || activeSlot === null) return
-    await writeSave({ schemaVersion: 4, slotId: activeSlot, savedAt: new Date().toISOString(), player, calendar, league, academyLeague, cups, international, pendingTraining: pendingTraining ?? null, youthWorld })
+    await writeSave({ schemaVersion: 5, slotId: activeSlot, savedAt: new Date().toISOString(), player, calendar, league, academyLeague, cups, international, pendingTraining: pendingTraining ?? null, youthWorld, youthV5 })
   },
 
   setPendingTraining: (snapshot) => {

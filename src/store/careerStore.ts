@@ -33,7 +33,7 @@ import { initLeagueWorld, initSchoolLeagueWorld, recordPlayerMatchResult, batchS
 import { generateSquad } from '../engine/squad'
 import { growSquadForSeason, rollSquadDepartures } from '../engine/squadLifecycle'
 import { generateGazetteIssue } from '../engine/gazette'
-import { resultStory, selectionStory, academyStory } from '../engine/gazetteV4'
+import { resultStory, selectionStory } from '../engine/gazetteV4'
 import { createRegionalCamp, simulateNpcCampAssessments, advanceRegionalCamp } from '../engine/regionalSelectionV4'
 import { buildNationalShortlist, selectNational23 } from '../engine/nationalPathwayV4'
 import { createOctoberLeague, advanceOctoberLeague, createThreeDayFestival, advanceFestival } from '../engine/youthFestivalV5'
@@ -1299,7 +1299,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
         const selected=camp.finalSquadIds.includes(player.id)
         pathwayWorld={...pathwayWorld,pathway:{...pathwayWorld.pathway,representative:selected?'regional-squad':pathwayWorld.pathway.representative}}
         nextYouthV5.gazetteStories=[...nextYouthV5.gazetteStories,selectionStory(newWeek,'regional final 23',player.name,selected,selected?'You survived the regional cuts and made the final squad.':'The final regional cut ended your representative run this season.')].slice(-120)
-        nextYouthV5.nationalPathway=selectNational23(buildNationalShortlist(player.nationality,[camp.trialists.filter(p=>p.selected)]))
+        nextYouthV5.nationalPathway=selectNational23(buildNationalShortlist(player.nationality??'eng',[camp.trialists.filter(p=>p.selected)]))
       }
     }
     if(pathwayWorld&&newWeek===36&&!nextYouthV5.octoberCompetition){

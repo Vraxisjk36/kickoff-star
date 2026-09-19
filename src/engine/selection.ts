@@ -92,7 +92,10 @@ export function decideSelection(player: Player, squad: SquadPlayer[] | undefined
   // positions, so first or second choice starts, third makes the bench.
   const startingSlots = player.position === 'GK' ? 1 : 2
   let role: SquadRole
-  if (pecking <= startingSlots) role = 'starting-xi'
+  // V5 hard availability rules override coach preference: <50 cannot start; <30 cannot appear.
+  if (player.fitness.stamina < 30) role = 'reserves'
+  else if (player.fitness.stamina < 50) role = pecking <= startingSlots + 2 ? 'bench' : 'reserves'
+  else if (pecking <= startingSlots) role = 'starting-xi'
   else if (pecking <= startingSlots + 2) role = 'bench'
   else role = 'reserves'
 

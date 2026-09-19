@@ -113,7 +113,7 @@ export function internationalRoundForWeek(weekNumber: number): { stage: 'qualifi
   return null
 }
 
-export function generateWeek(weekNumber: number, seasonYear: number, phase: CareerPhase = 'grassroots-season', hasInternationalDuty = false, grassrootsPath: GrassrootsPath = 'school', playsSundayFootball = false): CalendarWeek {
+export function generateWeek(weekNumber: number, seasonYear: number, phase: CareerPhase = 'grassroots-season', hasInternationalDuty = false, grassrootsPath: GrassrootsPath = 'school', _playsSundayFootball = false): CalendarWeek {
   // International duty takes over the Wednesday slot on window weeks —
   // midweek internationals, so club Saturdays are untouched.
   const internationalWeek = hasInternationalDuty && internationalRoundForWeek(weekNumber) !== null
@@ -152,13 +152,12 @@ export function generateWeek(weekNumber: number, seasonYear: number, phase: Care
     events.push({ id: id(), day: 'sat', type: 'training', title: 'extra training', resolved: false })
   }
   if (schoolMatch || events.some(e => e.day === 'sun' && e.type === 'match')) events.push({ id: id(), day: 'sat', type: 'rest', title: 'match recovery', resolved: false })
-  if (playsSundayFootball && phase !== 'academy' && grassrootsPath === 'school' && weekNumber <= 22) events.push({ id:id(), day:'sun', type:'match', title:'Sunday league fixture', resolved:false })
   if (!events.some(e => e.day === 'sun')) events.push({ id: id(), day: 'sun', type: 'rest', title: 'rest day', resolved: false })
   return { weekNumber, seasonYear, events }
 }
 
 /** Preserve event IDs/completion when updating an in-flight saved week. */
-export function alignMatchDays(state: CalendarState, phase: CareerPhase, path: GrassrootsPath, registered: boolean): CalendarState {
+export function alignMatchDays(state: CalendarState, phase: CareerPhase, path: GrassrootsPath, _registered: boolean): CalendarState {
   if (phase === 'academy') return state
   let events = state.currentWeek.events.map(event => {
     if (event.type !== 'match' || event.title === 'international duty') return event
@@ -167,10 +166,6 @@ export function alignMatchDays(state: CalendarState, phase: CareerPhase, path: G
   })
   const hasThursdayMatch = events.some(e => e.type === 'match' && e.day === 'thu')
   if (hasThursdayMatch) events = events.filter(e => e.day !== 'thu' || e.type !== 'street' || e.resolved)
-  if (registered && path === 'school' && state.currentWeek.weekNumber <= 22 && !events.some(e => e.day === 'sun' && e.type === 'match')) {
-    const rest = events.find(e => e.day === 'sun' && e.type === 'rest')
-    if (!rest?.resolved) events = [...events.filter(e => e !== rest), { id: rest?.id ?? id(), day: 'sun', type: 'match', title: 'Sunday league fixture', resolved: false }]
-  }
   if (!events.some(e => e.day === 'sat')) events.push({ id: id(), day: 'sat', type: 'rest', title: 'match recovery', resolved: false })
   events = events.filter(e => !(e.day === 'sun' && e.type === 'rest' && !e.resolved && events.some(m => m.day === 'sun' && m.type === 'match')))
   return { ...state, currentWeek: { ...state.currentWeek, events } }

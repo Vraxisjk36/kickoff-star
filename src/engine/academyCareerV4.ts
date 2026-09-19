@@ -73,8 +73,8 @@ export function buildAcademySeason(club:AcademyClub,clubs:AcademyClub[],year:num
 
 export interface AcademyReviewInput {averageRating:number;minutes:number;training:number;discipline:number;energy:number;positionCompetition:number}
 export function reviewAcademyRole(current:AcademyRole,input:AcademyReviewInput):{role:AcademyRole;proPathwayScore:number;releaseRisk:number}{
-  const form=clamp((input.averageRating-5)/4,0,1), minutes=clamp(input.minutes/900,0,1), training=clamp(input.training/100,0,1), discipline=clamp(input.discipline/100,0,1), competition=clamp(input.positionCompetition/100,0,1)
-  const score=form*.36+minutes*.20+training*.18+discipline*.12+(1-competition)*.14
+  const form=clamp((input.averageRating-5.5)/3,0,1), minutes=clamp(input.minutes/1200,0,1), training=clamp(input.training/100,0,1), discipline=clamp(input.discipline/100,0,1), competition=clamp(input.positionCompetition/100,0,1)
+  const score=form*.40+minutes*.18+training*.17+discipline*.10+(1-competition)*.15
   const proPathwayScore=Math.round(score*100)
   const releaseRisk=Math.round(clamp((.48-score)*180+(input.energy<35?12:0),0,100))
   const role:AcademyRole=score>=.74?'starter':score>=.59?'rotation':score>=.44?'bench':'development'
@@ -84,5 +84,7 @@ export function reviewAcademyRole(current:AcademyRole,input:AcademyReviewInput):
 export function proContractEligible(season:AcademySeason,playerAge:number,overall:number):boolean{
   // No artificial OVR jump: strong pathway performance can earn a contract in
   // the 60s, while OVR alone never guarantees one.
-  return playerAge>=17&&overall>=58&&season.proPathwayScore>=72&&season.releaseRisk<35
+  const ageLine=playerAge>=18?64:70
+  const ovrLine=playerAge>=18?57:60
+  return playerAge>=17&&overall>=ovrLine&&season.proPathwayScore>=ageLine&&season.releaseRisk<42
 }

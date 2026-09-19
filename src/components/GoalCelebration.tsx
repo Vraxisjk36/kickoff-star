@@ -45,6 +45,12 @@ export default function GoalCelebration({ kind, scorerName, homeShort, awayShort
     const t1 = window.setTimeout(() => setPhase('hold'), 720)
     const t2 = window.setTimeout(() => setPhase('out'), DURATION_MS - 320)
     const t3 = window.setTimeout(onDone, DURATION_MS)
+    return () => { window.clearTimeout(t0); window.clearTimeout(t1); window.clearTimeout(t2); window.clearTimeout(t3) }
+  }, [])
+
+  const isGood = kind !== 'concede'
+  const accent = isGood ? '#d4af37' : '#e0483e'
+
     return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-hidden transition-opacity duration-200" style={{background:isGood?'radial-gradient(circle at 50% 45%,rgba(212,175,55,.18),rgba(0,0,0,.96) 58%)':'radial-gradient(circle at 50% 45%,rgba(224,72,62,.13),rgba(0,0,0,.96) 58%)',opacity:phase==='out'?0:1}}>
       {phase==='impact'&&<div className="fixed inset-0 bg-white" style={{animation:'goalflash .28s ease-out forwards'}}/>}

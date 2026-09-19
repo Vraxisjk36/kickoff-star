@@ -17,6 +17,35 @@
 // ============================================================================
 import type { Player } from '../types/player'
 import type { SquadPlayer } from './squad'
+import { currentPerformance } from './youthOpportunities'
+import { SUNDAY_ENERGY_MULTIPLIERS } from './sundayContracts'
+
+export function matchAvailability(player: Player) {
+  const energy = player.fitness.stamina
+  return { canPlay: energy >= 30, canStart: energy >= 50,
+    reason: energy < 30 ? 'Below 30% energy: you sit this match out.' : energy < 50 ? 'Below 50% energy: you can only play from the bench.' : '' }
+}
+
+/** Match-specific selection must never overwrite the player's school/club role. */
+export function playerForMatch(player: Player, competitionId: string): Player {
+  let squadRole = player.squadRole
+  let squad = player.squad
+  if (competitionId === 'sundayLeague' && player.grassrootsPath === 'school') {
+    squad = player.sundaySquad
+    const record = currentPerformance(player, ['sundayLeague'])
+    squadRole = record.appearances >= 3 && record.average >= 6.8 ? decideSelection({ ...player, squadRole: 'bench' }, squad).role : 'bench'
+  }
+  if (competitionId === 'nationalChampionship' || competitionId === 'international') {
+    const record = currentPerformance(player, [competitionId])
+    squadRole = record.appearances >= 3 && record.average >= 7 ? 'starting-xi' : 'bench'
+  }
+  const availability = matchAvailability(player)
+  if (!availability.canPlay) squadRole = 'reserves'
+  else if (!availability.canStart && (squadRole === 'starting-xi' || !squadRole)) squadRole = 'bench'
+  const matchEnergyMultiplier = (competitionId === 'sundayLeague' || competitionId === 'sundayCup') && player.careerClock.phase !== 'academy'
+    ? SUNDAY_ENERGY_MULTIPLIERS[player.sundayContract?.division ?? player.sundayLeague?.playerDivision ?? 3] : 1
+  return { ...player, squadRole, squad, matchEnergyMultiplier }
+}
 
 export type SquadRole = 'starting-xi' | 'bench' | 'reserves'
 
@@ -92,16 +121,17 @@ export function decideSelection(player: Player, squad: SquadPlayer[] | undefined
   // positions, so first or second choice starts, third makes the bench.
   const startingSlots = player.position === 'GK' ? 1 : 2
   let role: SquadRole
-  // V5 hard availability rules override coach preference: <50 cannot start; <30 cannot appear.
-  if (player.fitness.stamina < 30) role = 'reserves'
-  else if (player.fitness.stamina < 50) role = pecking <= startingSlots + 2 ? 'bench' : 'reserves'
-  else if (pecking <= startingSlots) role = 'starting-xi'
+  if (pecking <= startingSlots) role = 'starting-xi'
   else if (pecking <= startingSlots + 2) role = 'bench'
   else role = 'reserves'
 
+  const availability = matchAvailability(player)
+  if (!availability.canPlay) role = 'reserves'
+  else if (!availability.canStart && role === 'starting-xi') role = 'bench'
+
   const changed = role === current ? null : rank(role) > rank(current) ? 'promoted' : 'demoted'
 
-  return { role, pecking, competing, score, changed, reason: reasonFor(player, score, role, changed, pecking) }
+  return { role, pecking, competing, score, changed, reason: availability.reason || reasonFor(player, score, role, changed, pecking) }
 }
 
 function rank(role: SquadRole): number {
@@ -134,6 +164,7 @@ function reasonFor(player: Player, score: number, role: SquadRole, changed: Sele
 
 /** What the player needs to do to move up, in plain language for the hub. */
 export function selectionAdvice(verdict: SelectionVerdict, player: Player): string {
+  if (!matchAvailability(player).canStart) return 'Recover to 50% energy to be considered for a start. Below 30%, you cannot play.'
   if (verdict.role === 'starting-xi' && verdict.pecking === 1) return 'Keep this up and the shirt is yours.'
   const trust = player.coachTrust ?? 0
   const ratings = (player.matchRatings ?? []).slice(-5)

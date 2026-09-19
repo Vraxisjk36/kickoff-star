@@ -43,7 +43,8 @@ import { initAcademyWorld, recordAcademyMatchResult, batchSimAcademyRound, apply
 import { evaluateCaptaincy, recordCaptainAppearance, clearCaptaincyStory } from '../engine/captaincy'
 import { createYouthWorld } from '../engine/youthWorld'
 import { applyTrialOutcome } from '../engine/youthPathways'
-import { initializeCompetitionWorld } from '../engine/youthCompetitionsV4'
+import { initializeCompetitionWorld, recordLeagueResult, simulateLeagueRound } from '../engine/youthCompetitionsV4'
+import { recordCompetitionStats } from '../engine/competitionStatsV4'
 import type { YouthWorld } from '../types/youthWorld'
 
 interface CareerStore {
@@ -1632,15 +1633,42 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     }
     const event = nextUnresolvedEvent(calendar)
     const updatedCalendar = event ? markResolved(calendar, event.id) : calendar
-    // V5 integration: the same match that updates the player must update the
-    // Competition Centre stat book and the persistent world Gazette.
+    // V5 AUTHORITATIVE RESULT BRIDGE.
+    // Career.tsx still labels routine youth matches with the legacy "sundayLeague"
+    // id, while the visible Competition Centre reads interSchools/sundayLeague
+    // from YouthWorld. Commit the played match to THAT world, not a parallel table.
     let updatedYouthWorld=youthWorld
-    if(updatedYouthWorld){
-      const bookId=competitionId
-      const oldBook=updatedYouthWorld.competitionWorld.statBooks?.[bookId]??{competitionId:bookId,players:{}}
-      const old=oldBook.players[player.id]??{playerId:player.id,name:player.name,teamId:updatedYouthWorld.pathway.route==='school'?(player.schoolId??'school'):(player.grassrootsClubId??'grassroots'),position:player.position,apps:0,goals:0,assists:0,cleanSheets:0,ratingTotal:0}
-      const nextBook={...oldBook,players:{...oldBook.players,[player.id]:{...old,apps:old.apps+1,goals:old.goals+goals,assists:old.assists+assists,cleanSheets:old.cleanSheets+(player.position==='GK'&&opponentGoalsScored===0?1:0),ratingTotal:old.ratingTotal+rating}}}
-      updatedYouthWorld={...updatedYouthWorld,competitionWorld:{...updatedYouthWorld.competitionWorld,statBooks:{...updatedYouthWorld.competitionWorld.statBooks,[bookId]:nextBook}}}
+    if(updatedYouthWorld && competitionId==='sundayLeague'){
+      const schoolRoute=updatedYouthWorld.pathway.route==='school'
+      const liveComp=schoolRoute?updatedYouthWorld.competitionWorld.interSchools:updatedYouthWorld.competitionWorld.sundayLeague
+      const teamId=schoolRoute?updatedYouthWorld.selectedSchoolId:updatedYouthWorld.pathway.sundayClubId
+      if(liveComp&&teamId){
+        // The V5 fixture order is authoritative. Legacy opponent ids are generated
+        // from a separate world and cannot safely identify this fixture.
+        const fixture=liveComp.fixtures.find(f=>!f.played&&(f.homeTeamId===teamId||f.awayTeamId===teamId))
+        if(fixture){
+          const playerHome=fixture.homeTeamId===teamId
+          let nextComp=recordLeagueResult(liveComp,fixture.id,playerHome?playerGoalsScored:opponentGoalsScored,playerHome?opponentGoalsScored:playerGoalsScored)
+          // Complete every other fixture in the same round immediately so the
+          // table always has equal games played when the player returns to the hub.
+          nextComp=simulateLeagueRound(nextComp,`${updatedYouthWorld.seed}|played|${fixture.id}`,teamId)
+          const bookId=liveComp.id
+          const oldBook=updatedYouthWorld.competitionWorld.statBooks?.[bookId]??{competitionId:bookId,players:{}}
+          const nextBook=recordCompetitionStats(oldBook,[{
+            playerId:player.id,name:player.name,teamId,position:player.position,
+            started:wasStarter,minutes:90,goals,assists,
+            cleanSheet:player.position==='GK'&&opponentGoalsScored===0,
+            saves:matchStats?.save??0,tackles:matchStats?.tackle??0,keyPasses:matchStats?.keyPass??0,
+            rating,potm:playerWonMotm,
+          }])
+          updatedYouthWorld={...updatedYouthWorld,competitionWorld:{
+            ...updatedYouthWorld.competitionWorld,
+            interSchools:schoolRoute?nextComp:updatedYouthWorld.competitionWorld.interSchools,
+            sundayLeague:schoolRoute?updatedYouthWorld.competitionWorld.sundayLeague:nextComp,
+            statBooks:{...updatedYouthWorld.competitionWorld.statBooks,[bookId]:nextBook},
+          }}
+        }
+      }
     }
     const week=player.totalWeeksElapsed??0
     const gazette=resultStory(week,competitionId,playerWasHome?(updatedYouthWorld?.pathway.route==='school'?'School XI':'Your Club'):(opponentName??'Opposition'),playerWasHome?(opponentName??'Opposition'):(updatedYouthWorld?.pathway.route==='school'?'School XI':'Your Club'),playerWasHome?playerGoalsScored:opponentGoalsScored,playerWasHome?opponentGoalsScored:playerGoalsScored)

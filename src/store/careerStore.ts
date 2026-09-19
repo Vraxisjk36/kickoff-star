@@ -33,7 +33,12 @@ import { initLeagueWorld, initSchoolLeagueWorld, recordPlayerMatchResult, batchS
 import { generateSquad } from '../engine/squad'
 import { growSquadForSeason, rollSquadDepartures } from '../engine/squadLifecycle'
 import { generateGazetteIssue } from '../engine/gazette'
-import { resultStory } from '../engine/gazetteV4'
+import { resultStory, selectionStory, academyStory } from '../engine/gazetteV4'
+import { createRegionalCamp, simulateNpcCampAssessments, advanceRegionalCamp } from '../engine/regionalSelectionV4'
+import { buildNationalShortlist, selectNational23 } from '../engine/nationalPathwayV4'
+import { createOctoberLeague, advanceOctoberLeague, createThreeDayFestival, advanceFestival } from '../engine/youthFestivalV5'
+import { buildAcademySeason, reviewAcademyRole, proContractEligible } from '../engine/academyCareerV4'
+import { buildCareerSummary } from '../engine/careerEndV4'
 import { initAcademyWorld, recordAcademyMatchResult, batchSimAcademyRound, applyAcademyPromotion, type AcademyWorld } from '../engine/academy'
 import { evaluateCaptaincy, recordCaptainAppearance, clearCaptaincyStory } from '../engine/captaincy'
 import { createYouthWorld } from '../engine/youthWorld'
@@ -766,7 +771,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   },
 
   advanceToNextWeek: () => {
-    const { player, calendar, league, academyLeague, cups, international, youthWorld } = getState()
+    const { player, calendar, league, academyLeague, cups, international, youthWorld, youthV5 } = getState()
     if (!player || !calendar) return
     let lastEconomyNote: string | null = null
     let lastSelectionNote: string | null = null
@@ -1275,8 +1280,58 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       worldTeamNames: divisionForHeadlines?.teams.map((t) => t.name) ?? [],
     })
 
-    const updatedYouthWorld = youthWorld ? { ...youthWorld, currentWeek: result.calendar.currentWeek.weekNumber, seasonYear: result.calendar.currentWeek.seasonYear } : youthWorld
-    setState({ player: finalPlayer, calendar: result.calendar, league: updatedLeague, academyLeague: updatedAcademyLeague, cups: updatedCups, international: updatedInternational, youthWorld: updatedYouthWorld, pendingArcVerdicts: [...getState().pendingArcVerdicts, ...verdicts], pendingHeadlines: [...getState().pendingHeadlines, ...weeklyHeadlines], pendingSeasonReview: seasonReview, economyNote: lastContractNote ?? lastEconomyNote, selectionNote: lastSelectionNote, negotiationBeat: negotiationBeatThisWeek ?? getState().negotiationBeat })
+    // V5 live pathway orchestration. These systems used to exist as isolated
+    // engines; the weekly career tick now owns their lifecycle.
+    let nextYouthV5={...youthV5}
+    let pathwayWorld=youthWorld
+    const newWeek=result.calendar.currentWeek.weekNumber
+    const route=pathwayWorld?.pathway.route??player.youthRoute
+    const playerOvr=toOvr(computeCurrentAbility(updatedPlayer))
+    if(pathwayWorld&&route==='school'&&newWeek===29&&!nextYouthV5.regionalCamp){
+      const school=pathwayWorld.schools.find(s=>s.id===pathwayWorld!.selectedSchoolId)??pathwayWorld.schools[0]
+      nextYouthV5.regionalCamp=createRegionalCamp(pathwayWorld,school.districtId,{id:player.id,name:player.name,age:updatedPlayer.careerClock.ageYears,position:player.position,overall:playerOvr,schoolId:school.id},newWeek)
+      nextYouthV5.gazetteStories=[...nextYouthV5.gazetteStories,selectionStory(newWeek,'regional selection camp',player.name,true,'You have been named on the 60-player regional camp longlist.')].slice(-120)
+    }
+    if(pathwayWorld&&nextYouthV5.regionalCamp&&newWeek>=30&&newWeek<=31&&nextYouthV5.regionalCamp.stage!=='complete'){
+      let camp=simulateNpcCampAssessments(nextYouthV5.regionalCamp,pathwayWorld,newWeek-28)
+      camp=advanceRegionalCamp(camp);nextYouthV5.regionalCamp=camp
+      if(camp.stage==='final-23'){
+        const selected=camp.finalSquadIds.includes(player.id)
+        pathwayWorld={...pathwayWorld,pathway:{...pathwayWorld.pathway,representative:selected?'regional-squad':pathwayWorld.pathway.representative}}
+        nextYouthV5.gazetteStories=[...nextYouthV5.gazetteStories,selectionStory(newWeek,'regional final 23',player.name,selected,selected?'You survived the regional cuts and made the final squad.':'The final regional cut ended your representative run this season.')].slice(-120)
+        nextYouthV5.nationalPathway=selectNational23(buildNationalShortlist(player.nationality,[camp.trialists.filter(p=>p.selected)]))
+      }
+    }
+    if(pathwayWorld&&newWeek===36&&!nextYouthV5.octoberCompetition){
+      const teamName=route==='school'?(pathwayWorld.schools.find(s=>s.id===pathwayWorld!.selectedSchoolId)?.name??'Your School'):(pathwayWorld.sundayClubs.find(s=>s.id===pathwayWorld!.pathway.sundayClubId)?.name??'Your Club')
+      const teams=[{id:'user-oct',name:teamName,strength:playerOvr,source:route==='school'?'school' as const:'sunday' as const},...Array.from({length:4},(_,i)=>({id:`oct-${i}`,name:`October XI ${i+1}`,strength:48+i*4,source:'school' as const}))]
+      nextYouthV5.octoberCompetition=createOctoberLeague('october-development',teams)
+    }
+    if(nextYouthV5.octoberCompetition&&newWeek>=36&&newWeek<=40&&!nextYouthV5.octoberCompetition.complete)nextYouthV5.octoberCompetition=advanceOctoberLeague(nextYouthV5.octoberCompetition,`${pathwayWorld?.seed}|oct|${newWeek}`,'user-oct')
+    if(pathwayWorld&&newWeek===41&&!nextYouthV5.festival&&route==='grassroots'){
+      const club=pathwayWorld.sundayClubs.find(s=>s.id===pathwayWorld!.pathway.sundayClubId)
+      const teams=[{id:'user-fest',name:club?.name??'Your Club',strength:playerOvr,source:'sunday' as const},...Array.from({length:3},(_,i)=>({id:`fest-${i}`,name:`Festival XI ${i+1}`,strength:47+i*4,source:'sunday' as const}))]
+      nextYouthV5.festival=createThreeDayFestival('november-festival',teams)
+    }
+    if(nextYouthV5.festival&&newWeek>=41&&newWeek<=43&&!nextYouthV5.festival.complete)nextYouthV5.festival=advanceFestival(nextYouthV5.festival,`${pathwayWorld?.seed}|festival|${newWeek}`,'user-fest')
+    if(pathwayWorld&&updatedPlayer.careerClock.phase==='academy'&&updatedPlayer.academyClubName&&!nextYouthV5.academySeason){
+      const club=pathwayWorld.academyClubs.find(a=>a.name===updatedPlayer.academyClubName)
+      if(club)nextYouthV5.academySeason=buildAcademySeason(club,pathwayWorld.academyClubs,result.calendar.currentWeek.seasonYear,updatedPlayer.careerClock.ageYears)
+    }
+    if(nextYouthV5.academySeason&&updatedPlayer.careerClock.phase==='academy'){
+      const avg=(updatedPlayer.seasonRatings??[]).length?(updatedPlayer.seasonRatings??[]).reduce((a,b)=>a+b,0)/(updatedPlayer.seasonRatings??[]).length:6
+      const review=reviewAcademyRole('bench',{averageRating:avg,minutes:(updatedPlayer.seasonAppearances??0)*70,training:Math.min(100,(updatedPlayer.trainingMomentum??0)*10+55),discipline:90,energy:updatedPlayer.fitness.stamina,positionCompetition:55})
+      nextYouthV5.academySeason={...nextYouthV5.academySeason,proPathwayScore:review.proPathwayScore,releaseRisk:review.releaseRisk}
+      if(proContractEligible(nextYouthV5.academySeason,updatedPlayer.careerClock.ageYears,playerOvr)&&!(updatedPlayer.contractOffers??[]).some(o=>o.kind==='professional')){
+        const club=pathwayWorld?.academyClubs.find(a=>a.id===nextYouthV5.academySeason!.clubId)
+        if(club)updatedPlayer={...updatedPlayer,contractOffers:[...(updatedPlayer.contractOffers??[]),{id:`pro-v5-${newWeek}`,clubId:club.id,clubName:club.name,clubShort:club.name.slice(0,3).toUpperCase(),weekOffered:updatedPlayer.totalWeeksElapsed??0,expiresInWeeks:3,prestige:club.prestige,ratings:{attack:club.prestige,midfield:club.prestige,defense:club.prestige},kind:'professional'}]}
+      }
+    }
+    if(finalPlayer.careerEnded&&!nextYouthV5.careerSummary){
+      nextYouthV5.careerSummary=buildCareerSummary({reason:graduatedWithoutAcademy?'graduated-without-academy':'career-ended',age:finalPlayer.careerClock.ageYears,finalOverall:playerOvr,peakOverall:playerOvr,matches:finalPlayer.career?.appearances??0,goals:finalPlayer.career?.goals??0,assists:finalPlayer.career?.assists??0,trophies:Object.keys(finalPlayer.clubGlory??{}),awards:Object.keys(finalPlayer.personalGlory??{}),representativeCaps:0,academyName:finalPlayer.academyClubName??undefined,proClubName:finalPlayer.turnedPro?.clubName})
+    }
+    const updatedYouthWorld = pathwayWorld ? { ...pathwayWorld, currentWeek: result.calendar.currentWeek.weekNumber, seasonYear: result.calendar.currentWeek.seasonYear } : pathwayWorld
+    setState({ player: finalPlayer, calendar: result.calendar, league: updatedLeague, academyLeague: updatedAcademyLeague, cups: updatedCups, international: updatedInternational, youthWorld: updatedYouthWorld, youthV5:nextYouthV5, pendingArcVerdicts: [...getState().pendingArcVerdicts, ...verdicts], pendingHeadlines: [...getState().pendingHeadlines, ...weeklyHeadlines], pendingSeasonReview: seasonReview, economyNote: lastContractNote ?? lastEconomyNote, selectionNote: lastSelectionNote, negotiationBeat: negotiationBeatThisWeek ?? getState().negotiationBeat })
     // Non-match achievements (scouts noticing you, offers arriving, coach trust,
     // reputation, squad role, injury comeback) have no match to hang off, so the
     // week tick is their trigger. Runs after setState so it reads the new state.

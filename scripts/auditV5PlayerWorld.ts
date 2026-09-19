@@ -33,7 +33,7 @@ const club=fs.readFileSync('src/screens/tabs/ClubTab.tsx','utf8')
 const league=fs.readFileSync('src/screens/tabs/YouthLeagueTab.tsx','utf8')
 assert(club.includes('schoolSquads')&&club.includes('teammates'),'Club no longer exposes persistent teammates')
 assert(!club.toLowerCase().includes('top scorers'),'league-wide scorers leaked into Club')
-assert(league.includes('competition leaders'),'League lost competition-wide leaders')
+assert(league.includes('TOP SCORERS')&&league.includes('TOP ASSISTS')&&league.includes('BEST RATINGS')&&league.includes('CLEAN SHEETS'),'League lost competition-wide leaderboards')
 
 // Selection screen must use the generated live world, never a static three-school constant.
 const store=fs.readFileSync('src/store/careerStore.ts','utf8')

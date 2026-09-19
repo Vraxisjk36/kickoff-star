@@ -122,6 +122,6 @@ export async function deleteSave(slot: SaveSlotId): Promise<void> {
 }
 
 export async function listSaves(): Promise<(SaveGame | undefined)[]> {
-  return Promise.all([0,1,2].map(async slot=>{try{return await readSave(slot as SaveSlotId)}catch(e){if(e instanceof Error&&e.message==='V5_ROUTE_CHOICE_REQUIRED'){const raw=await get(slotKey(slot));return raw as SaveGame}throw e}}))
+  return Promise.all([0,1,2].map(async slot=>{try{return await readSave(slot as SaveSlotId)}catch(e){if(e instanceof Error&&e.message==='V5_ROUTE_CHOICE_REQUIRED'){const raw=await get(slotKey(slot as SaveSlotId));return raw as SaveGame}throw e}}))
 }
 export async function legacyRouteAssessment(slot:SaveSlotId){const raw=await get(slotKey(slot));return raw?assessLegacyRoute(raw):null}

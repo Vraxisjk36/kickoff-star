@@ -5,14 +5,19 @@ import {
   pathwayOptions, recordYouthPerformance, reviewSchoolPath,
 } from '../src/engine/youthPathways'
 
-const base = createYouthWorld('audit-career', 'greenwood')
+const seedWorld = createYouthWorld('audit-career', null, 1, 'school', 'eng')
+const selectedId = seedWorld.schools[1].id
+const base = createYouthWorld('audit-career', selectedId, 1, 'school', 'eng')
 
 assert.equal(base.schools.length, 640)
 assert.equal(new Set(base.schools.map(s => s.id)).size, 640)
 assert.equal(base.sundayClubs.length, 16)
-assert(base.schools.some(s => s.id === 'westview'))
-assert(base.schools.some(s => s.id === 'greenwood'))
-assert(base.schools.some(s => s.id === 'riverside'))
+assert(base.schools.some(s => s.id === selectedId))
+assert.equal(base.selectedSchoolId, selectedId)
+assert.equal(new Set(base.schools.map(s=>s.districtId)).size, 8)
+for (const district of new Set(base.schools.map(s=>s.districtId))) assert.equal(base.schools.filter(s=>s.districtId===district).length,80)
+const rsa = createYouthWorld('audit-career', null, 1, 'school', 'rsa')
+assert.notDeepEqual(rsa.schools.slice(0,10).map(s=>s.name),base.schools.slice(0,10).map(s=>s.name))
 
 for (const school of base.schools) {
   const squads = base.schoolSquads[school.id]

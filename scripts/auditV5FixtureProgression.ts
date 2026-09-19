@@ -3,7 +3,9 @@ import { createYouthWorld } from '../src/engine/youthWorld'
 import { initializeCompetitionWorld, recordLeagueResult, simulateLeagueRound } from '../src/engine/youthCompetitionsV4'
 import { emptyStatBook, recordCompetitionStats } from '../src/engine/competitionStatsV4'
 
-let world=initializeCompetitionWorld(createYouthWorld('fixture-audit','school-1',1,'school','zaf'))
+const seedWorld=createYouthWorld('fixture-audit',undefined,1,'school','zaf')
+const selectedSchool=seedWorld.schools[0].id
+let world=initializeCompetitionWorld(createYouthWorld('fixture-audit',selectedSchool,1,'school','zaf'))
 const comp=world.competitionWorld.interSchools
 const teamId=world.selectedSchoolId!
 let state=comp

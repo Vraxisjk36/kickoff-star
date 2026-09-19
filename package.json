@@ -11,7 +11,8 @@
     "audit:sunday": "node --import tsx scripts/auditSundayFootball.ts",
     "audit:progression": "node --import tsx scripts/auditProgression.ts",
     "audit:v4-ui": "node --import tsx scripts/auditV4Integration.ts",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "audit:v4-v5": "node --import tsx scripts/auditV4V5Foundation.ts"
   },
   "dependencies": {
     "@capacitor-community/admob": "^8.0.0",

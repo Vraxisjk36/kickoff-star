@@ -42,7 +42,7 @@ function pick<T>(r: () => number, xs: T[]): T { return xs[Math.floor(r() * xs.le
 
 function makeNpc(r: () => number, school: YouthSchool, tier: YouthNpcPlayer['squadTier'], i: number): YouthNpcPlayer {
   const tierAdj = tier === 'first-team' ? 3 : tier === 'reserve' ? -2 : -7
-  const overall = clamp(Math.round(school.footballRating + tierAdj + (r() - .5) * 16), 38, 82)
+  const overall = clamp(Math.round(school.footballRating + tierAdj + (r() - .5) * 12), tier === 'development' ? 32 : 35, tier === 'first-team' ? 64 : tier === 'reserve' ? 60 : 55)
   return {
     id: `${school.id}-${tier}-${i}`,
     name: `${pick(r, FIRST)} ${pick(r, LAST)}`,
@@ -91,7 +91,7 @@ function generateSchools(r: () => number,country='eng'): YouthSchool[] {
       scoutExposure: clamp(Math.round((.55 + prestigeBase / 100) * 100) / 100, .65, 1.45),
       style: pick(r, ['possession','direct','counter','pressing','balanced'] as const),
       rivalId: null,
-      intakeStrength: clamp(Math.round(rating + (r() - .5) * 14), 40, 88),
+      intakeStrength: clamp(Math.round(rating + (r() - .5) * 10), 34, 60),
     }
     return school
   })

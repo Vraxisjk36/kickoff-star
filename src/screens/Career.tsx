@@ -185,18 +185,6 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
         setMode({ kind: 'matchday', opponent, isHome: nationIsHome, competitionId: 'international', competitionLabel: international.stage === 'finals' ? 'International Finals' : 'International Qualifier', isKnockout: international.stage === 'finals' })
         return
       }
-      if (pending.title === 'Sunday league fixture' || pending.title === 'Sunday community fixture') {
-        if (!sundayWorld || player.pathway?.sundayStatus !== 'registered') { resolveCurrentEvent(); return }
-        const division = sundayWorld.divisions[sundayWorld.playerDivision]
-        const fixture = division.fixtures.find(f => !f.played && f.week <= calendar.currentWeek.weekNumber && (f.homeTeamId === sundayWorld.playerTeamId || f.awayTeamId === sundayWorld.playerTeamId))
-        if (!fixture) { resolveCurrentEvent(); return }
-        const isHome = fixture.homeTeamId === sundayWorld.playerTeamId
-        const opponent = division.teams.find(t => t.id === (isHome ? fixture.awayTeamId : fixture.homeTeamId))
-        if (!opponent) { resolveCurrentEvent(); return }
-        setMode({ kind: 'matchday', opponent, isHome, competitionId: 'sundayLeague', competitionLabel: `Sunday League · Division ${sundayWorld.playerDivision}`, isKnockout: false })
-        return
-      }
-
       const comp = activeCompetitionForWeek(calendar.currentWeek.weekNumber, player.careerClock.phase, player.grassrootsPath)
       if (!comp) { resolveCurrentEvent(); return }
 

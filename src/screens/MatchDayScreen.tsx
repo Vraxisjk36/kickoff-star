@@ -40,6 +40,7 @@ export default function MatchDayScreen({ player, playerTeam, opponent, isHome, o
   const billing = gap >= 6 ? 'You should be winning this.'
     : gap <= -6 ? 'They\'re the better side on paper.'
     : 'There\'s very little between these two.'
+  const isRegional=competitionLabel?.toLowerCase().includes('regional');const isNational=competitionLabel?.toLowerCase().includes('national')||competitionLabel?.toLowerCase().includes('international')
 
   return (
     <div className="relative min-h-screen w-full bg-ks-black flex flex-col justify-center px-5 py-8">
@@ -51,7 +52,7 @@ export default function MatchDayScreen({ player, playerTeam, opponent, isHome, o
       <div className={`relative z-10 max-w-md mx-auto w-full transition-all duration-700 ${
         entered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
       }`}>
-        <div className="matchday-kicker">KICKOFF STAR · MATCHDAY</div><div className="text-center font-display tracking-[0.3em] text-[10px] text-ks-gold uppercase mb-6">{competitionLabel ?? 'matchday'}</div>
+        <div className="matchday-kicker">KICKOFF STAR · MATCHDAY</div>{(isRegional||isNational)&&<div className={`showpiece-ribbon ${isNational?'national':'regional'}`}><i>★</i><span>{isNational?'NATIONAL STAGE':'REGIONAL STAGE'}</span><i>★</i></div>}<div className="text-center font-display tracking-[0.3em] text-[10px] text-ks-gold uppercase mb-6">{competitionLabel ?? 'matchday'}</div>
 
         {/* the fixture */}
         <div className="fixture-stage flex items-center justify-center gap-4 mb-3">
@@ -130,7 +131,7 @@ export default function MatchDayScreen({ player, playerTeam, opponent, isHome, o
         {sharpness < 60 && (
           <div className="rounded-lg border border-orange-500/40 bg-orange-500/10 px-3 py-2 mb-3">
             <p className="text-[11px] text-orange-400 leading-relaxed">
-              You're not match-ready. You'll start blunted and tire quickly.
+              {player.fitness.stamina < 50 ? 'Below 50% energy: you are limited to a substitute appearance. Below 30%, you cannot play.' : "You are short of match sharpness and will tire quickly."}
             </p>
           </div>
         )}

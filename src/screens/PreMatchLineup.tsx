@@ -1,6 +1,5 @@
 import type { Player } from '../types/player'
 import type { Team } from '../engine/teams'
-import type { SquadPlayer } from '../engine/squad'
 import Avatar from '../components/Avatar'
 import { TeamCrest } from '../components/ui'
 

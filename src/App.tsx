@@ -82,8 +82,8 @@ export default function App() {
     replace('menu')
   }
 
-  const enterLoadedCareer = async (slot: SaveSlotId, push = true) => {
-    await loadFromSlot(slot)
+  const enterLoadedCareer = async (slot: SaveSlotId, push = true, routeChoice?:'school'|'grassroots') => {
+    await loadFromSlot(slot,routeChoice)
     const p = useCareerStore.getState().player
     if (!p) {
       replace('menu')
@@ -145,7 +145,7 @@ export default function App() {
       />
     )
   }
-  if (screen === 'load') return <LoadCareerScreen onBack={goBackToMenu} onLoad={(slot) => enterLoadedCareer(slot, false)} />
+  if (screen === 'load') return <LoadCareerScreen onBack={goBackToMenu} onLoad={(slot,routeChoice) => enterLoadedCareer(slot, false, routeChoice)} />
   if (screen === 'settings') return <SettingsScreen onBack={goBackToMenu} />
   if (screen === 'credits') return <CreditsScreen onBack={goBackToMenu} />
   if (screen === 'help') return <HelpScreen onBack={goBackToMenu} />

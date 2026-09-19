@@ -56,7 +56,7 @@ interface CareerStore {
   pendingTraining: import('../engine/save').PendingTrainingSnapshot | null
   setPendingTraining: (snapshot: import('../engine/save').PendingTrainingSnapshot | null) => void
 
-  loadFromSlot: (slot: SaveSlotId) => Promise<void>
+  loadFromSlot: (slot: SaveSlotId, routeChoice?: 'school'|'grassroots') => Promise<void>
   startNewCareer: (player: Player, calendar: CalendarState, slot: SaveSlotId) => Promise<void>
   saveCurrent: () => Promise<void>
 
@@ -210,8 +210,8 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   activeSlot: null,
   pendingTraining: null,
 
-  loadFromSlot: async (slot) => {
-    const save = await readSave(slot)
+  loadFromSlot: async (slot, routeChoice) => {
+    const save = await readSave(slot,routeChoice)
     if (!save) return
     const migratedPlayer = migratePlayer(save.player)
     const youthWorld = save.youthWorld ?? initializeCompetitionWorld(createYouthWorld(migratedPlayer.id, migratedPlayer.schoolId))

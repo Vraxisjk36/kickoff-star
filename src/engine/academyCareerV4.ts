@@ -84,7 +84,7 @@ export function reviewAcademyRole(current:AcademyRole,input:AcademyReviewInput):
 export function proContractEligible(season:AcademySeason,playerAge:number,overall:number):boolean{
   // No artificial OVR jump: strong pathway performance can earn a contract in
   // the 60s, while OVR alone never guarantees one.
-  const ageLine=playerAge>=18?64:70
+  const ageLine=playerAge>=18?60:67
   const ovrLine=playerAge>=18?57:60
-  return playerAge>=17&&overall>=ovrLine&&season.proPathwayScore>=ageLine&&season.releaseRisk<42
+  return playerAge>=17&&overall>=ovrLine&&season.proPathwayScore>=ageLine&&season.releaseRisk<48
 }

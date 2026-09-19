@@ -37,6 +37,8 @@ import RestDayScreen from './RestDayScreen'
 import MatchDayScreen from './MatchDayScreen'
 import PreMatchLineup from './PreMatchLineup'
 import type { HubTab } from '../components/navItems'
+import type { PlayerMatchStats } from '../engine/matchStats'
+import type { RatingBreakdown } from '../engine/ratingSystemV32'
 
 type Mode =
   | { kind: 'hub' }
@@ -46,8 +48,8 @@ type Mode =
   | { kind: 'lineup'; opponent: Team; isHome: boolean; competitionId: string; competitionLabel: string; isKnockout: boolean }
   | { kind: 'matchday'; opponent: Team; isHome: boolean; competitionId: string; competitionLabel: string; isKnockout: boolean }
   | { kind: 'match'; opponent: Team; isHome: boolean; competitionId: string; competitionLabel: string; isKnockout: boolean }
-  | { kind: 'shootout'; opponent: Team; isHome: boolean; competitionId: string; isKnockout: boolean; matchResult: { rating: number; goals: number; assists: number; won: boolean; drew: boolean; finalMatchStamina: number; injury: { severity: string; weeksOut: number; description: string } | null; wasSubbed: boolean; redCarded: boolean; playerScore: number; opponentScore: number; motm?: { playerWon: boolean; winnerName: string; winnerRating: number; winnerPosition: string }; squad?: import('../engine/squad').SquadPlayer[]; matchStats: { tackle: number; interception: number; header: number; keyPass: number; save: number } } }
-  | { kind: 'summary'; rating: number; goals: number; assists: number; won: boolean; drew: boolean; finalMatchStamina: number; injury: { severity: string; weeksOut: number; description: string } | null; wasSubbed: boolean; redCarded: boolean; opponent: Team; playerGoalsScored: number; opponentGoalsScored: number; playerWasHome: boolean; motm?: { playerWon: boolean; winnerName: string; winnerRating: number; winnerPosition: string }; squad?: import('../engine/squad').SquadPlayer[]; competitionId: string; isKnockout: boolean; shootoutWon?: boolean; matchStats: { tackle: number; interception: number; header: number; keyPass: number; save: number } }
+  | { kind: 'shootout'; opponent: Team; isHome: boolean; competitionId: string; isKnockout: boolean; matchResult: { rating: number; goals: number; assists: number; won: boolean; drew: boolean; finalMatchStamina: number; injury: { severity: string; weeksOut: number; description: string } | null; wasSubbed: boolean; redCarded: boolean; playerScore: number; opponentScore: number; motm?: { playerWon: boolean; winnerName: string; winnerRating: number; winnerPosition: string }; squad?: import('../engine/squad').SquadPlayer[]; matchStats: { tackle: number; interception: number; header: number; keyPass: number; save: number }; playerStats: PlayerMatchStats; ratingBreakdown?: RatingBreakdown; minutesPlayed: number; yellowCards: number } }
+  | { kind: 'summary'; rating: number; goals: number; assists: number; won: boolean; drew: boolean; finalMatchStamina: number; injury: { severity: string; weeksOut: number; description: string } | null; wasSubbed: boolean; redCarded: boolean; opponent: Team; playerGoalsScored: number; opponentGoalsScored: number; playerWasHome: boolean; motm?: { playerWon: boolean; winnerName: string; winnerRating: number; winnerPosition: string }; squad?: import('../engine/squad').SquadPlayer[]; competitionId: string; isKnockout: boolean; shootoutWon?: boolean; matchStats: { tackle: number; interception: number; header: number; keyPass: number; save: number }; playerStats: PlayerMatchStats; ratingBreakdown?: RatingBreakdown; minutesPlayed: number; yellowCards: number }
   | { kind: 'impact'; before: ImpactSnapshot; after: ImpactSnapshot; matchXp: number; tier: import('../engine/xp').CompetitionTier; playerName: string; rating: number; goals: number; assists: number; won: boolean; drew: boolean }
   | { kind: 'allocate-match'; matchXp: number; tier: import('../engine/xp').CompetitionTier }
   | { kind: 'allocate-training'; xp: number; attrs: import('../engine/xp').AttributeKey[] }
@@ -351,6 +353,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
         rating={mode.rating} goals={mode.goals} assists={mode.assists} won={mode.won} drew={mode.drew}
         injury={mode.injury} wasSubbed={mode.wasSubbed} redCarded={mode.redCarded}
         shootout={needsShootout ? { won: shootoutWon! } : null}
+        playerStats={mode.playerStats} ratingBreakdown={mode.ratingBreakdown} minutesPlayed={mode.minutesPlayed} yellowCards={mode.yellowCards}
         onDone={() => {
           // P47 — Joel: "show the actual number increase." Snapshot BEFORE
           // applyMatchResult runs (the current player is still pre-match at

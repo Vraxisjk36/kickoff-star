@@ -33,6 +33,7 @@ import { initLeagueWorld, initSchoolLeagueWorld, recordPlayerMatchResult, batchS
 import { generateSquad } from '../engine/squad'
 import { growSquadForSeason, rollSquadDepartures } from '../engine/squadLifecycle'
 import { generateGazetteIssue } from '../engine/gazette'
+import { resultStory } from '../engine/gazetteV4'
 import { initAcademyWorld, recordAcademyMatchResult, batchSimAcademyRound, applyAcademyPromotion, type AcademyWorld } from '../engine/academy'
 import { evaluateCaptaincy, recordCaptainAppearance, clearCaptaincyStory } from '../engine/captaincy'
 import { createYouthWorld } from '../engine/youthWorld'
@@ -1397,7 +1398,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   },
 
   applyMatchResult: (rating, goals, assists, finalMatchStamina, injury, opponentId, playerGoalsScored, opponentGoalsScored, playerWasHome, squad, opponentName, competitionId, shootoutWonByPlayer, redCarded, matchStats, playerWonMotm = false) => {
-    const { player, calendar, league, academyLeague, cups, international } = getState()
+    const { player, calendar, league, academyLeague, cups, international, youthWorld, youthV5 } = getState()
     if (!player || !calendar) return
     // P24 rebalance: was tuned for a 9-match season; the flat 2/-1 values
     // saturated confidence at the +10 cap within a single season once match
@@ -1576,6 +1577,19 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     }
     const event = nextUnresolvedEvent(calendar)
     const updatedCalendar = event ? markResolved(calendar, event.id) : calendar
+    // V5 integration: the same match that updates the player must update the
+    // Competition Centre stat book and the persistent world Gazette.
+    let updatedYouthWorld=youthWorld
+    if(updatedYouthWorld){
+      const bookId=competitionId
+      const oldBook=updatedYouthWorld.competitionWorld.statBooks?.[bookId]??{competitionId:bookId,players:{}}
+      const old=oldBook.players[player.id]??{playerId:player.id,name:player.name,teamId:updatedYouthWorld.pathway.route==='school'?(player.schoolId??'school'):(player.grassrootsClubId??'grassroots'),position:player.position,apps:0,goals:0,assists:0,cleanSheets:0,ratingTotal:0}
+      const nextBook={...oldBook,players:{...oldBook.players,[player.id]:{...old,apps:old.apps+1,goals:old.goals+goals,assists:old.assists+assists,cleanSheets:old.cleanSheets+(player.position==='GK'&&opponentGoalsScored===0?1:0),ratingTotal:old.ratingTotal+rating}}}
+      updatedYouthWorld={...updatedYouthWorld,competitionWorld:{...updatedYouthWorld.competitionWorld,statBooks:{...updatedYouthWorld.competitionWorld.statBooks,[bookId]:nextBook}}}
+    }
+    const week=player.totalWeeksElapsed??0
+    const gazette=resultStory(week,competitionId,playerWasHome?(updatedYouthWorld?.pathway.route==='school'?'School XI':'Your Club'):(opponentName??'Opposition'),playerWasHome?(opponentName??'Opposition'):(updatedYouthWorld?.pathway.route==='school'?'School XI':'Your Club'),playerWasHome?playerGoalsScored:opponentGoalsScored,playerWasHome?opponentGoalsScored:playerGoalsScored)
+    const updatedYouthV5={...youthV5,gazetteStories:[...youthV5.gazetteStories,gazette].slice(-120)}
     // P35 — post-match headlines, checked off the exact scouting before/after
     // this function already computes, so no extra state reads are needed.
     const matchHeadlines = checkPostMatchHeadlines({
@@ -1585,7 +1599,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     })
     setState({
       player: updatedPlayer, calendar: updatedCalendar, league: updatedLeague, academyLeague: updatedAcademyLeague,
-      cups: updatedCups, international: updatedInternational,
+      cups: updatedCups, international: updatedInternational, youthWorld:updatedYouthWorld, youthV5:updatedYouthV5,
       pendingHeadlines: [...getState().pendingHeadlines, ...matchHeadlines],
     })
     void getState().saveCurrent()

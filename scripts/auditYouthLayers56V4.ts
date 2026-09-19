@@ -24,7 +24,8 @@ import {
   workYouthJob,
 } from '../src/engine/youthFinancesV4'
 
-let world=createYouthWorld('layer56-audit','greenwood')
+const seedWorld=createYouthWorld('layer56-audit',null,1,'school','eng')
+let world=createYouthWorld('layer56-audit',seedWorld.schools[1].id,1,'school','eng')
 world=applyTrialOutcome(world,.66).world
 
 // V5 Inter-Schools: ten schools, home-and-away, 18 rounds.

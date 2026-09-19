@@ -1,115 +1,37 @@
+import { useEffect,useMemo,useState } from 'react'
 import { useCareerStore } from '../store/careerStore'
 import { TeamCrest } from '../components/ui'
 
-interface MatchSummaryProps {
-  rating: number
-  goals: number
-  assists: number
-  won: boolean
-  drew: boolean
-  injury?: { severity: string; weeksOut: number; description: string } | null
-  wasSubbed?: boolean
-  /** P40: sent off — takes precedence over the plain "substituted" note. */
-  redCarded?: boolean
-  /** Set for drawn knockout ties settled on penalties. */
-  shootout?: { won: boolean } | null
-  onDone: () => void
-}
-
-export default function MatchSummary({ rating, goals, assists, won, drew, injury, wasSubbed, redCarded, shootout, onDone }: MatchSummaryProps) {
-  // P60 — reference: a "round results" list showing the rest of the
-  // division's results, not just your own. The data already existed
-  // (batch-sim computes every fixture in the round, not just yours) — it
-  // was just never surfaced anywhere. Read directly from the store rather
-  // than prop-drilling through Career.tsx's existing call site.
-  const league = useCareerStore((s) => s.league)
-  const academyLeague = useCareerStore((s) => s.academyLeague)
-  const calendar = useCareerStore((s) => s.calendar)
-  const division = academyLeague
-    ? academyLeague.divisions[academyLeague.playerDivision]
-    : league
-    ? league.divisions[league.playerDivision]
-    : null
-  const weekNumber = calendar?.currentWeek.weekNumber
-  const roundFixtures = division && weekNumber
-    ? division.fixtures.filter((f) => f.week === weekNumber && f.played && f.homeGoals !== null && f.awayGoals !== null)
-    : []
-  const teamById = new Map((division?.teams ?? []).map((t) => [t.id, t] as const))
-
-  const ratingColor = rating >= 7.5 ? 'text-green-500' : rating >= 6.5 ? 'text-ks-gold' : rating >= 5 ? 'text-ks-ink' : 'text-orange-400'
-  const resultText = shootout ? (shootout.won ? 'Win on pens' : 'Loss on pens') : won ? 'Win' : drew ? 'Draw' : 'Loss'
-  const resultColor = shootout ? (shootout.won ? 'text-green-500' : 'text-red-500') : won ? 'text-green-500' : drew ? 'text-ks-muted' : 'text-red-500'
-
-  return (
-    <div className="relative min-h-screen w-full bg-ks-black flex flex-col justify-center px-5 py-8">
-      <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 60% 40% at 50% 25%, rgba(212,175,55,0.08), transparent 60%), linear-gradient(180deg,#0a0a09,#050504)' }} />
-      <div className="relative z-10 max-w-md mx-auto w-full">
-        <div className="text-center mb-6">
-          <div className="font-display tracking-widest text-[11px] text-ks-muted uppercase mb-2">match summary</div>
-          <div className={`font-display text-4xl tracking-wide ${resultColor}`}>{resultText}</div>
-        </div>
-
-        <div className="rounded-2xl border border-ks-border bg-[#0f0f0d] px-5 py-5 mb-4 text-center">
-          <div className="font-display tracking-widest text-[10px] text-ks-muted uppercase mb-2">your rating</div>
-          <div className={`font-display text-6xl ${ratingColor}`}>{rating.toFixed(1)}</div>
-        </div>
-
-        {redCarded && (
-          <div className="rounded-xl border border-red-500/50 bg-red-500/10 px-4 py-3 mb-4">
-            <div className="font-display tracking-widest text-[10px] text-red-400 uppercase mb-1">sent off</div>
-            <p className="text-ks-ink text-sm leading-relaxed">You were shown a red card and your side had to see out the rest of the match a man down.</p>
-            <p className="text-[11px] text-ks-muted mt-1">You'll miss your next match through suspension.</p>
-          </div>
-        )}
-        {injury && (
-          <div className="rounded-xl border border-red-500/40 bg-red-500/5 px-4 py-3 mb-4">
-            <div className="font-display tracking-widest text-[10px] text-red-400 uppercase mb-1">injury</div>
-            <p className="text-ks-ink text-sm leading-relaxed">{injury.description}</p>
-            {injury.weeksOut > 0 && <p className="text-[11px] text-ks-muted mt-1">Out for approximately {injury.weeksOut} week{injury.weeksOut === 1 ? '' : 's'}.</p>}
-          </div>
-        )}
-        {!injury && !redCarded && wasSubbed && (
-          <div className="rounded-xl border border-ks-border bg-[#0f0f0d] px-4 py-3 mb-4">
-            <p className="text-ks-muted text-sm">You were substituted before full-time.</p>
-          </div>
-        )}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          <div className="rounded-xl border border-ks-border bg-[#0f0f0d] px-4 py-3 text-center">
-            <div className="text-[10px] text-ks-muted uppercase tracking-wider mb-1">goals</div>
-            <div className="font-display text-2xl text-ks-ink">{goals}</div>
-          </div>
-          <div className="rounded-xl border border-ks-border bg-[#0f0f0d] px-4 py-3 text-center">
-            <div className="text-[10px] text-ks-muted uppercase tracking-wider mb-1">assists</div>
-            <div className="font-display text-2xl text-ks-ink">{assists}</div>
-          </div>
-        </div>
-
-        {roundFixtures.length > 0 && (
-          <div className="mb-5">
-            <div className="font-display tracking-widest text-[10px] text-ks-muted uppercase mb-2">round results</div>
-            <div className="rounded-xl border border-ks-border bg-[#0f0f0d] divide-y divide-ks-border/50">
-              {roundFixtures.map((f) => {
-                const home = teamById.get(f.homeTeamId)
-                const away = teamById.get(f.awayTeamId)
-                if (!home || !away) return null
-                return (
-                  <div key={f.id} className="flex items-center gap-2 px-3 py-2.5">
-                    <TeamCrest primary={home.primaryColor} secondary={home.secondaryColor} short={home.short} size="sm" />
-                    <span className="text-[12px] text-ks-ink flex-1 truncate">{home.name}</span>
-                    <span className="font-display text-ks-gold text-sm tabular-nums px-1">{f.homeGoals} : {f.awayGoals}</span>
-                    <span className="text-[12px] text-ks-ink flex-1 truncate text-right">{away.name}</span>
-                    <TeamCrest primary={away.primaryColor} secondary={away.secondaryColor} short={away.short} size="sm" />
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        <button onClick={onDone} className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-3.5 text-sm shadow-[0_0_25px_rgba(212,175,55,0.3)]">
-          continue
-        </button>
-      </div>
-    </div>
-  )
+interface MatchSummaryProps{rating:number;goals:number;assists:number;won:boolean;drew:boolean;injury?:{severity:string;weeksOut:number;description:string}|null;wasSubbed?:boolean;redCarded?:boolean;shootout?:{won:boolean}|null;onDone:()=>void}
+const clamp=(v:number,a:number,b:number)=>Math.max(a,Math.min(b,v))
+export default function MatchSummary({rating,goals,assists,won,drew,injury,wasSubbed,redCarded,shootout,onDone}:MatchSummaryProps){
+ const league=useCareerStore(s=>s.league),academy=useCareerStore(s=>s.academyLeague),calendar=useCareerStore(s=>s.calendar),player=useCareerStore(s=>s.player)
+ const division=academy?academy.divisions[academy.playerDivision]:league?league.divisions[league.playerDivision]:null,week=calendar?.currentWeek.weekNumber
+ const roundFixtures=division&&week?division.fixtures.filter(f=>f.week===week&&f.played&&f.homeGoals!==null&&f.awayGoals!==null):[],teamById=new Map((division?.teams??[]).map(t=>[t.id,t] as const))
+ const [phase,setPhase]=useState(0),[shown,setShown]=useState(5.8)
+ const contributions=useMemo(()=>[
+  {label:'BASE PERFORMANCE',value:5.8,delta:null},
+  ...(goals?[{label:`${goals} GOAL${goals===1?'':'S'}`,value:0,delta:Math.min(1.8,goals*.55)}]:[]),
+  ...(assists?[{label:`${assists} ASSIST${assists===1?'':'S'}`,value:0,delta:Math.min(1.1,assists*.35)}]:[]),
+  {label:won?'MATCH RESULT · WIN':drew?'MATCH RESULT · DRAW':'MATCH RESULT · LOSS',value:0,delta:won?.18:drew?.05:-.08},
+  ...(redCarded?[{label:'RED CARD',value:0,delta:-.65}]:[]),
+ ],[goals,assists,won,drew,redCarded])
+ useEffect(()=>{const timers:number[]=[];contributions.forEach((_,i)=>timers.push(window.setTimeout(()=>setPhase(i+1),500+i*430)));const reveal=500+contributions.length*430;timers.push(window.setTimeout(()=>{const from=shown,to=rating,start=performance.now(),dur=850;const tick=(now:number)=>{const p=clamp((now-start)/dur,0,1);setShown(from+(to-from)*(1-Math.pow(1-p,3)));if(p<1)requestAnimationFrame(tick)};requestAnimationFrame(tick)},reveal));return()=>timers.forEach(clearTimeout)},[])
+ const result=shootout?(shootout.won?'WIN ON PENS':'LOSS ON PENS'):won?'WIN':drew?'DRAW':'LOSS'
+ const grade=rating>=9?'WORLD CLASS':rating>=8?'OUTSTANDING':rating>=7?'STRONG':rating>=6.5?'SOLID':rating>=6?'QUIET':'TOUGH NIGHT'
+ return <div className="relative min-h-[100dvh] bg-ks-black overflow-x-hidden px-5 pt-[max(34px,env(safe-area-inset-top))] pb-[max(28px,env(safe-area-inset-bottom))]">
+  <div className="absolute inset-0 pointer-events-none" style={{background:'radial-gradient(circle at 50% 20%,rgba(212,175,55,.16),transparent 32%),linear-gradient(180deg,#0b0b09 0%,#050504 65%)'}}/>
+  <main className="relative z-10 max-w-md mx-auto">
+   <header className="flex justify-between items-end border-b border-white/10 pb-4"><div><div className="text-[9px] tracking-[.32em] text-ks-gold font-display">FULL TIME</div><h1 className="font-display text-3xl text-ks-ink mt-1">{result}</h1></div><div className="text-right"><div className="text-[9px] text-ks-muted tracking-widest">MATCHDAY</div><div className="text-xs text-ks-ink">WEEK {week??'—'}</div></div></header>
+   <section className="py-7 text-center"><div className="text-[10px] tracking-[.28em] text-ks-muted font-display">PERFORMANCE RATING</div><div className="relative inline-flex items-baseline mt-1"><span className="font-display text-[92px] leading-none text-ks-gold tabular-nums">{shown.toFixed(1)}</span><span className="ml-2 text-[10px] tracking-widest text-ks-muted">/10</span></div><div className="font-display text-[11px] tracking-[.22em] text-ks-ink mt-2">{phase>=contributions.length?grade:'CALCULATING…'}</div>
+    <div className="h-1.5 rounded-full bg-white/10 mt-5 overflow-hidden"><div className="h-full bg-ks-gold transition-all duration-700" style={{width:`${clamp(shown*10,0,100)}%`}}/></div>
+   </section>
+   <section className="rounded-2xl border border-white/10 bg-white/[.025] overflow-hidden mb-4"><div className="px-4 py-3 border-b border-white/10 text-[9px] tracking-[.25em] text-ks-muted font-display">RATING TALLY</div>{contributions.map((x,i)=><div key={x.label} className={`flex items-center justify-between px-4 py-3 border-b border-white/5 last:border-0 transition-all duration-300 ${phase>i?'opacity-100 translate-y-0':'opacity-20 translate-y-1'}`}><span className="text-[11px] text-ks-ink">{x.label}</span><b className={`font-display text-sm ${x.delta!==null&&x.delta<0?'text-red-400':'text-ks-gold'}`}>{x.delta===null?'5.8':`${x.delta>=0?'+':''}${x.delta.toFixed(2)}`}</b></div>)}</section>
+   <div className="grid grid-cols-3 gap-2 mb-4">{[['GOALS',goals],['ASSISTS',assists],['APPS',1]].map(([l,v])=><div key={String(l)} className="rounded-xl border border-white/10 bg-white/[.025] p-3 text-center"><div className="text-[8px] tracking-widest text-ks-muted">{l}</div><div className="font-display text-xl text-ks-ink mt-1">{v}</div></div>)}</div>
+   {(redCarded||injury||wasSubbed)&&<div className="rounded-xl border border-white/10 p-3 mb-4 text-xs text-ks-muted">{redCarded?'Sent off — suspension applies.':injury?`${injury.description}${injury.weeksOut? ` · approx. ${injury.weeksOut} week(s) out`:''}`:'Substituted before full-time.'}</div>}
+   {roundFixtures.length>0&&<details className="rounded-xl border border-white/10 bg-white/[.02] mb-5"><summary className="p-3 text-[10px] tracking-widest text-ks-muted cursor-pointer">ROUND RESULTS</summary><div className="border-t border-white/10">{roundFixtures.map(f=>{const h=teamById.get(f.homeTeamId),a=teamById.get(f.awayTeamId);if(!h||!a)return null;return <div key={f.id} className="flex items-center gap-2 p-2.5 border-b border-white/5 last:border-0"><TeamCrest primary={h.primaryColor} secondary={h.secondaryColor} short={h.short} size="sm"/><span className="text-[10px] flex-1 truncate">{h.name}</span><b className="text-ks-gold text-xs">{f.homeGoals}–{f.awayGoals}</b><span className="text-[10px] flex-1 text-right truncate">{a.name}</span></div>})}</div></details>}
+   <button onClick={onDone} className="w-full rounded-xl bg-ks-gold text-black py-4 font-display tracking-[.18em] text-sm uppercase">Continue career</button>
+   {player&&<div className="text-center text-[8px] tracking-[.25em] text-ks-muted mt-4">{player.name.toUpperCase()} · KICKOFF STAR</div>}
+  </main>
+ </div>
 }

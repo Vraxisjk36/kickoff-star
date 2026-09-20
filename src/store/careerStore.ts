@@ -1089,6 +1089,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
         youthFestival: !isInAcademy && updatedLeague?.kind === 'sunday' && grassrootsTeam ? initCupById('youthFestival', grassrootsTeam, allLeagueTeams) : null,
         academyLeagueCup: isInAcademy && academyTeam ? initCupById('academyLeagueCup', academyTeam, allAcademyTeams) : null,
         academyKnockoutCup: isInAcademy && academyTeam ? initCupById('academyKnockoutCup', academyTeam, allAcademyTeams) : null,
+        academyChampionsCup: isInAcademy && academyTeam ? initCupById('academyChampionsCup', academyTeam, allAcademyTeams) : null,
       }
       // P36 — National glory: capture BEFORE the campaign resets. A completed
       // campaign that was actually won earns the trophy; anything else
@@ -1737,7 +1738,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
         const bucket: keyof typeof prev =
           competitionId === 'international' ? 'international'
           : competitionId === 'sundayLeague' || competitionId === 'schoolLeague' ? 'league'
-          : competitionId === 'schoolCup' || competitionId === 'nationalChampionship' || competitionId === 'sundayCup' || competitionId === 'academyLeagueCup' || competitionId === 'academyKnockoutCup' ? 'cup'
+          : competitionId === 'schoolCup' || competitionId === 'nationalChampionship' || competitionId === 'sundayCup' || competitionId === 'academyLeagueCup' || competitionId === 'academyKnockoutCup' || competitionId === 'academyChampionsCup' ? 'cup'
           : 'other'
         return {
           ...prev,
@@ -1937,6 +1938,7 @@ updated=withStory(updated,calendar,{kind:passed?'selection':'elimination',eyebro
       youthFestival:null,
       academyLeagueCup: initCupById('academyLeagueCup', academyTeam, allAcademyTeams),
       academyKnockoutCup: initCupById('academyKnockoutCup', academyTeam, allAcademyTeams),
+      academyChampionsCup: initCupById('academyChampionsCup', academyTeam, allAcademyTeams),
     }
     setState({ player: updatedPlayer, league: null, academyLeague: academyWorld, cups: academyCups })
     // Signing is the biggest moment in the game so far — celebrate it now, not

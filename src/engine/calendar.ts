@@ -53,12 +53,13 @@ export const COMPETITION_SPECS: CompetitionRoundSpec[] = [
   // grassroots-only ones above — phases never run concurrently so nothing
   // collides, it's just some slots are a no-op depending on which phase.
   { id: 'academyLeagueCup', rounds: 5 }, // U18 PL Cup equivalent — group + knockout
-  { id: 'academyKnockoutCup', rounds: 4 }, // FA Youth Cup equivalent — pure knockout
+  { id: 'academyKnockoutCup', rounds: 4 },
+  { id: 'academyChampionsCup', rounds: 5 }, // FA Youth Cup equivalent — pure knockout
 ]
 
 export const SCHOOL_SEASON_SCHEDULE: Record<string, number[]> = { schoolFriendlies:[4,5], schoolLeague:Array.from({length:18},(_,i)=>i+6), schoolCup:[24,25,26,27,28,29,30,31], nationalChampionship:[32,33,34,35], octoberLeague:[36,37,38,39,40] }
 export const SUNDAY_SEASON_SCHEDULE: Record<string, number[]> = { schoolLeague:Array.from({length:22},(_,i)=>i+6), sundayCup:[28,31,34,35], octoberLeague:[36,37,38,39,40], youthFestival:[41,42,43] }
-export const ACADEMY_SEASON_SCHEDULE: Record<string, number[]> = { schoolLeague:Array.from({length:22},(_,i)=>i+1), academyLeagueCup:[24,27,30,33,36], academyKnockoutCup:[38,40,42,44] }
+export const ACADEMY_SEASON_SCHEDULE: Record<string, number[]> = { schoolLeague:Array.from({length:22},(_,i)=>i+1), academyLeagueCup:[24,27,30,33,36], academyKnockoutCup:[38,40,42,44], academyChampionsCup:[23,26,29,32,35] }
 export const SEASON_SCHEDULE = SCHOOL_SEASON_SCHEDULE
 
 // Kept as a Set export for backward compatibility with existing call sites
@@ -83,7 +84,7 @@ export type CareerPhase = 'grassroots-trials' | 'grassroots-season' | 'academy'
 export type GrassrootsPath = 'school' | 'sunday'
 const SCHOOL_ACTIVE = new Set(['schoolLeague','schoolCup','schoolDevelopment','schoolFriendlies','nationalChampionship','octoberLeague'])
 const SUNDAY_ACTIVE = new Set(['sundayLeague','sundayCup','octoberLeague','youthFestival'])
-const ACADEMY_ACTIVE = new Set(['sundayLeague', 'academyLeagueCup', 'academyKnockoutCup'])
+const ACADEMY_ACTIVE = new Set(['sundayLeague', 'academyLeagueCup', 'academyKnockoutCup', 'academyChampionsCup'])
 
 export function isCompetitionActive(competitionId: string, phase: CareerPhase, grassrootsPath: GrassrootsPath = 'school'): boolean {
   const set = phase === 'academy' ? ACADEMY_ACTIVE : grassrootsPath === 'sunday' ? SUNDAY_ACTIVE : SCHOOL_ACTIVE

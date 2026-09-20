@@ -107,5 +107,5 @@ export function migrateAcademyRecruitment(player: Player, calendar: CalendarStat
 
 export function academyTrialAvailable(player: Player, offerId: string, calendar?: CalendarState | null) {
   const offer = (player.contractOffers ?? []).find(o => o.id === offerId && o.kind === 'academy')
-  return academyEntryOpen(player, calendar) && !!offer && (player.totalWeeksElapsed ?? 0) - offer.weekOffered < offer.expiresInWeeks
+  return academyEntryOpen(player, calendar) && !!offer && (player.pathway?.academyTrialStatus==='passed' || (player.totalWeeksElapsed ?? 0) - offer.weekOffered < offer.expiresInWeeks)
 }

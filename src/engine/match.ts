@@ -37,6 +37,8 @@ export interface MatchState {
   playerIsHome: boolean
   minute: number
   addedTime: number
+  /** Normal matches are 90; the V5 youth festival uses 40 (2x20). */
+  durationMinutes: number
   homeScore: number
   awayScore: number
   momentum: number // -10 (opponent) .. +10 (player team)
@@ -130,22 +132,24 @@ export interface KeyMoment {
   isInjuryDecision?: boolean
 }
 
-export function initMatch(player: Player, playerTeam: Team, opponent: Team, playerIsHome: boolean, squad?: SquadPlayer[]): MatchState {
+export function initMatch(player: Player, playerTeam: Team, opponent: Team, playerIsHome: boolean, squad?: SquadPlayer[], durationMinutes = 90): MatchState {
   const commentator = createCommentator()
   const surname = surnameOf(player.name)
   // Bench players come on in the last half-hour; reserves who make the squad
   // at all get on later still. Starters play from the first whistle.
   const availability = matchAvailability(player)
   const role = playerForMatch(player, '').squadRole
-  const entryMinute = !availability.canPlay ? 120 : role === 'starting-xi' || !role ? 0
-    : role === 'bench' ? 55 + Math.floor(rand() * 16) // 55-70
-    : 70 + Math.floor(rand() * 16) // reserves: 70-85, a cameo
+  const scale=durationMinutes/90
+  const entryMinute = !availability.canPlay ? durationMinutes + 30 : role === 'starting-xi' || !role ? 0
+    : role === 'bench' ? Math.round((55 + Math.floor(rand() * 16))*scale)
+    : Math.round((70 + Math.floor(rand() * 16))*scale)
   const base: MatchState & { _playerPosition?: import('../types/attributes').Position } = {
     homeTeam: playerIsHome ? playerTeam : opponent,
     awayTeam: playerIsHome ? opponent : playerTeam,
     playerIsHome,
     minute: 0,
-    addedTime: 1 + Math.floor(rand() * 6),
+    addedTime: durationMinutes === 40 ? 1 + Math.floor(rand()*3) : 1 + Math.floor(rand() * 6),
+    durationMinutes,
     homeScore: 0,
     awayScore: 0,
     momentum: 0,
@@ -329,7 +333,8 @@ const TIME_PER_DRIVE = () => 1.4 + rand() * 2
 
 export function advanceToKeyMoment(state: MatchState, player: Player): AdvanceResult {
   let s = { ...state, events: [...state.events] }
-  const fullTime = 90 + s.addedTime
+  const fullTime = (s.durationMinutes ?? 90) + s.addedTime
+  const halfTime = (s.durationMinutes ?? 90) / 2
 
   // P38: while a scenario is in progress, the match is "inside" a single
   // passage of play — resolution walks the scenario graph, not the normal
@@ -357,9 +362,9 @@ export function advanceToKeyMoment(state: MatchState, player: Player): AdvanceRe
 
   while (!s.finished) {
     // half-time marker
-    if (s.minute >= 45 && !s.events.some((e) => e.kind === 'halftime')) {
+    if (s.minute >= halfTime && !s.events.some((e) => e.kind === 'halftime')) {
       s.momentum = Math.round(s.momentum * 0.5) // partial reset (Section 1)
-      s.events.push({ minute: 45, text: s.commentator.line('halftime', ctxOf({ ...s, minute: 45 })), kind: 'halftime' })
+      s.events.push({ minute: halfTime, text: s.commentator.line('halftime', ctxOf({ ...s, minute: halfTime })), kind: 'halftime' })
     }
 
     // P63 — the fullTime-only guarantee check below concentrates every
@@ -406,7 +411,7 @@ export function advanceToKeyMoment(state: MatchState, player: Player): AdvanceRe
     // the half-time marker (hardcoded to minute 45) is pushed after them — so the feed
     // read out of chronological order. Audit caught this in a sample feed.
     const advanced = Math.round(s.minute + TIME_PER_DRIVE())
-    s.minute = s.minute < 45 && advanced > 45 ? 45 : Math.min(fullTime, advanced)
+    s.minute = s.minute < halfTime && advanced > halfTime ? halfTime : Math.min(fullTime, advanced)
     const driveMinutes = TIME_PER_DRIVE()
     const drive = resolveDrive(s)
 

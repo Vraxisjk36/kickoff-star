@@ -325,6 +325,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
         opponent={mode.opponent}
         playerIsHome={mode.isHome}
         autoResolve={autoResolve}
+        matchMinutes={mode.competitionId === 'youthFestival' ? 40 : 90}
         onToggleAutoResolve={() => setAutoResolve((v) => !v)}
         onComplete={(r) => {
           const drew = r.playerScore === r.opponentScore

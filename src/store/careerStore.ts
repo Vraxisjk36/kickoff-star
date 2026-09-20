@@ -180,7 +180,8 @@ function reviewAcademyOpportunities(player: Player, calendar: CalendarState): Pl
   // invitation while its existing one is still on the table.
   state.watchers = state.watchers.filter(w => !updated.contractOffers.some(o => o.clubId === w.club.id))
   const result = checkForOffers(state, updated.totalWeeksElapsed ?? 0, false, updated.careerClock.ageYears, report)
-  for (const offer of result.offers) {
+  const rankedOffers=result.offers.slice(0,6)
+  for (const offer of rankedOffers) {
     updated = { ...updated,
       scoutWatchers: updated.scoutWatchers.filter(w => w.clubId !== offer.club.id),
       contractOffers: [...updated.contractOffers, { id: offer.id, clubId: offer.club.id, clubName: offer.club.name, clubShort: offer.club.short, ratings: offer.club.ratings, prestige: offer.club.prestige, kind: 'academy', weekOffered: offer.weekOffered, expiresInWeeks: offer.expiresInWeeks }],
@@ -189,6 +190,15 @@ function reviewAcademyOpportunities(player: Player, calendar: CalendarState): Pl
     updated = withStory(updated, calendar, { kind: 'invitation', eyebrow: 'Academy invitation', title: `${offer.club.name.toUpperCase()} WANT YOU`,
       body: 'After reviewing your long-term record and repeated scouting visits, the academy has invited you to a trial.',
       detail: `${report.appearances} matches reviewed · ${report.average.toFixed(2)} average rating. Pass the trial before scholarship negotiations can begin.` })
+  }
+  // A successful assessment is the trigger for the global scholarship market:
+  // never fewer than three and never more than six live academy options.
+  if(updated.pathway?.academyTrialStatus==='passed'){
+    const existing=updated.contractOffers.filter(o=>o.kind==='academy')
+    const source=[...updated.scoutWatchers].sort((a,b)=>b.interest-a.interest)
+    const target=Math.min(6,Math.max(3,existing.length))
+    const extra=source.filter(w=>!existing.some(o=>o.clubId===w.clubId)).slice(0,Math.max(0,target-existing.length)).map(w=>({id:crypto.randomUUID(),clubId:w.clubId,clubName:w.clubName,clubShort:w.clubShort,ratings:w.ratings,prestige:w.prestige,kind:'academy' as const,weekOffered:updated.totalWeeksElapsed??0,expiresInWeeks:2}))
+    updated={...updated,contractOffers:[...updated.contractOffers,...extra]}
   }
   return updated
 }

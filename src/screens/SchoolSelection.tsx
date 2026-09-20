@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { SCHOOLS, type School } from '../engine/schools'
+import { type School } from '../engine/schools'
+import { localSchoolChoices } from '../engine/youthWorldDatabase'
+import { useCareerStore } from '../store/careerStore'
 
 function DiffMeter({ label, value, max = 1.4 }: { label: string; value: number; max?: number }) {
   const pct = Math.round((value / max) * 100)
@@ -15,6 +17,8 @@ function DiffMeter({ label, value, max = 1.4 }: { label: string; value: number; 
 
 export default function SchoolSelection({ onChoose }: { onChoose: (school: School) => void }) {
   const [selected, setSelected] = useState<School | null>(null)
+  const nationality=useCareerStore(s=>s.player?.nationality??'eng')
+  const schools:School[]=localSchoolChoices(nationality).map((s,i)=>({id:s.id,name:s.name,blurb:i<3?'High-exposure local programme. Competition for places is serious.':'A local programme with a genuine route into regional selection.',strengths:['Local league','Regional pathway','Persistent squad'],trialDifficulty:0.94+(i%5)*0.04,scoutExposure:0.8+(i%4)*0.12,squadPlaceOdds:1.08-(i%4)*0.04}))
 
   return (
     <div className="relative min-h-screen w-full bg-ks-black flex flex-col px-5 py-8">
@@ -26,7 +30,7 @@ export default function SchoolSelection({ onChoose }: { onChoose: (school: Schoo
         <p className="text-ks-muted text-xs mb-6">Each school changes how hard the trials are and how many scouts watch you.</p>
 
         <div className="flex flex-col gap-3 flex-1">
-          {SCHOOLS.map((school) => (
+          {schools.map((school) => (
             <button
               key={school.id}
               onClick={() => setSelected(school)}

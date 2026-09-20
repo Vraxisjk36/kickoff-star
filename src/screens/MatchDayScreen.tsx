@@ -5,6 +5,7 @@ import { teamOverall } from '../engine/teams'
 import { bandSpec, matchSharpnessFrom } from '../engine/energy'
 import { TeamCrest } from '../components/ui'
 import Avatar from '../components/Avatar'
+import { venueForTeam } from '../engine/venues'
 
 // Phase 16: matches used to begin with no ceremony at all — you tapped "continue"
 // on the hub and were suddenly at 0'. This is the walk-out: who you're playing,
@@ -40,6 +41,8 @@ export default function MatchDayScreen({ player, playerTeam, opponent, isHome, o
   const billing = gap >= 6 ? 'You should be winning this.'
     : gap <= -6 ? 'They\'re the better side on paper.'
     : 'There\'s very little between these two.'
+  const venue=venueForTeam(isHome?playerTeam:opponent)
+  const opponentSquad=player.worldSquads?.[opponent.id]??[]
   const isRegional=competitionLabel?.toLowerCase().includes('regional');const isNational=competitionLabel?.toLowerCase().includes('national')||competitionLabel?.toLowerCase().includes('international')
 
   return (
@@ -72,7 +75,9 @@ export default function MatchDayScreen({ player, playerTeam, opponent, isHome, o
         <div className="text-center text-[10px] text-ks-muted uppercase tracking-widest mb-1">
           {isHome ? 'home' : 'away'}
         </div>
-        <p className="text-center text-ks-muted text-[12px] mb-7">{billing}</p>
+        <p className="text-center text-ks-muted text-[12px] mb-2">{billing}</p>
+        <div className="text-center text-[9px] text-ks-muted uppercase tracking-widest mb-5">{venue.name} · {venue.surface} · cap {venue.capacity.toLocaleString()}</div>
+        {opponentSquad.length>0&&<div className="rounded-xl border border-ks-border bg-[#0f0f0d] px-3 py-3 mb-3"><div className="font-display text-[9px] text-ks-gold tracking-widest uppercase mb-2">opposition squad</div><div className="grid grid-cols-2 gap-x-3 gap-y-1">{opponentSquad.slice(0,16).map(p=><div key={p.id} className="text-[10px] text-ks-muted flex justify-between"><span>{p.name}</span><span>{p.position} · {p.quality}</span></div>)}</div></div>}
 
         {/* your state going in */}
         <div className="rounded-xl border border-ks-border bg-[#0f0f0d] px-4 py-3.5 mb-3">

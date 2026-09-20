@@ -121,9 +121,9 @@ export function initLeagueWorld(playerTeamName: string): LeagueWorld {
 
 /** Ten-school local divisions. Only the player's local division is surfaced;
  * the other districts exist so regional cup draws still have real schools. */
-export function initSchoolLeagueWorld(playerSchoolName: string): LeagueWorld {
+export function initSchoolLeagueWorld(playerSchoolName: string, localNames?: string[]): LeagueWorld {
   const playerTeam = generatePlayerTeam(playerSchoolName, 3)
-  const availableNames = SCHOOL_NAMES.filter((name) => name !== playerSchoolName)
+  const availableNames = (localNames?.length ? localNames : SCHOOL_NAMES).filter((name) => name !== playerSchoolName)
   const div1 = initDivision(1, playerTeam, 10, availableNames.slice(0, 9))
   const div2 = initDivision(2, undefined, 10, availableNames.slice(9, 19))
   const div3 = initDivision(3, undefined, 10, availableNames.slice(19, 29))

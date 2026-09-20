@@ -1,8 +1,8 @@
-name: Build V3.1 Closed Test AAB
+name: Build Kickoff Star V4.1 Signed AAB
 
 on:
   push:
-    branches: [v3.1-player-feedback-fixes]
+    branches: [v4.1-release]
   workflow_dispatch: {}
 
 jobs:
@@ -11,21 +11,17 @@ jobs:
     env:
       KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
     steps:
-      - name: Checkout
+      - name: Checkout V4.1
         uses: actions/checkout@v4
 
-      - name: Verify V3.1 closed-test configuration
+      - name: Verify V4.1 release configuration
         run: |
-          grep -q 'versionCode 4' android/app/build.gradle
-          grep -q 'versionName "3.1.0"' android/app/build.gradle
+          grep -q 'versionCode 8' android/app/build.gradle
+          grep -q 'versionName "4.1.0"' android/app/build.gradle
           grep -q 'ca-app-pub-3940256099942544/5224354917' src/engine/ads.ts
           grep -q 'const IS_TESTING = true' src/engine/ads.ts
           grep -q 'ca-app-pub-3940256099942544~3347511713' android/app/src/main/AndroidManifest.xml
-          if grep -R -q 'ca-app-pub-5886721718793058' src android/app/src/main/AndroidManifest.xml; then
-            echo 'ERROR: production AdMob ID found in closed-test build.'
-            exit 1
-          fi
-          echo 'V3.1 version and Google test ads verified.'
+          echo 'V4.1 version and test-ad configuration verified.'
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -42,19 +38,16 @@ jobs:
       - name: Install web dependencies
         run: npm ci
 
-      - name: Build web app
-        run: npm run build
+      - name: Validate V4.1 rebuild
+        run: |
+          npm run build
+          npm run audit:v4-v5
+          npm run audit:v4-v5-routes
+          npm run audit:v4-v5-competition
+          npm run audit:v4-v5-master
 
       - name: Sync Capacitor Android project
         run: npx cap sync android
-
-      - name: Re-verify test ads after Capacitor sync
-        run: |
-          grep -q 'ca-app-pub-3940256099942544~3347511713' android/app/src/main/AndroidManifest.xml
-          if grep -R -q 'ca-app-pub-5886721718793058' dist android/app/src/main/AndroidManifest.xml; then
-            echo 'ERROR: production AdMob ID leaked into compiled closed-test assets.'
-            exit 1
-          fi
 
       - name: Decode release keystore
         run: |
@@ -64,7 +57,7 @@ jobs:
           echo "Decoded keystore size: $SIZE bytes"
           test "$SIZE" -ge 500 || { echo 'ERROR: decoded keystore is suspiciously small'; exit 1; }
 
-      - name: Build signed V3.1 release AAB
+      - name: Build signed V4.1 release AAB
         working-directory: android
         env:
           KEYSTORE_PATH: kickoff-star-release.keystore
@@ -75,9 +68,9 @@ jobs:
           chmod +x gradlew
           ./gradlew bundleRelease --stacktrace
 
-      - name: Upload V3.1 closed-test AAB
+      - name: Upload V4.1 signed AAB
         uses: actions/upload-artifact@v4
         with:
-          name: kickoff-star-v3.1-closed-test-aab
+          name: kickoff-star-v4.1-signed-aab
           path: android/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error

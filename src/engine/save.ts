@@ -78,13 +78,14 @@ function migrateSave(raw: SaveGame & { schemaVersion?: number }): SaveGame {
       cups: (raw as SaveGame).cups ?? { ...EMPTY_CUPS },
       international: (raw as SaveGame).international ?? null,
       pendingTraining: null,
+      legacyRouteMigration: raw.player?.sundayLeague && raw.player?.schoolId ? 'pending' : undefined,
     }
   }
   if (raw.schemaVersion < 3) {
-    return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, pendingTraining: null }
+    return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, pendingTraining: null, cups:{...EMPTY_CUPS,...(raw.cups??{})}, legacyRouteMigration: raw.player?.sundayLeague && raw.player?.schoolId ? 'pending' : undefined }
   }
   if (raw.schemaVersion < 4) {
-    return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION }
+    return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, cups:{...EMPTY_CUPS,...(raw.cups??{})}, legacyRouteMigration: raw.player?.sundayLeague && raw.player?.schoolId ? 'pending' : undefined }
   }
   if (raw.schemaVersion < 6) return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, cups: { ...EMPTY_CUPS, ...(raw.cups ?? {}) }, legacyRouteMigration: raw.player?.sundayLeague && raw.player?.schoolId ? 'pending' : undefined }
   if (raw.schemaVersion < 7) return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, cups:{...EMPTY_CUPS,...(raw.cups??{})}, legacyRouteMigration: raw.player?.sundayLeague && raw.player?.schoolId ? 'pending' : undefined }

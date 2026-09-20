@@ -25,7 +25,7 @@ import type { TrainingIntensity } from './energy'
 //      of restarting.
 //  v4: separates school football from the Sunday League fallback route.
 //  v5: complete representative pathway + National Schools Championship.
-export const SAVE_SCHEMA_VERSION = 6
+export const SAVE_SCHEMA_VERSION = 7
 
 export type SaveSlotId = 0 | 1 | 2
 
@@ -60,6 +60,8 @@ export interface SaveGame {
   cups: CupWorlds
   international: InternationalWorld | null
   pendingTraining: PendingTrainingSnapshot | null
+  /** Explicit choice required for legacy saves that used School+Sunday simultaneously. */
+  legacyRouteMigration?: 'pending' | 'school' | 'grassroots'
 }
 
 const slotKey = (slot: SaveSlotId) => `kickoff-star-save-${slot}`
@@ -83,7 +85,8 @@ function migrateSave(raw: SaveGame & { schemaVersion?: number }): SaveGame {
   if (raw.schemaVersion < 4) {
     return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION }
   }
-  if (raw.schemaVersion < 6) return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, cups: { ...EMPTY_CUPS, ...(raw.cups ?? {}) } }
+  if (raw.schemaVersion < 6) return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, cups: { ...EMPTY_CUPS, ...(raw.cups ?? {}) }, legacyRouteMigration: raw.player?.sundayLeague && raw.player?.schoolId ? 'pending' : undefined }
+  if (raw.schemaVersion < 7) return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, cups:{...EMPTY_CUPS,...(raw.cups??{})}, legacyRouteMigration: raw.player?.sundayLeague && raw.player?.schoolId ? 'pending' : undefined }
   return { ...raw, cups:{ ...EMPTY_CUPS, ...(raw.cups ?? {}) } }
 }
 

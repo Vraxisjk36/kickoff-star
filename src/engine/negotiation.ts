@@ -72,6 +72,8 @@ export interface Negotiation {
   patience: number
   /** Narrative beats so far, newest last. */
   log: string[]
+  /** V5 academy talks are a two-week interactive window. */
+  negotiationWeek?: 1 | 2
   /** Set when the deal dies, for the UI to explain why. */
   collapseReason?: string
   /** Whether the player is waiting on a decision this week. */
@@ -149,6 +151,7 @@ export function startNegotiation(player: Player, clubId: string, clubName: strin
           return { ...c, weeklyWage: Math.min(c.weeklyWage, SCHOLARSHIP_WAGE_CEILING) }
         })(),
     pushCount: 0,
+    negotiationWeek: 1,
     patience: 100,
     log: [
       kind === 'renewal'
@@ -274,12 +277,14 @@ export function resolveChoice(negotiation: Negotiation, choiceId: string, player
         n.log.push(`You kept your cards close. They left knowing they'll have to work for this.`)
       }
       n.stage = 'terms'
+      n.negotiationWeek = 1
       return { negotiation: n, beat: n.log[n.log.length - 1] }
     }
 
     case 'terms': {
       if (choiceId === 'accept') {
         n.stage = 'agreement'
+        n.negotiationWeek = 2
         n.log.push(`Your agent accepted the terms. ${n.clubName} are drawing up a scholarship.`)
         return { negotiation: n, beat: n.log[n.log.length - 1] }
       }
@@ -338,6 +343,7 @@ export function resolveChoice(negotiation: Negotiation, choiceId: string, player
         return { negotiation: n, beat: n.log[n.log.length - 1] }
       }
       n.stage = 'medical'
+      n.negotiationWeek = 2
       n.log.push(`You shook on it. The club booked you in for a medical.`)
       return { negotiation: n, beat: n.log[n.log.length - 1] }
     }
@@ -354,6 +360,8 @@ export function resolveChoice(negotiation: Negotiation, choiceId: string, player
           // Declaring it costs you terms but rarely the deal
           n.terms = { ...n.terms, weeklyWage: Math.round(n.terms.weeklyWage * 0.85), years: Math.max(1, n.terms.years - 1) }
           n.stage = 'signing'
+        n.negotiationWeek = 2
+          n.negotiationWeek = 2
           n.log.push(`The medical flagged the wear and tear you'd already told them about. They've reduced the offer, but the deal stands.`)
         } else {
           return die(`The medical found what you didn't mention. ${n.clubName} pulled out, and word travels.`)

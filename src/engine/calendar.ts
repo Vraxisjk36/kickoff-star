@@ -44,7 +44,9 @@ export const COMPETITION_SPECS: CompetitionRoundSpec[] = [
   { id: 'schoolLeague', rounds: 18 },
   { id: 'schoolCup', rounds: 8 },
   { id: 'nationalChampionship', rounds: 5 },
-  { id: 'sundayCup', rounds: 4 }, // pure knockout, field 16 -> 4 rounds — grassroots only
+  { id: 'sundayCup', rounds: 4 },
+  { id:'octoberLeague', rounds:5 },
+  { id:'youthFestival', rounds:3 }, // pure knockout, field 16 -> 4 rounds — grassroots only
   // Phase 21: Academy gets the same cup depth as grassroots, per the locked
   // product strategy ("same depth applied to academy competitions"). These
   // slots sit unused during the grassroots phase and vice versa for the
@@ -54,8 +56,8 @@ export const COMPETITION_SPECS: CompetitionRoundSpec[] = [
   { id: 'academyKnockoutCup', rounds: 4 }, // FA Youth Cup equivalent — pure knockout
 ]
 
-export const SCHOOL_SEASON_SCHEDULE: Record<string, number[]> = { schoolFriendlies:[1,2], schoolLeague:Array.from({length:18},(_,i)=>i+3), schoolCup:Array.from({length:8},(_,i)=>i+21), nationalChampionship:Array.from({length:5},(_,i)=>i+31), youthShowcase:[37] }
-export const SUNDAY_SEASON_SCHEDULE: Record<string, number[]> = { schoolLeague:Array.from({length:22},(_,i)=>i+1), sundayCup:[25,29,33,37], youthShowcase:[38] }
+export const SCHOOL_SEASON_SCHEDULE: Record<string, number[]> = { schoolFriendlies:[4,5], schoolLeague:Array.from({length:18},(_,i)=>i+6), schoolCup:[24,25,26,27,28,29,30,31], nationalChampionship:[32,33,34,35], octoberLeague:[36,37,38,39,40] }
+export const SUNDAY_SEASON_SCHEDULE: Record<string, number[]> = { schoolLeague:Array.from({length:22},(_,i)=>i+6), sundayCup:[12,18,24,30], octoberLeague:[36,37,38,39,40], youthFestival:[41,42,43] }
 export const ACADEMY_SEASON_SCHEDULE: Record<string, number[]> = { schoolLeague:Array.from({length:22},(_,i)=>i+1), academyLeagueCup:[24,27,30,33,36], academyKnockoutCup:[38,40,42,44] }
 export const SEASON_SCHEDULE = SCHOOL_SEASON_SCHEDULE
 
@@ -79,8 +81,8 @@ export function competitionForWeek(weekNumber: number, phase: CareerPhase = 'gra
 // as extra training instead (fixes the Phase 25 audit's "20 dead matchdays").
 export type CareerPhase = 'grassroots-trials' | 'grassroots-season' | 'academy'
 export type GrassrootsPath = 'school' | 'sunday'
-const SCHOOL_ACTIVE = new Set(['schoolLeague','schoolCup','schoolFriendlies','nationalChampionship','youthShowcase'])
-const SUNDAY_ACTIVE = new Set(['sundayLeague', 'sundayCup', 'youthShowcase'])
+const SCHOOL_ACTIVE = new Set(['schoolLeague','schoolCup','schoolDevelopment','schoolFriendlies','nationalChampionship','octoberLeague'])
+const SUNDAY_ACTIVE = new Set(['sundayLeague','sundayCup','octoberLeague','youthFestival'])
 const ACADEMY_ACTIVE = new Set(['sundayLeague', 'academyLeagueCup', 'academyKnockoutCup'])
 
 export function isCompetitionActive(competitionId: string, phase: CareerPhase, grassrootsPath: GrassrootsPath = 'school'): boolean {

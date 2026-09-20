@@ -1,0 +1,64 @@
+name: Deploy Rebuild Test
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-rebuild-test.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rebuild-test-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout V4-V5 rebuild branch
+        uses: actions/checkout@v4
+        with:
+          ref: v4-v5-rebuild
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Audit foundation
+        run: npm run audit:v4-v5
+
+      - name: Audit routes
+        run: npm run audit:v4-v5-routes
+
+      - name: Audit competition authority
+        run: npm run audit:v4-v5-competition
+
+      - name: Audit master rebuild
+        run: npm run audit:v4-v5-master
+
+      - name: Prepare test deployment
+        run: |
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
+          test -f dist/index.html
+
+      - name: Publish only /rebuild
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./dist
+          destination_dir: rebuild
+          keep_files: true
+          enable_jekyll: false

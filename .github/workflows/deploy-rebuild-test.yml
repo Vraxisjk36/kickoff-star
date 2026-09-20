@@ -1,4 +1,5 @@
 name: Deploy Rebuild Test
+# Actions enabled — deployment trigger
 
 on:
   workflow_dispatch: {}

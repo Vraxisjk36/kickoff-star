@@ -106,8 +106,8 @@ export function activeCompetitionForWeek(weekNumber: number, phase: CareerPhase,
 // duty never collides with the packed Saturday club calendar. Four qualifier
 // rounds spread through the season, then a three-round finals bracket
 // (QF/SF/F) in the run-in.
-export const INTERNATIONAL_QUALIFIER_WEEKS = [38,39,40,41]
-export const INTERNATIONAL_FINALS_WEEKS = [42,43,44]
+export const INTERNATIONAL_QUALIFIER_WEEKS = [8,16,24,32]
+export const INTERNATIONAL_FINALS_WEEKS = [37,40,43]
 export function internationalRoundForWeek(weekNumber: number): { stage: 'qualifiers' | 'finals'; round: number } | null {
   const q = INTERNATIONAL_QUALIFIER_WEEKS.indexOf(weekNumber)
   if (q !== -1) return { stage: 'qualifiers', round: q + 1 }

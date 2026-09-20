@@ -218,7 +218,9 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
 
       // A cup competition. If the player is eliminated (or the cup's done),
       // Saturday becomes extra training — never a dead tap.
-      const cupWorld = (cups as unknown as Record<string, import('../engine/cup').CupWorld | null>)[comp.competitionId]
+      const scheduledCompetitionId = comp.competitionId === 'schoolCup' && cups.schoolCup?.playerEliminated && cups.schoolDevelopment
+        ? 'schoolDevelopment' : comp.competitionId
+      const cupWorld = (cups as unknown as Record<string, import('../engine/cup').CupWorld | null>)[scheduledCompetitionId]
       const cupFixture = cupWorld ? playerCupFixture(cupWorld) : null
       if (!cupWorld || !cupFixture) { setMode({ kind: 'training' }); return }
       const isHome = cupFixture.homeTeamId === cupWorld.playerTeamId

@@ -1685,7 +1685,15 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const proInterest=(player.proInterest??[]).map(x=>({...x,interest:Math.min(100,x.interest+(rating>=7.2?6:rating>=6.7?2:-2))}))
     if(isInAcademy && player.academyClubName && !proInterest.some(x=>x.source==='parent-club')) proInterest.push({clubName:player.academyClubName.replace(/ Academy$/,''),clubId:`senior-${player.academyClubName}`,source:'parent-club',interest:Math.max(20,Math.round((rating-5)*18))})
     if(isInAcademy && rating>=7.5 && scoutingOut.watchers[0] && !proInterest.some(x=>x.clubId===scoutingOut.watchers[0].club.id)) proInterest.push({clubName:scoutingOut.watchers[0].club.name,clubId:`senior-${scoutingOut.watchers[0].club.id}`,source:'outside-club',interest:35})
-    const newOffer = scoutingOut.offers.find((offer) => !scoutingIn.offers.some((old) => old.id === offer.id))
+    if(isInAcademy){
+      const hot=proInterest.filter(x=>x.interest>=72)
+      for(const lead of hot){
+        if(!scoutingOut.offers.some(o=>o.club.id===lead.clubId)){
+          scoutingOut.offers.push({id:crypto.randomUUID(),weekOffered:player.totalWeeksElapsed??0,expiresInWeeks:3,kind:'professional',club:{id:lead.clubId,name:lead.clubName,short:lead.clubName.slice(0,3).toUpperCase(),ratings:{attack:8,midfield:8,defense:8},prestige:8,primaryColor:'#888',secondaryColor:'#fff',notablePlayers:[]}})
+        }
+      }
+    }
+        const newOffer = scoutingOut.offers.find((offer) => !scoutingIn.offers.some((old) => old.id === offer.id))
     if (newOffer) {
       matchStories.push({
         kind: 'invitation', eyebrow: newOffer.kind === 'academy' ? 'Academy invitation' : 'Professional opportunity',

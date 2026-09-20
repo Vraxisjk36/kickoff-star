@@ -8,6 +8,7 @@ import { nextUnresolvedEvent, markResolved, advanceWeek, alignMatchDays, activeC
 import { initCupById, batchSimCupStage, advanceCupStage, recordCupPlayerResult, playerCupFixture, syncCupTeamIdentities } from '../engine/cup'
 import { initInternationalWorld, formQualifiesForSelection, batchSimQualifyingRound, batchSimFinalsRound, advanceInternationalStage, recordNationResult, internationalTeamById, nationFixture, type InternationalWorld } from '../engine/international'
 import { getSchool } from '../engine/schools'
+import { worldSchool } from '../engine/youthWorldDatabase'
 import { getNation } from '../engine/nations'
 import { archetypeConfidenceSwingMultiplier, archetypeTrustGainMultiplier } from '../engine/archetypes'
 import { initialCast, driftRelationships, adjustBond, addPerson, relationshipEffects, resolveInteraction, interactedThisWeek, pruneCast, INTERACTIONS } from '../engine/relationships'
@@ -296,7 +297,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     if (player.pathway?.sundayStatus === 'squad-offer' && player.sundayLeague && !player.sundayContract) player = openSundayContractWindow(player, player.sundayLeague, save.calendar.currentWeek.seasonYear, true)
     let cups = save.cups ?? { ...EMPTY_CUPS }
     if (league && player.careerClock.phase !== 'academy' && player.grassrootsPath === 'school') {
-      const schoolName = (player.schoolId ? getSchool(player.schoolId)?.name : null) ?? 'Your School'
+      const schoolName = (player.schoolId ? (worldSchool(player.schoolId,player.nationality??'eng')?.name ?? getSchool(player.schoolId)?.name) : null) ?? 'Your School'
       league = migrateToSchoolLeagueWorld(league, schoolName)
       const teams = Object.values(league.divisions).flatMap((division) => division.teams)
       const playerTeam = teams.find((team) => team.id === league!.playerTeamId)

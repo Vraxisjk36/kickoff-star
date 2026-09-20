@@ -1680,6 +1680,11 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       scoutingOut = { ...scoutingOut, watchers: [] }
     }
     if (isInAcademy) scoutingOut = checkForOffers(scoutingOut, player.totalWeeksElapsed ?? 0, true, player.careerClock.ageYears)
+    // V5 senior pathway: academy performances can attract the parent senior club
+    // or an outside professional club. Scouting still owns the actual offer gate.
+    const proInterest=(player.proInterest??[]).map(x=>({...x,interest:Math.min(100,x.interest+(rating>=7.2?6:rating>=6.7?2:-2))}))
+    if(isInAcademy && player.academyClubName && !proInterest.some(x=>x.source==='parent-club')) proInterest.push({clubName:player.academyClubName.replace(/ Academy$/,''),clubId:`senior-${player.academyClubName}`,source:'parent-club',interest:Math.max(20,Math.round((rating-5)*18))})
+    if(isInAcademy && rating>=7.5 && scoutingOut.watchers[0] && !proInterest.some(x=>x.clubId===scoutingOut.watchers[0].club.id)) proInterest.push({clubName:scoutingOut.watchers[0].club.name,clubId:`senior-${scoutingOut.watchers[0].club.id}`,source:'outside-club',interest:35})
     const newOffer = scoutingOut.offers.find((offer) => !scoutingIn.offers.some((old) => old.id === offer.id))
     if (newOffer) {
       matchStories.push({
@@ -1702,6 +1707,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
         ? { opponentName, playerScore: playerGoalsScored, opponentScore: opponentGoalsScored, playerGoals: goals, playerAssists: assists, playerRating: rating }
         : player.lastMatchResult,
       matchRatings: [...(player.matchRatings ?? []), rating].slice(-10),
+      proInterest,
       seasonGoals: (player.seasonGoals ?? 0) + goals,
       seasonAssists: (player.seasonAssists ?? 0) + assists,
       // Phase 16: career totals, which the rolling season/window fields can't provide.

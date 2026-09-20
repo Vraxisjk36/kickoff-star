@@ -403,6 +403,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const squad = player.squad ?? generateSquad(2)
     const world = isSchoolPath ? initSchoolLeagueWorld(teamName,localSchoolChoices(player.nationality??'eng').map(s=>s.name)) : initLeagueWorld(teamName)
     const playerTeam = world.divisions[world.playerDivision].teams.find((t) => t.id === world.playerTeamId)!
+    const worldSquads={...(player.worldSquads??{})};for(const division of Object.values(world.divisions)){for(const team of division.teams){if(!worldSquads[team.id])worldSquads[team.id]=generateSquad(team.prestige)}}
     // P63 — real cross-division cup draws: every team across every
     // division in the league, not just fresh disconnected fake teams.
     const allLeagueTeams = Object.values(world.divisions).flatMap((d) => d.teams)

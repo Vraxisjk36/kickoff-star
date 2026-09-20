@@ -57,7 +57,7 @@ export const COMPETITION_SPECS: CompetitionRoundSpec[] = [
 ]
 
 export const SCHOOL_SEASON_SCHEDULE: Record<string, number[]> = { schoolFriendlies:[4,5], schoolLeague:Array.from({length:18},(_,i)=>i+6), schoolCup:[24,25,26,27,28,29,30,31], nationalChampionship:[32,33,34,35], octoberLeague:[36,37,38,39,40] }
-export const SUNDAY_SEASON_SCHEDULE: Record<string, number[]> = { schoolLeague:Array.from({length:22},(_,i)=>i+6), sundayCup:[12,18,24,30], octoberLeague:[36,37,38,39,40], youthFestival:[41,42,43] }
+export const SUNDAY_SEASON_SCHEDULE: Record<string, number[]> = { schoolLeague:Array.from({length:22},(_,i)=>i+6), sundayCup:[28,31,34,35], octoberLeague:[36,37,38,39,40], youthFestival:[41,42,43] }
 export const ACADEMY_SEASON_SCHEDULE: Record<string, number[]> = { schoolLeague:Array.from({length:22},(_,i)=>i+1), academyLeagueCup:[24,27,30,33,36], academyKnockoutCup:[38,40,42,44] }
 export const SEASON_SCHEDULE = SCHOOL_SEASON_SCHEDULE
 

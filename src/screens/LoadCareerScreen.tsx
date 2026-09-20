@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { listSaves, type SaveGame, type SaveSlotId } from '../engine/save'
+import { listSaves, writeSave, type SaveGame, type SaveSlotId } from '../engine/save'
 
 interface Props {
   onBack: () => void
@@ -8,6 +8,11 @@ interface Props {
 
 export default function LoadCareerScreen({ onBack, onLoad }: Props) {
   const [saves, setSaves] = useState<(SaveGame | undefined)[] | null>(null)
+  const migrate=async(save:SaveGame,route:'school'|'grassroots')=>{
+    const player={...save.player,youthRoute:route,grassrootsPath:route==='school'?'school':'sunday' as const,...(route==='school'?{sundayLeague:undefined,sundaySquad:undefined,sundayContract:undefined}:{schoolId:null})}
+    const next={...save,player,league:route==='grassroots'?(save.player.sundayLeague??save.league):save.league,legacyRouteMigration:route}
+    await writeSave(next);setSaves(await listSaves());onLoad(save.slotId)
+  }
 
   useEffect(() => { listSaves().then(setSaves) }, [])
 
@@ -29,6 +34,7 @@ export default function LoadCareerScreen({ onBack, onLoad }: Props) {
                 return <div key={slot} className="rounded-2xl border border-ks-border/60 p-5 opacity-50"><div className="text-xs text-ks-muted">SLOT {slot + 1}</div><div className="mt-1">Empty slot</div></div>
               }
               const p = save.player
+              if(save.legacyRouteMigration==='pending') return <div key={slot} className="rounded-2xl border border-ks-gold/50 bg-ks-gold/5 p-5"><div className="text-xs text-ks-gold tracking-widest">OLD DUAL-ROUTE SAVE</div><div className="font-black text-lg mt-1">{p.name}</div><p className="text-xs text-ks-muted mt-2">V5 uses one youth route. Choose which career history continues. Your player development and career totals stay intact.</p><div className="grid grid-cols-2 gap-2 mt-4"><button onClick={()=>migrate(save,'school')} className="rounded-xl bg-ks-gold text-ks-black py-3 font-bold">Keep School</button><button onClick={()=>migrate(save,'grassroots')} className="rounded-xl border border-ks-gold text-ks-gold py-3 font-bold">Keep Grassroots</button></div></div>
               return (
                 <button key={slot} type="button" onClick={() => onLoad(slot as SaveSlotId)} className="w-full text-left rounded-2xl border border-ks-border bg-white/[0.025] p-5 active:scale-[0.99]">
                   <div className="flex items-start justify-between gap-3">

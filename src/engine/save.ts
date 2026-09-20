@@ -25,7 +25,7 @@ import type { TrainingIntensity } from './energy'
 //      of restarting.
 //  v4: separates school football from the Sunday League fallback route.
 //  v5: complete representative pathway + National Schools Championship.
-export const SAVE_SCHEMA_VERSION = 5
+export const SAVE_SCHEMA_VERSION = 6
 
 export type SaveSlotId = 0 | 1 | 2
 
@@ -33,11 +33,14 @@ export interface CupWorlds {
   schoolCup: CupWorld | null
   nationalChampionship: CupWorld | null
   sundayCup: CupWorld | null
+  schoolDevelopment: CupWorld | null
+  octoberLeague: CupWorld | null
+  youthFestival: CupWorld | null
   academyLeagueCup: CupWorld | null
   academyKnockoutCup: CupWorld | null
 }
 
-export const EMPTY_CUPS: CupWorlds = { schoolCup: null, nationalChampionship: null, sundayCup: null, academyLeagueCup: null, academyKnockoutCup: null }
+export const EMPTY_CUPS: CupWorlds = { schoolCup:null, nationalChampionship:null, sundayCup:null, schoolDevelopment:null, octoberLeague:null, youthFestival:null, academyLeagueCup:null, academyKnockoutCup:null }
 
 export interface PendingTrainingSnapshot {
   session: TrainingSession
@@ -80,8 +83,8 @@ function migrateSave(raw: SaveGame & { schemaVersion?: number }): SaveGame {
   if (raw.schemaVersion < 4) {
     return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION }
   }
-  if (raw.schemaVersion < 5) return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, cups: { ...EMPTY_CUPS, ...(raw.cups ?? {}) } }
-  return raw
+  if (raw.schemaVersion < 6) return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, cups: { ...EMPTY_CUPS, ...(raw.cups ?? {}) } }
+  return { ...raw, cups:{ ...EMPTY_CUPS, ...(raw.cups ?? {}) } }
 }
 
 export async function writeSave(save: SaveGame): Promise<void> {

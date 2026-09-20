@@ -1372,7 +1372,10 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     let finalPlayer = result.reachedAgeCap
       ? { ...arcPlayer, careerEnded: true }
       : arcPlayer
-    if(result.seasonEnded&&result.newAge>=18&&!isInAcademy&&finalPlayer.grassrootsPath==='school'&&!finalPlayer.careerEnded){finalPlayer={...finalPlayer,grassrootsPath:'sunday',squadRole:'bench',pathway:{...(finalPlayer.pathway??initYouthPathway(finalPlayer)),schoolSquad:'released',sundayInterest:100,sundayStatus:'registered'}};finalPlayer=withStory(finalPlayer,result.calendar,{kind:'milestone',eyebrow:'Age 18 · school leaver',title:'SCHOOL FOOTBALL COMPLETE',body:'Your school career is over, but your football career is not. Sunday football, showcases and academy opportunities remain open.',detail:'There are no dead careers: keep performing and another route can find you.',ceremony:'callup'});updatedLeague=updatedSundayLeague??null;finalPlayer={...finalPlayer,squad:finalPlayer.sundaySquad??finalPlayer.squad,sundayLeague:undefined,sundaySquad:undefined};updatedSundayLeague=undefined;updatedCups={...EMPTY_CUPS}}
+    if(result.seasonEnded && result.newAge>=18 && !isInAcademy && !finalPlayer.careerEnded){
+      finalPlayer={...finalPlayer,careerEnded:true}
+      finalPlayer=withStory(finalPlayer,result.calendar,{kind:'milestone',eyebrow:'Graduation · career verdict',title:'YOUTH CAREER COMPLETE',body:'Your school-age football journey has ended without an academy place.',detail:'Your complete career record, competitions, awards and development remain available on the career summary.',ceremony:'selection'})
+    }
     if (result.seasonEnded && finalPlayer.careerClock.phase !== 'academy' && !finalPlayer.careerEnded) {
       const contractWorld = finalPlayer.grassrootsPath === 'school' ? finalPlayer.sundayLeague : updatedLeague
       if (contractWorld) {

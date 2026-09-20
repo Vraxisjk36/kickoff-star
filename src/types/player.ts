@@ -175,6 +175,8 @@ export interface Player {
   // code path before a squad exists yet, e.g. mid-trials) keep working —
   // match.ts falls back to generic "a teammate" commentary when absent.
   squad?: import('../engine/squad').SquadPlayer[]
+  /** Persistent NPC squads keyed by team id for clubs/schools encountered in the world. */
+  worldSquads?: Record<string, import('../engine/squad').SquadPlayer[]>
   // Phase 25: weekly newspaper archive, most recent last. Capped in the store
   // so the save doesn't grow unbounded over a multi-season career.
   gazetteIssues?: import('../engine/gazette').GazetteIssue[]

@@ -402,6 +402,9 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       schoolCup: isSchoolPath ? (cups.schoolCup ?? initCupById('schoolCup', playerTeam, allLeagueTeams)) : null,
       nationalChampionship: cups.nationalChampionship ?? null,
       sundayCup: !isSchoolPath ? (cups.sundayCup ?? initCupById('sundayCup', playerTeam, allLeagueTeams)) : null,
+      schoolDevelopment: cups.schoolDevelopment ?? null,
+      octoberLeague: cups.octoberLeague ?? initCupById('octoberLeague', playerTeam, allLeagueTeams),
+      youthFestival: !isSchoolPath ? (cups.youthFestival ?? initCupById('youthFestival', playerTeam, allLeagueTeams)) : null,
     }
     const readyPlayer = !isSchoolPath && calendar ? openSundayContractWindow({ ...player, squad }, world, calendar.currentWeek.seasonYear, true) : { ...player, squad }
     setState({ league: world, cups: newCups, player: readyPlayer })
@@ -1069,6 +1072,9 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
         schoolCup: !isInAcademy && updatedLeague?.kind === 'school' && grassrootsTeam ? initCupById('schoolCup', grassrootsTeam, allLeagueTeams) : null,
         nationalChampionship: null,
         sundayCup: !isInAcademy && updatedLeague?.kind === 'sunday' && grassrootsTeam ? initCupById('sundayCup', grassrootsTeam, allLeagueTeams) : null,
+        schoolDevelopment: null,
+        octoberLeague: !isInAcademy && grassrootsTeam ? initCupById('octoberLeague', grassrootsTeam, allLeagueTeams) : null,
+        youthFestival: !isInAcademy && updatedLeague?.kind === 'sunday' && grassrootsTeam ? initCupById('youthFestival', grassrootsTeam, allLeagueTeams) : null,
         academyLeagueCup: isInAcademy && academyTeam ? initCupById('academyLeagueCup', academyTeam, allAcademyTeams) : null,
         academyKnockoutCup: isInAcademy && academyTeam ? initCupById('academyKnockoutCup', academyTeam, allAcademyTeams) : null,
       }
@@ -1910,6 +1916,9 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       schoolCup: null,
       nationalChampionship: null,
       sundayCup: null,
+      schoolDevelopment:null,
+      octoberLeague:null,
+      youthFestival:null,
       academyLeagueCup: initCupById('academyLeagueCup', academyTeam, allAcademyTeams),
       academyKnockoutCup: initCupById('academyKnockoutCup', academyTeam, allAcademyTeams),
     }

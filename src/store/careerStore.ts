@@ -1929,6 +1929,8 @@ updated=withStory(updated,calendar,{kind:passed?'selection':'elimination',eyebro
     const allAcademyTeams = Object.values(academyWorld.divisions).flatMap((d) => d.teams)
     // Grassroots cups end with the grassroots career; academy cups spin up in
     // their place (same depth, per the locked product strategy).
+    const academyWorldSquads={...(updatedPlayer.worldSquads??{})};for(const division of Object.values(academyWorld.divisions)){for(const team of division.teams){if(!academyWorldSquads[team.id])academyWorldSquads[team.id]=generateSquad(team.prestige)}}
+    updatedPlayer={...updatedPlayer,worldSquads:academyWorldSquads}
     const academyCups: CupWorlds = {
       schoolCup: null,
       nationalChampionship: null,

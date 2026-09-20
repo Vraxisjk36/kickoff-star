@@ -38,5 +38,8 @@ const saveSrc=fs.readFileSync('src/engine/save.ts','utf8');const loadSrc=fs.read
 ok(SAVE_SCHEMA_VERSION>=6&&'octoberLeague'in EMPTY_CUPS&&'youthFestival'in EMPTY_CUPS,'new competitions persist through V4 save schema')
 const md=fs.readFileSync('src/screens/MatchDayScreen.tsx','utf8');const venues=fs.readFileSync('src/engine/venues.ts','utf8');ok(md.includes('opposition squad')&&venues.includes('venueForTeam'),'prematch exposes persistent squad and ground')
 const calendarSrc=fs.readFileSync('src/engine/calendar.ts','utf8');ok(calendarSrc.includes('academyChampionsCup')&&fs.readFileSync('src/engine/cup.ts','utf8').includes('Continental Academy Champions Cup'),'academy has domestic cups plus continental competition')
+ok(calendarSrc.includes('INTERNATIONAL_QUALIFIER_WEEKS = [8,16,24,32]')&&calendarSrc.includes('INTERNATIONAL_FINALS_WEEKS = [37,40,43]'),'international campaign uses season-long qualifiers and QF/SF/F windows')
+ok(store.includes("source:'parent-club'")&&store.includes("source:'outside-club'")&&store.includes("kind:'professional'"),'academy can earn parent-club or outside senior professional offers')
+const proScreen=fs.readFileSync('src/screens/TurnedPro.tsx','utf8');ok(proScreen.includes("youth-career story ends here")&&proScreen.includes("player.career?.appearances"),'professional contract ends game with career record')
 const selection=fs.readFileSync('src/engine/selection.ts','utf8');ok(selection.includes('energy>=30')&&selection.includes('energy>=50'),'energy gates remain <30 out / <50 cannot start')
 console.log('\nV4→V5 master rebuild audit:',n,'checks passed')

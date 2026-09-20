@@ -38,9 +38,10 @@ export interface CupWorlds {
   youthFestival: CupWorld | null
   academyLeagueCup: CupWorld | null
   academyKnockoutCup: CupWorld | null
+  academyChampionsCup: CupWorld | null
 }
 
-export const EMPTY_CUPS: CupWorlds = { schoolCup:null, nationalChampionship:null, sundayCup:null, schoolDevelopment:null, octoberLeague:null, youthFestival:null, academyLeagueCup:null, academyKnockoutCup:null }
+export const EMPTY_CUPS: CupWorlds = { schoolCup:null, nationalChampionship:null, sundayCup:null, schoolDevelopment:null, octoberLeague:null, youthFestival:null, academyLeagueCup:null, academyKnockoutCup:null, academyChampionsCup:null }
 
 export interface PendingTrainingSnapshot {
   session: TrainingSession

@@ -753,7 +753,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     if (isLive(player.negotiation)) return
     const offer = (player.contractOffers ?? []).find((o) => o.id === offerId)
     if (!offer || (offer.kind !== 'academy' && offer.kind !== 'professional')) return
-    if (offer.kind === 'academy' && (!academyTrialAvailable(player, offerId, getState().calendar) || player.pathway?.academyTrialStatus !== 'passed' || player.pathway.academyTrialClubId !== offer.clubId)) return
+    if (offer.kind === 'academy' && (player.pathway?.academyTrialStatus !== 'passed' || !academyEntryOpen(player,getState().calendar))) return
     const negotiation = startNegotiation(player, offer.clubId, offer.clubName, offer.prestige, offer.kind)
     setState({ player: { ...player, negotiation }, negotiationBeat: negotiation.log[0] })
     void getState().saveCurrent()
@@ -762,7 +762,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   makeNegotiationChoice: (choiceId) => {
     const { player } = getState()
     if (!player?.negotiation || !isLive(player.negotiation)) return
-    if (player.negotiation.kind === 'academy' && (!academyEntryOpen(player, getState().calendar) || player.pathway?.academyTrialStatus !== 'passed' || player.pathway.academyTrialClubId !== player.negotiation.clubId)) return
+    if (player.negotiation.kind === 'academy' && (!academyEntryOpen(player, getState().calendar) || player.pathway?.academyTrialStatus !== 'passed')) return
     const outcome = resolveChoice(player.negotiation, choiceId, player)
     const next: Player = { ...player, negotiation: outcome.negotiation }
 
@@ -1897,7 +1897,7 @@ updated=withStory(updated,calendar,{kind:passed?'selection':'elimination',eyebro
 
   completeAcademyMove: (clubName, prestige) => {
     const { player, calendar } = getState()
-    if (!player || !academyEntryOpen(player, calendar) || player.pathway?.academyTrialStatus !== 'passed' || player.negotiation?.kind !== 'academy' || player.negotiation.stage !== 'complete' || player.negotiation.clubName !== clubName || player.pathway.academyTrialClubId !== player.negotiation.clubId) return
+    if (!player || !academyEntryOpen(player, calendar) || player.pathway?.academyTrialStatus !== 'passed' || player.negotiation?.kind !== 'academy' || player.negotiation.stage !== 'complete' || player.negotiation.clubName !== clubName || !(player.contractOffers??[]).some(o=>o.kind==='academy'&&o.clubId===player.negotiation!.clubId)) return
     // Academy offer accepted: Grassroots → Academy transition. Reset scouting state
     // (a fresh academy career starts its own reputation/watchers) and initialize the
     // academy league world, discarding the Grassroots one.

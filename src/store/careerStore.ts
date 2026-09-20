@@ -289,10 +289,10 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   loadFromSlot: async (slot) => {
     const save = await readSave(slot)
     if (!save) return
-    let player = ensureSundayClub(repairSundayInvitation(migrateAcademyRecruitment(migratePlayer(save.player), save.calendar)), save.calendar.currentWeek.weekNumber)
+    let player = migrateAcademyRecruitment(migratePlayer(save.player), save.calendar)
     const loadedCalendar = alignMatchDays(save.calendar, player.careerClock.phase, player.grassrootsPath ?? 'school', player.pathway?.sundayStatus === 'registered')
     let league = save.league ?? null
-    player = migrateSundayContracts(player, player.grassrootsPath === 'school' ? player.sundayLeague : league, save.calendar.currentWeek.seasonYear)
+    player = migrateSundayContracts(player, player.youthRoute === 'grassroots' ? league : null, save.calendar.currentWeek.seasonYear)
     if (player.pathway?.sundayStatus === 'squad-offer' && player.sundayLeague && !player.sundayContract) player = openSundayContractWindow(player, player.sundayLeague, save.calendar.currentWeek.seasonYear, true)
     let cups = save.cups ?? { ...EMPTY_CUPS }
     if (league && player.careerClock.phase !== 'academy' && player.grassrootsPath === 'school') {
@@ -1778,12 +1778,6 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       ],
     }
     if(newOffer?.kind==='academy')updatedPlayer={...updatedPlayer,pathway:{...(updatedPlayer.pathway??initYouthPathway(updatedPlayer)),academyTrialStatus:'invited',academyTrialClubId:newOffer.club.id}}
-    if (!isInAcademy && player.grassrootsPath === 'school' && ['schoolLeague', 'schoolReserveLeague', 'schoolCup'].includes(competitionId)) {
-      const previousStatus = updatedPlayer.pathway?.sundayStatus
-      updatedPlayer = ensureSundayClub(updateSundayRecruitment(updatedPlayer, rating), calendar.currentWeek.weekNumber)
-      if (updatedPlayer.pathway?.sundayStatus === 'squad-offer' && updatedPlayer.sundayLeague) updatedPlayer = openSundayContractWindow(updatedPlayer, updatedPlayer.sundayLeague, calendar.currentWeek.seasonYear, true)
-      if (updatedPlayer.pathway?.sundayStatus === 'training-invite' && previousStatus !== 'training-invite' && previousStatus !== 'squad-offer') matchStories.push({ kind: 'invitation', eyebrow: 'Community football', title: 'SUNDAY CLUB INVITE', body: `${sundayClub(updatedPlayer.sundayLeague)?.name ?? 'A local club'} have followed your school performances and invited you to train.`, detail: 'Keep performing to earn a squad offer. This is community football; academy scouting starts at 16.' })
-    }
     updatedPlayer = reviewAcademyOpportunities(updatedPlayer, calendar)
     for (const story of matchStories) updatedPlayer = withStory(updatedPlayer, calendar, story)
     const event = nextUnresolvedEvent(calendar)

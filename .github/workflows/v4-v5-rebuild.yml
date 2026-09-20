@@ -1,0 +1,21 @@
+name: V4-first V5 Rebuild Validation
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [v4-v5-rebuild]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run audit:v4-v5
+      - run: npm run audit:v4-v5-routes
+      - run: npm run audit:v4-v5-competition
+      - run: npm run audit:v4-v5-master

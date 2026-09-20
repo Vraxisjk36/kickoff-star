@@ -338,6 +338,7 @@ export const CUP_CONFIGS: Record<string, Omit<CupConfig, 'competitionId' | 'labe
   youthFestival: { label: 'Three-Day Youth Festival', groupSize: 4, fieldSize: 4, prestigeRange: [3, 7], qualifiersPerGroup: 1 },
   academyLeagueCup: { label: 'U18 Premier Cup', groupSize: 4, fieldSize: 16, prestigeRange: [5, 8] },
   academyKnockoutCup: { label: 'Youth Cup', groupSize: 0, fieldSize: 16, prestigeRange: [5, 8] },
+  academyChampionsCup: { label: 'Continental Academy Champions Cup', groupSize: 4, fieldSize: 16, prestigeRange: [7, 10], qualifiersPerGroup: 2 },
 }
 
 export function initCupById(competitionId: string, playerTeam: Team, realTeamPool?: Team[]): CupWorld {

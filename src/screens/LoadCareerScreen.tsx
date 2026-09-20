@@ -10,7 +10,7 @@ export default function LoadCareerScreen({ onBack, onLoad }: Props) {
   const [saves, setSaves] = useState<(SaveGame | undefined)[] | null>(null)
   const migrate=async(save:SaveGame,route:'school'|'grassroots')=>{
     const player={...save.player,youthRoute:route,grassrootsPath:route==='school'?'school':'sunday' as const,...(route==='school'?{sundayLeague:undefined,sundaySquad:undefined,sundayContract:undefined}:{schoolId:null})}
-    const next={...save,player,league:route==='grassroots'?(save.player.sundayLeague??save.league):save.league,legacyRouteMigration:route}
+    const next={...save,player,league:route==='grassroots'?(save.player.sundayLeague??save.league):save.league,legacyRouteMigration:route,cups:{...save.cups,...(route==='school'?{sundayCup:null,youthFestival:null}:{schoolCup:null,schoolDevelopment:null,nationalChampionship:null})}}
     await writeSave(next);setSaves(await listSaves());onLoad(save.slotId)
   }
 

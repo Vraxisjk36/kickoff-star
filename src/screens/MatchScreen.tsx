@@ -78,14 +78,15 @@ interface MatchScreenProps {
   playerIsHome: boolean
   autoResolve: boolean
   onToggleAutoResolve: () => void
+  matchMinutes?: number
   onComplete: (result: { rating: number; goals: number; assists: number; won: boolean; drew: boolean; finalMatchStamina: number; injury: { severity: string; weeksOut: number; description: string } | null; wasSubbed: boolean; redCarded: boolean; playerScore: number; opponentScore: number; motm?: { playerWon: boolean; winnerName: string; winnerRating: number; winnerPosition: string }; squad?: import('../engine/squad').SquadPlayer[]; matchStats: { tackle: number; interception: number; header: number; keyPass: number; save: number }; playerStats: PlayerMatchStats; ratingBreakdown?: RatingBreakdown; minutesPlayed: number; yellowCards: number }) => void
 }
 
 const SPEEDS = [1, 2, 3] as const
 const BASE_TICK_MS = 450
 
-export default function MatchScreen({ player, playerTeam, opponent, playerIsHome, autoResolve, onToggleAutoResolve, onComplete }: MatchScreenProps) {
-  const [state, setState] = useState<MatchState>(() => initMatch(player, playerTeam, opponent, playerIsHome, player.squad))
+export default function MatchScreen({ player, playerTeam, opponent, playerIsHome, autoResolve, onToggleAutoResolve, onComplete, matchMinutes = 90 }: MatchScreenProps) {
+  const [state, setState] = useState<MatchState>(() => initMatch(player, playerTeam, opponent, playerIsHome, player.squad, matchMinutes))
   const [moment, setMoment] = useState<KeyMoment | null>(null)
   const [bundle, setBundle] = useState<MatchDecisionBundle | null>(null)
   const [revealed, setRevealed] = useState<{ text: string; success: boolean; grade: ExecutionGrade | null; action?: PitchAction } | null>(null)
@@ -297,7 +298,7 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
 
   const skipAhead = () => setDisplayMinute(state.minute)
 
-  const clockLabel = displayMinute > 90 ? `90+${displayMinute - 90}'` : `${displayMinute}'`
+  const clockLabel = displayMinute > matchMinutes ? `${matchMinutes}+${displayMinute - matchMinutes}'` : `${displayMinute}'`
 
   return (
     <div className="relative h-[100dvh] w-full bg-ks-black flex flex-col overflow-hidden">

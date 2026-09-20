@@ -11,8 +11,13 @@ export default function TurnedPro({ player, onMenu }: { player: Player; onMenu: 
           You've signed for <span className="text-ks-gold font-display tracking-wide">{player.turnedPro?.clubName}</span>.
         </p>
         <p className="text-ks-muted text-sm leading-relaxed mb-10 px-2">
-          At age {player.careerClock.ageYears}, the dream that started on a grassroots pitch is real. This is where your story as a footballer truly begins.
+          At age {player.careerClock.ageYears}, the dream that started on a grassroots pitch is real. Kickoff Star's youth-career story ends here: you earned the professional contract.
         </p>
+        <div className="grid grid-cols-3 gap-2 mb-8">
+          <div className="rounded-xl border border-ks-border p-3"><b className="text-ks-gold">{player.career?.appearances??0}</b><div className="text-[9px] text-ks-muted uppercase">apps</div></div>
+          <div className="rounded-xl border border-ks-border p-3"><b className="text-ks-gold">{player.career?.goals??0}</b><div className="text-[9px] text-ks-muted uppercase">goals</div></div>
+          <div className="rounded-xl border border-ks-border p-3"><b className="text-ks-gold">{player.career?.assists??0}</b><div className="text-[9px] text-ks-muted uppercase">assists</div></div>
+        </div>
         <button onClick={onMenu} className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-3.5 text-sm shadow-[0_0_25px_rgba(212,175,55,0.3)]">
           back to menu
         </button>

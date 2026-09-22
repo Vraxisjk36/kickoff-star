@@ -117,6 +117,7 @@ interface CareerStore {
   sendMoneyHome: (amount: number) => { ok: boolean; bondGain?: number }
   /** P32: apply the outcome of a street / small-sided game. */
   applyStreetGameResult: (result: { attributeGains: Record<string, number>; confidence: number; energyCost: number; injury: { severity: string; weeksOut: number; description: string } | null }) => void
+  setYouthRoute: (route: 'school' | 'grassroots', club?: { id: string; name: string }) => void
   setSchool: (schoolId: string) => void
   completeTrials: (role: SquadRole, trialPerformance: number) => void
   /** competitionId routes the result: 'sundayLeague' updates the league table; cup ids update their bracket; 'international' the nation's campaign; 'schoolFriendlies' nothing. shootoutWonByPlayer is only set for drawn knockout ties. */
@@ -1466,10 +1467,27 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     void getState().saveCurrent()
   },
 
+  setYouthRoute: (route, club) => {
+    const { player } = getState()
+    if (!player) return
+    setState({ player: {
+      ...player,
+      youthRoute: route,
+      grassrootsPath: route === 'school' ? 'school' : 'sunday',
+      schoolId: route === 'school' ? player.schoolId : null,
+      grassrootsClubId: route === 'grassroots' ? club?.id ?? null : null,
+      grassrootsClubName: route === 'grassroots' ? club?.name ?? null : null,
+      sundayLeague: undefined,
+      sundaySquad: undefined,
+      sundayContract: undefined,
+    } })
+    void getState().saveCurrent()
+  },
+
   setSchool: (schoolId) => {
     const { player } = getState()
     if (!player) return
-    setState({ player: { ...player, schoolId } })
+    setState({ player: { ...player, youthRoute: 'school', grassrootsPath: 'school', schoolId, grassrootsClubId: null, grassrootsClubName: null } })
     void getState().saveCurrent()
   },
 
@@ -1487,8 +1505,8 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       ...player,
       attributes: { ...player.attributes, values } as Player['attributes'],
       squadRole: role,
-      grassrootsPath: role === 'released' ? 'sunday' : 'school',
-      pathway: { ...(player.pathway??initYouthPathway(player)), schoolSquad:role==='released'?'released':role==='reserves'?(performance<.5?'development':'reserve'):'first', sundayInterest:role==='released'?100:0, sundayStatus:role==='released'?'registered':'undiscovered' },
+      grassrootsPath: player.youthRoute === 'grassroots' ? 'sunday' : 'school',
+      pathway: player.youthRoute === 'grassroots' ? { ...(player.pathway??initYouthPathway(player)), sundayInterest:100, sundayStatus:role==='released'?'undiscovered':'registered' } : { ...(player.pathway??initYouthPathway(player)), schoolSquad:role==='released'?'released':role==='reserves'?(performance<.5?'development':'reserve'):'first', sundayInterest:0, sundayStatus:'undiscovered' },
       squadRoleSetWeek: player.totalWeeksElapsed ?? 0,
       trialWeekCompleted: 3,
       careerClock: { ...player.careerClock, phase: 'grassroots-season' },

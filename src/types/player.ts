@@ -33,7 +33,11 @@ export interface Player {
   careerClock: CareerClock
 
   // Grassroots trials fields (Football Engine Spec Section: Grassroots opening)
+  /** The one youth route chosen at onboarding. School and grassroots are mutually exclusive. */
+  youthRoute?: 'school' | 'grassroots'
   schoolId: string | null
+  grassrootsClubId?: string | null
+  grassrootsClubName?: string | null
   trialWeekCompleted: 0 | 1 | 2 | 3
   /** The active grassroots route. Selected players represent their school;
       Sunday football is the fallback route after release/elimination. */

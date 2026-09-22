@@ -4,6 +4,8 @@ import MainMenu from './screens/MainMenu'
 import PlayerCreation from './screens/PlayerCreation'
 import StoryIntro from './screens/StoryIntro'
 import SchoolSelection from './screens/SchoolSelection'
+import RouteSelection, { type YouthRouteChoice } from './screens/RouteSelection'
+import GrassrootsSelection, { type GrassrootsClubChoice } from './screens/GrassrootsSelection'
 import TrialsScreen from './screens/TrialsScreen'
 import Career from './screens/Career'
 import SettingsScreen from './screens/SettingsScreen'
@@ -16,15 +18,16 @@ import type { School } from './engine/schools'
 import type { SquadRole } from './engine/trials'
 import { installMusicLifecycle, pauseMusic } from './engine/music'
 
-type Screen = 'splash' | 'menu' | 'create' | 'story' | 'school' | 'trials' | 'career' | 'settings' | 'credits' | 'help' | 'load'
+type Screen = 'splash' | 'menu' | 'create' | 'story' | 'route' | 'school' | 'grassroots' | 'trials' | 'career' | 'settings' | 'credits' | 'help' | 'load'
 
 // Native-shell validation touch: navigation contract is intentionally centralized here.
-const SCREEN_VALUES: Screen[] = ['splash', 'menu', 'create', 'story', 'school', 'trials', 'career', 'settings', 'credits', 'help', 'load']
+const SCREEN_VALUES: Screen[] = ['splash', 'menu', 'create', 'story', 'route', 'school', 'grassroots', 'trials', 'career', 'settings', 'credits', 'help', 'load']
 const isScreen = (value: unknown): value is Screen => typeof value === 'string' && SCREEN_VALUES.includes(value as Screen)
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('splash')
   const [chosenSchool, setChosenSchool] = useState<School | null>(null)
+  const setYouthRoute = useCareerStore((s) => s.setYouthRoute)
   const screenRef = useRef<Screen>(screen)
   screenRef.current = screen
   const player = useCareerStore((s) => s.player)
@@ -84,7 +87,7 @@ export default function App() {
     }
     if (p.trialWeekCompleted < 3) {
       setChosenSchool(null)
-      ;(push ? navigate : replace)('school')
+      ;(push ? navigate : replace)(p.youthRoute === 'grassroots' ? 'grassroots' : p.youthRoute === 'school' ? 'school' : 'route')
     } else {
       ;(push ? navigate : replace)('career')
     }
@@ -97,6 +100,18 @@ export default function App() {
     await enterLoadedCareer(latest.slotId)
   }
 
+  const handleRouteChosen = (route: YouthRouteChoice) => {
+    setYouthRoute(route)
+    setChosenSchool(null)
+    replace(route === 'school' ? 'school' : 'grassroots')
+  }
+
+  const handleGrassrootsChosen = (club: GrassrootsClubChoice) => {
+    setYouthRoute('grassroots', { id: club.clubId, name: club.name })
+    setChosenSchool(club)
+    replace('trials')
+  }
+
   const handleSchoolChosen = (school: School) => {
     setChosenSchool(school)
     setSchool(school.id)
@@ -104,11 +119,6 @@ export default function App() {
   }
 
   const handleTrialsComplete = (role: SquadRole, performance: number) => {
-    if (role === 'released') {
-      setChosenSchool(null)
-      replace('school')
-      return
-    }
     completeTrials(role, performance)
     replace('career')
   }
@@ -131,8 +141,10 @@ export default function App() {
   if (screen === 'credits') return <CreditsScreen onBack={goBackToMenu} />
   if (screen === 'help') return <HelpScreen onBack={goBackToMenu} />
   if (screen === 'create') return <PlayerCreation onComplete={() => replace('story')} onBack={goBackToMenu} />
-  if (screen === 'story') return <StoryIntro onComplete={() => replace('school')} />
+  if (screen === 'story') return <StoryIntro onComplete={() => replace('route')} />
+  if (screen === 'route') return <RouteSelection onChoose={handleRouteChosen} />
   if (screen === 'school') return <SchoolSelection onChoose={handleSchoolChosen} />
+  if (screen === 'grassroots') return <GrassrootsSelection onChoose={handleGrassrootsChosen} />
   if (screen === 'trials' && player && chosenSchool) {
     return <TrialsScreen player={player} school={chosenSchool} onComplete={handleTrialsComplete} />
   }

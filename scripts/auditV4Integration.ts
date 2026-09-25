@@ -63,6 +63,10 @@ check(new Set(Object.values(schoolWorld.divisions).flatMap((division) => divisio
 const leagueWeek = SEASON_SCHEDULE.schoolLeague[0]
 check(activeCompetitionForWeek(leagueWeek, 'grassroots-season', 'school')?.competitionId === 'schoolLeague', 'selected route schedules the school league')
 check(activeCompetitionForWeek(leagueWeek, 'grassroots-season', 'sunday')?.competitionId === 'sundayLeague', 'released route schedules Sunday League instead')
+for (let week = 24; week <= 28; week++) {
+  check(activeCompetitionForWeek(week, 'grassroots-season', 'school', true)?.competitionId === 'schoolDevelopment', `development route plays week ${week}`)
+  check(activeCompetitionForWeek(week, 'grassroots-season', 'school')?.competitionId === 'schoolCup', `qualified route plays Regional Cup week ${week}`)
+}
 const legacy = initLeagueWorld('Greenwood High')
 legacy.divisions[legacy.playerDivision].standings[0].points = 7
 const migrated = migrateToSchoolLeagueWorld(legacy, 'Greenwood High')

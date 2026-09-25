@@ -197,7 +197,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
         return
       }
 
-      const comp = activeCompetitionForWeek(calendar.currentWeek.weekNumber, player.careerClock.phase, player.grassrootsPath)
+      const comp = activeCompetitionForWeek(calendar.currentWeek.weekNumber, player.careerClock.phase, player.grassrootsPath, Boolean(cups.schoolDevelopment))
       if (!comp) { resolveCurrentEvent(); return }
 
       if (comp.competitionId === 'sundayLeague' || comp.competitionId === 'schoolLeague') {

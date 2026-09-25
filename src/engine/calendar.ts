@@ -70,7 +70,7 @@ export const SCHOOL_SEASON_SCHEDULE: Record<string, number[]> = {
 export const SUNDAY_SEASON_SCHEDULE: Record<string, number[]> = {
   schoolLeague: Array.from({ length: 22 }, (_, i) => i + 6), // routed to Sunday League, W6-W27
   sundayCup: [12, 18, 24, 30],
-  youthShowcase: [37],
+  youthShowcase: [38],
 }
 export const ACADEMY_SEASON_SCHEDULE: Record<string, number[]> = {
   schoolLeague: Array.from({ length: 22 }, (_, i) => i + 1),
@@ -110,7 +110,13 @@ export function isCompetitionActive(competitionId: string, phase: CareerPhase, g
 
 // The competition producing the player's Saturday match this week, or null
 // (dormant competition or no fixture week at all).
-export function activeCompetitionForWeek(weekNumber: number, phase: CareerPhase, grassrootsPath: GrassrootsPath = 'school'): { competitionId: string; round: number } | null {
+export function activeCompetitionForWeek(weekNumber: number, phase: CareerPhase, grassrootsPath: GrassrootsPath = 'school', schoolDevelopment = false): { competitionId: string; round: number } | null {
+  // The five development fixtures share Regional Cup weeks. The league table
+  // decides which one the school enters; the saved cup world carries that choice.
+  if (phase !== 'academy' && grassrootsPath === 'school' && schoolDevelopment) {
+    const round = SCHOOL_SEASON_SCHEDULE.schoolDevelopment.indexOf(weekNumber)
+    if (round !== -1) return { competitionId: 'schoolDevelopment', round: round + 1 }
+  }
   const comp = competitionForWeek(weekNumber, phase, grassrootsPath)
   if (!comp) return null
   const routed = comp.competitionId === 'schoolLeague' && (phase === 'academy' || grassrootsPath === 'sunday')
@@ -134,6 +140,7 @@ export function internationalRoundForWeek(weekNumber: number): { stage: 'qualifi
 }
 
 export function generateWeek(weekNumber: number, seasonYear: number, phase: CareerPhase = 'grassroots-season', hasInternationalDuty = false, grassrootsPath: GrassrootsPath = 'school', playsSundayFootball = false): CalendarWeek {
+  void playsSundayFootball // Retained for callers and saved route compatibility.
   // International duty takes over the Wednesday slot on window weeks —
   // midweek internationals, so club Saturdays are untouched.
   const internationalWeek = hasInternationalDuty && internationalRoundForWeek(weekNumber) !== null

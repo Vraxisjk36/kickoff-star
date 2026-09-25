@@ -617,7 +617,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const { player, calendar } = getState()
     if (!player || !calendar) return
     const event = nextUnresolvedEvent(calendar)
-    const competitionId = activeCompetitionForWeek(calendar.currentWeek.weekNumber, player.careerClock.phase, player.grassrootsPath)?.competitionId
+    const competitionId = activeCompetitionForWeek(calendar.currentWeek.weekNumber, player.careerClock.phase, player.grassrootsPath, Boolean(getState().cups.schoolDevelopment))?.competitionId
       ?? (nextUnresolvedEvent(calendar)?.title === 'international duty' ? 'international' : 'other')
     setState({
       player: { ...player, suspensionMatches: Math.max(0, (player.suspensionMatches ?? 0) - 1), competitionCareer: serveCompetitionSuspension(player.competitionCareer, competitionId) },
@@ -916,7 +916,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     // the previous code only ever handled 'sundayLeague' while the calendar
     // reserved matchdays for five other competitions that didn't exist at
     // runtime, producing 20 dead matchdays a season and zero cup football.
-    const weekCompetition = activeCompetitionForWeek(completedWeekNumber, phase, player.grassrootsPath)
+    const weekCompetition = activeCompetitionForWeek(completedWeekNumber, phase, player.grassrootsPath, Boolean(cups.schoolDevelopment))
 
     if (weekCompetition?.competitionId === 'sundayLeague' || weekCompetition?.competitionId === 'schoolLeague') {
       const round = weekCompetition.round
@@ -1064,6 +1064,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       const allAcademyTeams = updatedAcademyLeague ? Object.values(updatedAcademyLeague.divisions).flatMap((d) => d.teams) : []
       updatedCups = {
         schoolCup: !isInAcademy && updatedLeague?.kind === 'school' && grassrootsTeam ? initCupById('schoolCup', grassrootsTeam, allLeagueTeams) : null,
+        schoolDevelopment: null,
         nationalChampionship: null,
         sundayCup: !isInAcademy && updatedLeague?.kind === 'sunday' && grassrootsTeam ? initCupById('sundayCup', grassrootsTeam, allLeagueTeams) : null,
         academyLeagueCup: isInAcademy && academyTeam ? initCupById('academyLeagueCup', academyTeam, allAcademyTeams) : null,
@@ -1565,7 +1566,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     // already recorded above, batchSimDivisionRound correctly skips
     // anything already marked played.
     if (isLeagueMatch && !isSideSunday) {
-      const roundInfo = activeCompetitionForWeek(calendar.currentWeek.weekNumber, player.careerClock.phase, player.grassrootsPath)
+      const roundInfo = activeCompetitionForWeek(calendar.currentWeek.weekNumber, player.careerClock.phase, player.grassrootsPath, Boolean(cups.schoolDevelopment))
       if (roundInfo) {
         if (!isInAcademy && updatedLeague) {
           const division = updatedLeague.divisions[updatedLeague.playerDivision]
@@ -1895,6 +1896,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     // their place (same depth, per the locked product strategy).
     const academyCups: CupWorlds = {
       schoolCup: null,
+      schoolDevelopment: null,
       nationalChampionship: null,
       sundayCup: null,
       academyLeagueCup: initCupById('academyLeagueCup', academyTeam, allAcademyTeams),

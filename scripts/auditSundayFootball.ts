@@ -56,7 +56,7 @@ const oldCalendar: CalendarState = { currentWeek: { seasonYear: 1, weekNumber: 1
 ] }, history: [] }
 const aligned = alignMatchDays(oldCalendar, 'grassroots-season', 'school', true)
 check(nextUnresolvedEvent(aligned)?.id === 'saved-match' && nextUnresolvedEvent(aligned)?.day === 'thu', 'Saved match keeps its ID and moves to Thursday, with the conflicting kickabout removed')
-check(aligned.currentWeek.events.some(e => e.day === 'sat' && e.type === 'rest') && aligned.currentWeek.events.some(e => e.day === 'sun' && e.type === 'match'), 'Saturday recovery separates the two matches')
+check(aligned.currentWeek.events.some(e => e.day === 'sat' && e.type === 'rest') && !aligned.currentWeek.events.some(e => e.day === 'sun' && e.type === 'match'), 'Saved school route keeps recovery without adding a Sunday match')
 
 const schoolWorld = initSchoolLeagueWorld('Audit High')
 const division = schoolWorld.divisions[schoolWorld.playerDivision]

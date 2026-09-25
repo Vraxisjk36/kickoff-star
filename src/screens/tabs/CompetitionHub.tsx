@@ -7,6 +7,7 @@ import { sortStandings } from '../../engine/league'
 import { Panel, EmptyNote } from '../../components/ui'
 import { useCareerStore } from '../../store/careerStore'
 import { initYouthPathway,pathwayNextStep } from '../../engine/pathway'
+import { octoberStandings, playerOctoberFixture } from '../../engine/octoberLeague'
 
 function competitionStatus(cup: CupWorld): string {
   if (cup.playerWonCup) return 'Champions'
@@ -37,6 +38,12 @@ export default function CompetitionHub({ player, division, playerTeamId, cups }:
       {player.careerClock.phase!=='academy'&&<div className="pathway-map"><div className="pathway-map-head"><span>{pathway.ageGroup} PLAYER PATHWAY</span><b>{pathwayNextStep(player)}</b></div><div className="pathway-track"><PathStep label="School" state="complete"/><PathStep label="Regional XI" state={pathway.regionalSelection==='selected'?'complete':pathway.regionalSelection==='cut'?'missed':pathway.regionalSelection==='not-started'?'locked':'active'}/><PathStep label="National" state={pathway.nationalSelection==='selected'?'complete':pathway.nationalSelection==='cut'?'missed':pathway.nationalSelection==='not-started'?'locked':'active'}/><PathStep label="International" state={pathway.nationalSelection==='selected'?'active':'locked'}/></div><div className="pathway-side-route"><span>Sunday route</span><b>{pathway.sundayStatus.replace('-',' ')}</b><i>{pathway.sundayInterest}% interest</i></div></div>}
 
       <CompetitionCard name={leagueDef.name} format="League" prestige={leagueDef.prestige} status={position > 0 ? `${position}${position === 1 ? 'st' : position === 2 ? 'nd' : position === 3 ? 'rd' : 'th'} of ${sorted.length}` : 'Not placed'} stats={current[leagueKey]} />
+      {player.octoberLeague && player.careerClock.phase !== 'academy' && <section className="rounded-xl border border-ks-gold/35 bg-[#14120b] px-3 py-3">
+        <div className="flex justify-between gap-2"><div><h2 className="font-display text-sm text-ks-gold">OCTOBER DEVELOPMENT SERIES</h2><p className="text-[9px] text-ks-muted mt-1">Season {player.octoberLeague.season} · four matches · five teams</p></div><span className="text-[10px] text-ks-gold">{player.octoberLeague.fixtures.filter(f => f.homeGoals !== null && (f.homeId === player.octoberLeague?.playerTeamId || f.awayId === player.octoberLeague?.playerTeamId)).length}/4 results</span></div>
+        <div className="mt-3 space-y-1" aria-label="October league table">{octoberStandings(player.octoberLeague).map((row, i) => <div key={row.teamId} className={`grid grid-cols-[20px_1fr_22px_22px_25px] gap-1 text-[10px] py-1 border-b border-ks-border/40 ${row.teamId === player.octoberLeague?.playerTeamId ? 'text-ks-gold' : 'text-ks-ink'}`}><span>{i + 1}</span><span className="truncate">{row.teamName}</span><span>{row.played}</span><span>{row.goalsFor - row.goalsAgainst > 0 ? '+' : ''}{row.goalsFor - row.goalsAgainst}</span><b>{row.points}</b></div>)}</div>
+        <div className="grid grid-cols-[20px_1fr_22px_22px_25px] gap-1 text-[8px] uppercase text-ks-muted mt-1"><span></span><span>Team</span><span>P</span><span>GD</span><span>Pts</span></div>
+        <div className="mt-3 space-y-1">{[36,37,38,39].map(week => { const fixture = playerOctoberFixture(player.octoberLeague!, week); const opponent = player.octoberLeague!.teams.find(team => team.id === (fixture?.homeId === player.octoberLeague!.playerTeamId ? fixture?.awayId : fixture?.homeId)); return <div key={week} className="flex justify-between text-[10px] text-ks-muted"><span>W{week} · {opponent?.name ?? 'Opponent'}</span><b className="text-ks-ink">{fixture?.homeGoals === null ? 'Upcoming' : `${fixture?.homeGoals}–${fixture?.awayGoals}`}</b></div> })}</div>
+      </section>}
       {activeCups.map((cup) => {
         const def = competitionDefinition(cup.competitionId)
         return <CompetitionCard key={cup.competitionId} name={cup.label} format={def.format === 'group-knockout' ? 'Groups → Knockout' : 'Knockout'} prestige={def.prestige} status={competitionStatus(cup)} stats={current[cup.competitionId]} />

@@ -43,6 +43,7 @@ import { defaultClubSupport, initYouthFinance, postTransaction, type FinanceCate
 import { addStoryMoment, createStoryMoment, type StoryMoment } from '../engine/presentation'
 import { academyEntryOpen, academyRecruitmentReport, academyTrialAvailable, migrateAcademyRecruitment, reviewAcademyShowcase } from '../engine/academyRecruitment'
 import { ageGroupFor, initYouthPathway, representativeSelection, selectionPassed } from '../engine/pathway'
+import { initOctoberLeague, recordOctoberResult, simulateOctoberWeek, octoberStandings } from '../engine/octoberLeague'
 
 interface CareerStore {
   player: Player | null
@@ -303,6 +304,12 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
         schoolCup: cups.schoolCup ? syncCupTeamIdentities(cups.schoolCup, teams) : playerTeam ? initCupById('schoolCup', playerTeam, teams) : null,
         sundayCup: null,
       }
+    }
+    if (league && player.careerClock.phase !== 'academy' && player.careerClock.ageYears <= 15 && !player.pathway?.showcaseInvited && loadedCalendar.currentWeek.weekNumber >= 36 && loadedCalendar.currentWeek.weekNumber <= 44 && player.octoberLeague?.season !== loadedCalendar.currentWeek.seasonYear) {
+      const division = league.divisions[league.playerDivision]
+      let october = initOctoberLeague(loadedCalendar.currentWeek.seasonYear, league.playerTeamId, division.teams)
+      for (let week = 36; october && week < loadedCalendar.currentWeek.weekNumber && week <= 39; week++) october = simulateOctoberWeek(october, week)
+      player = { ...player, octoberLeague: october }
     }
     setState({ player, calendar: loadedCalendar, league, academyLeague: save.academyLeague ?? null, cups, international: save.international ?? null, activeSlot: slot, pendingTraining: save.pendingTraining ?? null })
     void getState().saveCurrent()
@@ -617,7 +624,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const { player, calendar } = getState()
     if (!player || !calendar) return
     const event = nextUnresolvedEvent(calendar)
-    const competitionId = activeCompetitionForWeek(calendar.currentWeek.weekNumber, player.careerClock.phase, player.grassrootsPath, Boolean(getState().cups.schoolDevelopment))?.competitionId
+    const competitionId = event?.title === 'October development fixture' ? 'octoberDevelopment' : activeCompetitionForWeek(calendar.currentWeek.weekNumber, player.careerClock.phase, player.grassrootsPath, Boolean(getState().cups.schoolDevelopment))?.competitionId
       ?? (nextUnresolvedEvent(calendar)?.title === 'international duty' ? 'international' : 'other')
     setState({
       player: { ...player, suspensionMatches: Math.max(0, (player.suspensionMatches ?? 0) - 1), competitionCareer: serveCompetitionSuspension(player.competitionCareer, competitionId) },
@@ -1191,6 +1198,9 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
           : player.careerClock.grassrootsSeason,
       },
     }
+    if (updatedPlayer.octoberLeague?.season === calendar.currentWeek.seasonYear && completedWeekNumber >= 36 && completedWeekNumber <= 39) {
+      updatedPlayer = { ...updatedPlayer, octoberLeague: simulateOctoberWeek(updatedPlayer.octoberLeague, completedWeekNumber) }
+    }
     if (!isInAcademy && updatedLeague?.kind === 'school' && !result.seasonEnded) {
       const pathway=updatedPlayer.pathway??initYouthPathway(updatedPlayer)
       if(completedWeekNumber===23){const d=updatedLeague.divisions[updatedLeague.playerDivision];const position=sortStandings(d.standings).findIndex(s=>s.teamId===updatedLeague!.playerTeamId)+1;const qualified=position>0&&position<=3;const playerTeam=d.teams.find(t=>t.id===updatedLeague!.playerTeamId);if(qualified){updatedCups={...updatedCups,schoolDevelopment:null};updatedPlayer={...updatedPlayer,competitionCareer:addQualification(updatedPlayer.competitionCareer,{competitionId:'schoolLeague',qualifiedFor:'schoolCup',season:calendar.currentWeek.seasonYear,reason:'league-position',position})}}else if(playerTeam){updatedCups={...updatedCups,schoolCup:updatedCups.schoolCup?{...updatedCups.schoolCup,playerEliminated:true}:null,schoolDevelopment:initCupById('schoolDevelopment',playerTeam,d.teams)}}updatedPlayer=withStory(updatedPlayer,result.calendar,{kind:qualified?'qualification':'selection',eyebrow:'Local School League · final table',title:qualified?'REGIONAL CUP QUALIFIED':'DEVELOPMENT COMPETITION',body:qualified?`A ${position}${position===1?'st':position===2?'nd':'rd'}-place finish sends your school into the 24-team Regional Schools Cup.`:'Your school missed the top three, but your season continues in a six-school development group.',detail:qualified?'Four groups of six. Five group matches. The top two in each group reach the quarter-finals.':'Five guaranteed matches remain, and your individual performances still count toward Regional XI selection.',ceremony:qualified?'draw':'selection'})}
@@ -1203,11 +1213,12 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     }
     if (!isInAcademy && completedWeekNumber === 39 && player.careerClock.ageYears <= 15) {
       const october = updatedPlayer.competitionCareer?.current.octoberDevelopment
+      const position = updatedPlayer.octoberLeague ? octoberStandings(updatedPlayer.octoberLeague).findIndex(row => row.teamId === updatedPlayer.octoberLeague!.playerTeamId) + 1 : 0
       updatedPlayer = withStory(updatedPlayer, result.calendar, {
         kind: 'selection', eyebrow: 'October Development Series', title: 'FOUR-MATCH WINDOW COMPLETE',
         body: 'The October fixtures are over. Your performances stay on your career record and count toward your development.',
-        detail: `${october?.appearances ?? 0} appearances · ${october?.goals ?? 0} goals · ${october?.assists ?? 0} assists. Missed matches remain missed; the next season brings another chance.`,
-        metrics: [{ label: 'Appearances', value: october?.appearances ?? 0 }, { label: 'Goals', value: october?.goals ?? 0 }, { label: 'Assists', value: october?.assists ?? 0 }],
+        detail: `${position ? `Finished ${position} of 5 · ` : ''}${october?.appearances ?? 0} appearances · ${october?.goals ?? 0} goals · ${october?.assists ?? 0} assists. Missed matches are simulated; the next season brings another chance.`,
+        metrics: [{ label: 'Place', value: position || 0 }, { label: 'Appearances', value: october?.appearances ?? 0 }, { label: 'Goals', value: october?.goals ?? 0 }],
       })
     }
     const newClubApproach = clubApproachOffers.find((offer) => offer.kind === 'club' && !(player.contractOffers ?? []).some((old) => old.id === offer.id))
@@ -1384,6 +1395,10 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       }
     }
     finalPlayer = reviewAcademyOpportunities(finalPlayer, result.calendar)
+    if (updatedLeague && finalPlayer.careerClock.phase !== 'academy' && finalPlayer.careerClock.ageYears <= 15 && !finalPlayer.pathway?.showcaseInvited && result.calendar.currentWeek.weekNumber === 36 && finalPlayer.octoberLeague?.season !== result.calendar.currentWeek.seasonYear) {
+      const division = updatedLeague.divisions[updatedLeague.playerDivision]
+      finalPlayer = { ...finalPlayer, octoberLeague: initOctoberLeague(result.calendar.currentWeek.seasonYear, updatedLeague.playerTeamId, division.teams) }
+    }
     const hasPyramidMovement = isInAcademy || updatedLeague?.kind === 'sunday'
     if (result.seasonEnded && hasPyramidMovement && seasonReview?.promoted) {
       finalPlayer = withStory(finalPlayer, result.calendar, { kind: 'promotion', eyebrow: 'Season verdict', title: 'PROMOTED', body: 'Your team has earned a place at the next level.', detail: seasonReview.verdict })
@@ -1670,6 +1685,9 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     let updatedPlayer: Player = {
       ...player,
       squad: isSideSunday ? player.squad : squad ?? player.squad,
+      octoberLeague: competitionId === 'octoberDevelopment' && player.octoberLeague?.season === calendar.currentWeek.seasonYear
+        ? recordOctoberResult(player.octoberLeague, calendar.currentWeek.weekNumber, opponentId, playerWasHome ? playerGoalsScored : opponentGoalsScored, playerWasHome ? opponentGoalsScored : playerGoalsScored)
+        : player.octoberLeague,
       sundaySquad: isSideSunday ? squad ?? player.sundaySquad : player.sundaySquad,
       sundayLeague: updatedSundayLeague,
       leagueGoals: isLeagueMatch ? recordLeagueGoals(player, careerCompetitionId, isSideSunday ? player.sundayLeague?.playerDivision ?? 3 : isInAcademy ? academyLeague?.playerDivision ?? 2 : league?.playerDivision ?? 1, goals) : player.leagueGoals,

@@ -52,6 +52,7 @@ export interface Player {
   matchEnergyMultiplier?: number
   leagueGoals?: import('../engine/leagueScorers').PlayerLeagueGoals[]
   pathway?: import('../engine/pathway').YouthPathwayState
+  octoberLeague?: import('../engine/octoberLeague').OctoberLeague | null
 
   // Phase 32 — standing with the three groups (coach reads off coachTrust)
   standing?: import('../engine/standing').Standing

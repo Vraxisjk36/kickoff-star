@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useCareerStore } from '../store/careerStore'
 import { nextUnresolvedEvent, activeCompetitionForWeek } from '../engine/calendar'
 import { playerCupFixture, CUP_CONFIGS } from '../engine/cup'
+import { playerOctoberFixture } from '../engine/octoberLeague'
 import { nationFixture, internationalTeamById } from '../engine/international'
 import { generateTeam } from '../engine/teams'
 import { canPlayYouthShowcase } from '../engine/academyRecruitment'
@@ -198,10 +199,14 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
       }
 
       if (pending.title === 'October development fixture') {
-        const teams = playerDivision.teams.filter(team => team.id !== activeWorld.playerTeamId)
+        const october = player.octoberLeague
+        const fixture = october?.season === calendar.currentWeek.seasonYear ? playerOctoberFixture(october, calendar.currentWeek.weekNumber) : null
+        if (!fixture || fixture.homeGoals !== null) { resolveCurrentEvent(); return }
         const round = calendar.currentWeek.weekNumber - 36
-        const opponent = teams[round % teams.length] ?? generateTeam(playerTeam.prestige)
-        setMode({ kind: 'matchday', opponent, isHome: round % 2 === 0, competitionId: 'octoberDevelopment', competitionLabel: `October Development Series · Match ${round + 1}/4`, isKnockout: false })
+        const isHome = fixture.homeId === october!.playerTeamId
+        const opponent = october!.teams.find(team => team.id === (isHome ? fixture.awayId : fixture.homeId))
+        if (!opponent) { resolveCurrentEvent(); return }
+        setMode({ kind: 'matchday', opponent, isHome, competitionId: 'octoberDevelopment', competitionLabel: `October Development Series · Match ${round + 1}/4`, isKnockout: false })
         return
       }
 

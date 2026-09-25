@@ -45,6 +45,14 @@ import { academyEntryOpen, academyRecruitmentReport, academyTrialAvailable, migr
 import { ageGroupFor, initYouthPathway, representativeSelection, selectionPassed } from '../engine/pathway'
 import { initOctoberLeague, recordOctoberResult, simulateOctoberWeek, octoberStandings } from '../engine/octoberLeague'
 
+// UI actions can save several snapshots in one tick. Keep their disk writes in
+// action order so an older snapshot cannot finish after a newer one.
+let saveQueue: Promise<void> = Promise.resolve()
+function queueSave(save: Parameters<typeof writeSave>[0]): Promise<void> {
+  saveQueue = saveQueue.catch(() => undefined).then(() => writeSave(save))
+  return saveQueue
+}
+
 interface CareerStore {
   player: Player | null
   calendar: CalendarState | null
@@ -286,6 +294,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   pendingTraining: null,
 
   loadFromSlot: async (slot) => {
+    await saveQueue
     const save = await readSave(slot)
     if (!save) return
     let player = ensureSundayClub(repairSundayInvitation(migrateAcademyRecruitment(migratePlayer(save.player), save.calendar)), save.calendar.currentWeek.weekNumber)
@@ -364,13 +373,13 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       nationalGlory: {},
     }
     setState({ player, calendar, league: null, academyLeague: null, cups: { ...EMPTY_CUPS }, international: null, activeSlot: slot, pendingTraining: null })
-    await writeSave({ schemaVersion: SAVE_SCHEMA_VERSION, slotId: slot, savedAt: new Date().toISOString(), player, calendar, league: null, academyLeague: null, cups: { ...EMPTY_CUPS }, international: null, pendingTraining: null })
+    await queueSave({ schemaVersion: SAVE_SCHEMA_VERSION, slotId: slot, savedAt: new Date().toISOString(), player, calendar, league: null, academyLeague: null, cups: { ...EMPTY_CUPS }, international: null, pendingTraining: null })
   },
 
   saveCurrent: async () => {
     const { player, calendar, league, academyLeague, cups, international, activeSlot, pendingTraining } = getState()
     if (!player || !calendar || activeSlot === null) return
-    await writeSave({ schemaVersion: SAVE_SCHEMA_VERSION, slotId: activeSlot, savedAt: new Date().toISOString(), player, calendar, league, academyLeague, cups, international, pendingTraining: pendingTraining ?? null })
+    await queueSave({ schemaVersion: SAVE_SCHEMA_VERSION, slotId: activeSlot, savedAt: new Date().toISOString(), player, calendar, league, academyLeague, cups, international, pendingTraining: pendingTraining ?? null })
   },
 
   setPendingTraining: (snapshot) => {
@@ -392,7 +401,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const school = player.schoolId ? getSchool(player.schoolId) : undefined
     const schoolName = school?.name ?? 'Your School'
     const isSchoolPath = player.grassrootsPath !== 'sunday'
-    const teamName = isSchoolPath ? schoolName : generateTeam(2).name
+    const teamName = isSchoolPath ? schoolName : (player.grassrootsClubName ?? generateTeam(2).name)
     const squad = player.squad ?? generateSquad(2)
     const world = isSchoolPath ? initSchoolLeagueWorld(teamName) : initLeagueWorld(teamName)
     const playerTeam = world.divisions[world.playerDivision].teams.find((t) => t.id === world.playerTeamId)!
@@ -1544,7 +1553,13 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     updatedPlayer = withStory(updatedPlayer, calendar, {
       kind: 'selection', eyebrow: 'Final squad reveal',
       title: role === 'released' ? 'YOU HAVE BEEN CUT' : role === 'starting-xi' ? 'STARTING XI' : role === 'bench' ? 'YOU MADE THE SQUAD' : 'DEVELOPMENT SQUAD',
-      body: role === 'released' ? 'The school coaches made their decision. Your next route is Sunday football, where strong performances can reopen the academy pathway.' : `The coaches selected you for the ${role === 'starting-xi' ? 'starting eleven' : role}. You will represent your school in the local league and Regional Schools Cup.`,
+      body: player.youthRoute === 'grassroots'
+        ? role === 'released'
+          ? `${player.grassrootsClubName ?? 'The club'} did not offer you a squad place. Sunday football is still open, where strong performances can reopen the academy pathway.`
+          : `${player.grassrootsClubName ?? 'The club'} selected you for the ${role === 'starting-xi' ? 'starting eleven' : role}. Your next fixtures are in the Sunday League and Sunday Cup.`
+        : role === 'released'
+          ? 'The school coaches made their decision. Your next route is Sunday football, where strong performances can reopen the academy pathway.'
+          : `The coaches selected you for the ${role === 'starting-xi' ? 'starting eleven' : role}. You will represent your school in the local league and Regional Schools Cup.`,
       detail: `Trial score: ${Math.round(performance * 100)}. The selection was earned from your performance, ability, fitness and coach trust.`,
     })
     setState({ player: updatedPlayer })

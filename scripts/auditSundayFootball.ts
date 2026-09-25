@@ -82,6 +82,7 @@ check(openSundayContractWindow(first, sundayWorld, 1, true).contractOffers.lengt
 check(sundayWage(2, 8) === 30 && sundayWage(1, 8) === 50 && sundayWage(2, 6) === 20 && sundayWage(1, 6) === 35, 'Higher-division wage ranges are bounded and increase with sustained performance')
 
 // Play the real school-to-Sunday recruitment path through the store.
+const realSaveCurrent = useCareerStore.getState().saveCurrent
 useCareerStore.setState({ saveCurrent: async () => {} })
 await useCareerStore.getState().startNewCareer(player(), calendar(3), 0)
 useCareerStore.getState().ensureLeagueWorld()
@@ -164,4 +165,20 @@ const team = generateTeam(4), opponent = generateTeam(4)
 reseed(91); const third = advanceToKeyMoment(initMatch(p3, team, opponent, true), p3).state
 reseed(91); const firstDivision = advanceToKeyMoment(initMatch(p1, team, opponent, true), p1).state
 check(firstDivision.matchStamina < third.matchStamina, 'Higher-division match actually drains more energy in the live engine')
+
+// Drive the same route selection and trial actions used by onboarding.
+useCareerStore.setState({ saveCurrent: realSaveCurrent })
+await useCareerStore.getState().startNewCareer({ ...player(), careerClock: { ageYears: 14, phase: 'grassroots-trials', grassrootsSeason: 1 }, trialWeekCompleted: 0, squadRole: null }, calendar(1), 2)
+useCareerStore.getState().setYouthRoute('grassroots', { id: 'grassroots-central', name: 'Central Juniors' })
+useCareerStore.getState().completeTrials('starting-xi', 0.7)
+useCareerStore.getState().ensureLeagueWorld()
+state = useCareerStore.getState()
+const chosenTeam = state.league!.divisions[state.league!.playerDivision].teams.find(t => t.id === state.league!.playerTeamId)
+check(chosenTeam?.name === 'Central Juniors' && state.league?.kind === 'sunday', 'Selected grassroots club enters the actual Sunday league')
+check(state.player!.contractOffers.some(o => o.kind === 'club' && o.clubName === 'Central Juniors'), 'Initial contract names the selected club')
+check(state.player!.inbox.some(m => m.title === 'STARTING XI' && m.body.includes('Central Juniors') && m.body.includes('Sunday League')), 'Grassroots trial reveal names its club and competitions')
+await useCareerStore.getState().saveCurrent()
+await useCareerStore.getState().loadFromSlot(2)
+state = useCareerStore.getState()
+check(state.player?.grassrootsClubName === 'Central Juniors' && state.league?.divisions[state.league.playerDivision].teams.find(t => t.id === state.league!.playerTeamId)?.name === 'Central Juniors', 'Chosen club identity survives save and reload')
 console.log(`\n${checks} Sunday football checks passed`)

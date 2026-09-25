@@ -197,6 +197,14 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
         return
       }
 
+      if (pending.title === 'October development fixture') {
+        const teams = playerDivision.teams.filter(team => team.id !== activeWorld.playerTeamId)
+        const round = calendar.currentWeek.weekNumber - 36
+        const opponent = teams[round % teams.length] ?? generateTeam(playerTeam.prestige)
+        setMode({ kind: 'matchday', opponent, isHome: round % 2 === 0, competitionId: 'octoberDevelopment', competitionLabel: `October Development Series · Match ${round + 1}/4`, isKnockout: false })
+        return
+      }
+
       const comp = activeCompetitionForWeek(calendar.currentWeek.weekNumber, player.careerClock.phase, player.grassrootsPath, Boolean(cups.schoolDevelopment))
       if (!comp) { resolveCurrentEvent(); return }
 

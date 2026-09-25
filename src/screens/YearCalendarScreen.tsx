@@ -20,7 +20,9 @@ function weekItems(week: number, current: number, player: Player, cups: CupWorld
     sundayCup: 'Sunday Cup', academyLeagueCup: 'Academy League Cup',
     academyKnockoutCup: 'Academy Knockout Cup', youthShowcase: 'October academy showcase',
   }
-  if (school && week >= 24 && week <= 28 && current <= 23) {
+  if (fixture?.competitionId === 'youthShowcase' && !academy && player.careerClock.ageYears <= 15) {
+    // The 16+ showcase is replaced by the October development fixture below.
+  } else if (school && week >= 24 && week <= 28 && current <= 23) {
     items.push({ label: 'Regional Cup / development route', tone: 'window' })
   } else if (fixture) {
     items.push({ label: names[fixture.competitionId] ?? fixture.competitionId, tone: 'match' })
@@ -28,7 +30,11 @@ function weekItems(week: number, current: number, player: Player, cups: CupWorld
   if (school && week === 23) items.push({ label: 'Local league final table', tone: 'pathway' })
   if (school && week >= 29 && week <= 31) items.push({ label: 'Regional XI selection window', tone: 'pathway' })
   if (school && week >= 35 && week <= 36) items.push({ label: 'National selection window', tone: 'pathway' })
-  if (!academy && week >= 36 && week <= 38) items.push({ label: 'Academy assessment window', tone: 'window' })
+  if (!academy && player.careerClock.ageYears <= 15 && week >= 36 && week <= 39) {
+    items.push({ label: `October Development Series · ${week - 35}/4`, tone: 'match' })
+  } else if (!academy && week >= 36 && week <= 38) {
+    items.push({ label: 'Academy assessment window', tone: 'window' })
+  }
   if (player.pathway?.nationalSelection === 'selected' && internationalRoundForWeek(week)) {
     items.push({ label: 'International duty · Wednesday', tone: 'pathway' })
   }

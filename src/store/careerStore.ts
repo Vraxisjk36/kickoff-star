@@ -4,7 +4,7 @@ import { spendXp, positionCostMultiplier } from '../engine/xp'
 import type { CalendarState } from '../types/calendar'
 import type { DecisionResult } from '../types/decision'
 import { readSave, writeSave, EMPTY_CUPS, SAVE_SCHEMA_VERSION, type SaveSlotId, type CupWorlds } from '../engine/save'
-import { nextUnresolvedEvent, markResolved, advanceWeek, alignMatchDays, activeCompetitionForWeek, internationalRoundForWeek, SEASON_WEEKS } from '../engine/calendar'
+import { nextUnresolvedEvent, markResolved, advanceWeek, alignMatchDays, alignOctoberDevelopment, activeCompetitionForWeek, internationalRoundForWeek, SEASON_WEEKS } from '../engine/calendar'
 import { initCupById, batchSimCupStage, advanceCupStage, recordCupPlayerResult, playerCupFixture, syncCupTeamIdentities } from '../engine/cup'
 import { initInternationalWorld, formQualifiesForSelection, batchSimQualifyingRound, batchSimFinalsRound, advanceInternationalStage, recordNationResult, internationalTeamById, nationFixture, type InternationalWorld } from '../engine/international'
 import { getSchool } from '../engine/schools'
@@ -288,7 +288,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const save = await readSave(slot)
     if (!save) return
     let player = ensureSundayClub(repairSundayInvitation(migrateAcademyRecruitment(migratePlayer(save.player), save.calendar)), save.calendar.currentWeek.weekNumber)
-    const loadedCalendar = alignMatchDays(save.calendar, player.careerClock.phase, player.grassrootsPath ?? 'school', player.pathway?.sundayStatus === 'registered')
+    const loadedCalendar = alignOctoberDevelopment(alignMatchDays(save.calendar, player.careerClock.phase, player.grassrootsPath ?? 'school', player.pathway?.sundayStatus === 'registered'), player.careerClock.ageYears, player.careerClock.phase, player.grassrootsPath ?? 'school', player.pathway?.showcaseInvited === true)
     let league = save.league ?? null
     player = migrateSundayContracts(player, player.grassrootsPath === 'school' ? player.sundayLeague : league, save.calendar.currentWeek.seasonYear)
     if (player.pathway?.sundayStatus === 'squad-offer' && player.sundayLeague && !player.sundayContract) player = openSundayContractWindow(player, player.sundayLeague, save.calendar.currentWeek.seasonYear, true)
@@ -1201,6 +1201,15 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       else if(completedWeekNumber===35&&pathway.regionalSelection==='selected'&&pathway.nationalSelection==='not-started'){const evidence=representativeEvidence(updatedPlayer,'national');updatedPlayer={...updatedPlayer,pathway:{...pathway,nationalSelection:'cut'}};updatedPlayer=withStory(updatedPlayer,result.calendar,{kind:'selection',eyebrow:'National schools review',title:'MORE TO PROVE',body:'You have not yet built the championship record needed for national selection.',detail:evidence.reason,ceremony:'selection'})}
       else if(completedWeekNumber===36&&pathway.nationalSelection==='longlist'&&pathway.nationalScore){const finalScore=representativeSelection(updatedPlayer,'national');pathway.nationalScore=finalScore;const ok=selectionPassed(finalScore,'national');updatedPlayer={...updatedPlayer,pathway:{...pathway,nationalSelection:ok?'selected':'cut'},competitionCareer:recordSelectionResult(updatedPlayer.competitionCareer,{competitionId:'nationalSelection',season:calendar.currentWeek.seasonYear,round:2,entrants:35,survivors:23,score:pathway.nationalScore.total,outcome:ok?'selected':'cut'})};updatedPlayer=withStory(updatedPlayer,result.calendar,{kind:ok?'selection':'elimination',eyebrow:'National schools · final squad',title:ok?'COUNTRY CALLED':'NOT THIS WINDOW',body:ok?'You have earned the national shirt. International youth football is next.':'You were close, but the final national place went elsewhere. Your pathway stays open.',detail:`Final score ${pathway.nationalScore.total}/100 · positional rank ${pathway.nationalScore.positionalRank}.`,ceremony:ok?'callup':'selection',metrics:[{label:'Final score',value:pathway.nationalScore.total,suffix:'/100',tone:ok?'good':'bad'},{label:'Position rank',value:pathway.nationalScore.positionalRank}]})}
     }
+    if (!isInAcademy && completedWeekNumber === 39 && player.careerClock.ageYears <= 15) {
+      const october = updatedPlayer.competitionCareer?.current.octoberDevelopment
+      updatedPlayer = withStory(updatedPlayer, result.calendar, {
+        kind: 'selection', eyebrow: 'October Development Series', title: 'FOUR-MATCH WINDOW COMPLETE',
+        body: 'The October fixtures are over. Your performances stay on your career record and count toward your development.',
+        detail: `${october?.appearances ?? 0} appearances · ${october?.goals ?? 0} goals · ${october?.assists ?? 0} assists. Missed matches remain missed; the next season brings another chance.`,
+        metrics: [{ label: 'Appearances', value: october?.appearances ?? 0 }, { label: 'Goals', value: october?.goals ?? 0 }, { label: 'Assists', value: october?.assists ?? 0 }],
+      })
+    }
     const newClubApproach = clubApproachOffers.find((offer) => offer.kind === 'club' && !(player.contractOffers ?? []).some((old) => old.id === offer.id))
     if (newClubApproach) {
       updatedPlayer = withStory(updatedPlayer, result.calendar, {
@@ -1411,7 +1420,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       worldTeamNames: divisionForHeadlines?.teams.map((t) => t.name) ?? [],
     })
 
-    setState({ player: finalPlayer, calendar: alignMatchDays(result.calendar, finalPlayer.careerClock.phase, finalPlayer.grassrootsPath ?? 'school', finalPlayer.pathway?.sundayStatus === 'registered'), league: updatedLeague, academyLeague: updatedAcademyLeague, cups: updatedCups, international: updatedInternational, pendingArcVerdicts: [...getState().pendingArcVerdicts, ...verdicts], pendingHeadlines: [...getState().pendingHeadlines, ...weeklyHeadlines], pendingSeasonReview: seasonReview, economyNote: lastContractNote ?? lastEconomyNote, selectionNote: lastSelectionNote, negotiationBeat: negotiationBeatThisWeek ?? getState().negotiationBeat })
+    setState({ player: finalPlayer, calendar: alignOctoberDevelopment(alignMatchDays(result.calendar, finalPlayer.careerClock.phase, finalPlayer.grassrootsPath ?? 'school', finalPlayer.pathway?.sundayStatus === 'registered'), finalPlayer.careerClock.ageYears, finalPlayer.careerClock.phase, finalPlayer.grassrootsPath ?? 'school', finalPlayer.pathway?.showcaseInvited === true), league: updatedLeague, academyLeague: updatedAcademyLeague, cups: updatedCups, international: updatedInternational, pendingArcVerdicts: [...getState().pendingArcVerdicts, ...verdicts], pendingHeadlines: [...getState().pendingHeadlines, ...weeklyHeadlines], pendingSeasonReview: seasonReview, economyNote: lastContractNote ?? lastEconomyNote, selectionNote: lastSelectionNote, negotiationBeat: negotiationBeatThisWeek ?? getState().negotiationBeat })
     // Non-match achievements (scouts noticing you, offers arriving, coach trust,
     // reputation, squad role, injury comeback) have no match to hang off, so the
     // week tick is their trigger. Runs after setState so it reads the new state.

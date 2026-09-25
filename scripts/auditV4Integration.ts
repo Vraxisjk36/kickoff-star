@@ -5,7 +5,7 @@ import { addStoryMoment, createStoryMoment } from '../src/engine/presentation'
 import { initYouthFinance, postTransaction } from '../src/engine/youthFinances'
 import { emptyMatchStats } from '../src/engine/matchStats'
 import { calculatePlayerRating } from '../src/engine/ratingSystemV32'
-import { activeCompetitionForWeek, SEASON_SCHEDULE } from '../src/engine/calendar'
+import { activeCompetitionForWeek, alignOctoberDevelopment, generateWeek, OCTOBER_DEVELOPMENT_TITLE, SEASON_SCHEDULE } from '../src/engine/calendar'
 import { initLeagueWorld, initSchoolLeagueWorld, migrateToSchoolLeagueWorld, resetSchoolLeagueSeason } from '../src/engine/league'
 
 let failures = 0
@@ -67,6 +67,18 @@ for (let week = 24; week <= 28; week++) {
   check(activeCompetitionForWeek(week, 'grassroots-season', 'school', true)?.competitionId === 'schoolDevelopment', `development route plays week ${week}`)
   check(activeCompetitionForWeek(week, 'grassroots-season', 'school')?.competitionId === 'schoolCup', `qualified route plays Regional Cup week ${week}`)
 }
+for (const path of ['school', 'sunday'] as const) {
+  for (const week of [36, 37, 38, 39]) {
+    const base = { currentWeek: generateWeek(week, 1, 'grassroots-season', false, path), history: [] }
+    const aligned = alignOctoberDevelopment(base, 15, 'grassroots-season', path, false)
+    const fixtures = aligned.currentWeek.events.filter(e => e.title === OCTOBER_DEVELOPMENT_TITLE)
+    check(fixtures.length === 1 && fixtures[0].day === (path === 'school' ? 'sat' : 'sun'), `${path} week ${week} has one October match`)
+    check(alignOctoberDevelopment(aligned, 15, 'grassroots-season', path, false).currentWeek.events.filter(e => e.title === OCTOBER_DEVELOPMENT_TITLE).length === 1, 'loading an October week never duplicates its fixture')
+    check(aligned.currentWeek.events.filter(e => e.day === fixtures[0].day).length === 1, 'October match replaces same-day rest or unavailable showcase')
+    if (week === 37 && path === 'school' || week === 38 && path === 'sunday') check(!aligned.currentWeek.events.some(e => e.title === 'matchday'), 'under-16 showcase slot is removed')
+  }
+}
+check(!alignOctoberDevelopment({ currentWeek: generateWeek(36, 1), history: [] }, 16, 'grassroots-season', 'school', false).currentWeek.events.some(e => e.title === OCTOBER_DEVELOPMENT_TITLE), 'age 16 does not enter the under-16 October series')
 const legacy = initLeagueWorld('Greenwood High')
 legacy.divisions[legacy.playerDivision].standings[0].points = 7
 const migrated = migrateToSchoolLeagueWorld(legacy, 'Greenwood High')

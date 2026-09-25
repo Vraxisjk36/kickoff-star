@@ -9,6 +9,8 @@ const DAY_ORDER: DayOfWeek[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
 // leagues use 18 fixtures; any spare slots naturally become training weeks.
 // + Sunday Cup (KO) + 2 school friendlies, per the locked 30+ matches/season spec.
 export const SEASON_WEEKS = 44
+export const OCTOBER_DEVELOPMENT_WEEKS = [36, 37, 38, 39] as const
+export const OCTOBER_DEVELOPMENT_TITLE = 'October development fixture'
 
 function id() { return crypto.randomUUID() }
 
@@ -188,7 +190,7 @@ export function generateWeek(weekNumber: number, seasonYear: number, phase: Care
 export function alignMatchDays(state: CalendarState, phase: CareerPhase, path: GrassrootsPath, registered: boolean): CalendarState {
   if (phase === 'academy') return state
   let events = state.currentWeek.events.map(event => {
-    if (event.type !== 'match' || event.title === 'international duty') return event
+    if (event.type !== 'match' || event.title === 'international duty' || event.title === OCTOBER_DEVELOPMENT_TITLE) return event
     const sunday = event.title === 'Sunday community fixture' || event.title === 'Sunday league fixture'
     return { ...event, day: (sunday || path === 'sunday' ? 'sun' : 'thu') as DayOfWeek, title: sunday ? 'Sunday league fixture' : event.title }
   })
@@ -199,6 +201,24 @@ export function alignMatchDays(state: CalendarState, phase: CareerPhase, path: G
   void registered
   if (!events.some(e => e.day === 'sat')) events.push({ id: id(), day: 'sat', type: 'rest', title: 'match recovery', resolved: false })
   events = events.filter(e => !(e.day === 'sun' && e.type === 'rest' && !e.resolved && events.some(m => m.day === 'sun' && m.type === 'match')))
+  return { ...state, currentWeek: { ...state.currentWeek, events } }
+}
+
+/** Add the four October games to a live or loaded week without replacing V4 fixtures. */
+export function alignOctoberDevelopment(state: CalendarState, age: number, phase: CareerPhase, path: GrassrootsPath, showcaseInvited: boolean): CalendarState {
+  const week = state.currentWeek.weekNumber
+  const eligible = phase !== 'academy' && age >= 14 && age <= 15 && !showcaseInvited && OCTOBER_DEVELOPMENT_WEEKS.includes(week as typeof OCTOBER_DEVELOPMENT_WEEKS[number])
+  if (!eligible) return state
+  const day: DayOfWeek = path === 'school' ? 'sat' : 'sun'
+  let events = state.currentWeek.events.filter(e => {
+    // Young players cannot enter the 16+ showcase occupying this week.
+    if (activeCompetitionForWeek(week, phase, path)?.competitionId === 'youthShowcase' && e.type === 'match' && e.title === 'matchday') return false
+    if (path === 'school' && e.day === 'thu' && e.type === 'street' && !e.resolved) return false
+    return !(e.day === day && (e.type === 'rest' || e.type === 'training') && !e.resolved)
+  })
+  if (!events.some(e => e.title === OCTOBER_DEVELOPMENT_TITLE)) {
+    events = [...events, { id: id(), day, type: 'match', title: OCTOBER_DEVELOPMENT_TITLE, resolved: false }]
+  }
   return { ...state, currentWeek: { ...state.currentWeek, events } }
 }
 

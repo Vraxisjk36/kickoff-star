@@ -71,7 +71,9 @@ export const SCHOOL_SEASON_SCHEDULE: Record<string, number[]> = {
 }
 export const SUNDAY_SEASON_SCHEDULE: Record<string, number[]> = {
   schoolLeague: Array.from({ length: 22 }, (_, i) => i + 6), // routed to Sunday League, W6-W27
-  sundayCup: [12, 18, 24, 30],
+  // The 22 league Sundays occupy W6-W27. Keep the first cup round at W30
+  // for in-progress saves, then use free Sundays for the remaining ties.
+  sundayCup: [30, 31, 33, 35], // final before the under-16 October league opens
   youthShowcase: [38],
 }
 export const ACADEMY_SEASON_SCHEDULE: Record<string, number[]> = {

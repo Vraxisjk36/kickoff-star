@@ -7,6 +7,7 @@ import { emptyMatchStats } from '../src/engine/matchStats'
 import { calculatePlayerRating } from '../src/engine/ratingSystemV32'
 import { activeCompetitionForWeek, alignOctoberDevelopment, generateWeek, OCTOBER_DEVELOPMENT_TITLE, SEASON_SCHEDULE, SUNDAY_SEASON_SCHEDULE, ACADEMY_SEASON_SCHEDULE } from '../src/engine/calendar'
 import { initLeagueWorld, initSchoolLeagueWorld, migrateToSchoolLeagueWorld, resetSchoolLeagueSeason } from '../src/engine/league'
+import { initCupById, playerCupFixture } from '../src/engine/cup'
 
 let failures = 0
 const check = (condition: boolean, message: string) => {
@@ -65,6 +66,8 @@ check(activeCompetitionForWeek(leagueWeek, 'grassroots-season', 'school')?.compe
 check(activeCompetitionForWeek(leagueWeek, 'grassroots-season', 'sunday')?.competitionId === 'sundayLeague', 'released route schedules Sunday League instead')
 check(SUNDAY_SEASON_SCHEDULE.sundayCup.every((week, i) => activeCompetitionForWeek(week, 'grassroots-season', 'sunday')?.competitionId === 'sundayCup' && activeCompetitionForWeek(week, 'grassroots-season', 'sunday')?.round === i + 1), 'all four Sunday Cup rounds have playable matchdays')
 check(SUNDAY_SEASON_SCHEDULE.sundayCup.every(week => !SUNDAY_SEASON_SCHEDULE.schoolLeague.includes(week)), 'Sunday Cup never collides with the Sunday League')
+const excludedCup = initCupById('schoolCup', schoolDivision.teams.find(team => team.id === schoolWorld.playerTeamId)!, schoolDivision.teams)
+check(playerCupFixture({ ...excludedCup, playerEliminated: true }) === null, 'development route cannot re-enter Regional Cup group fixtures')
 check(ACADEMY_SEASON_SCHEDULE.academyLeagueCup.every(week => activeCompetitionForWeek(week, 'academy')?.competitionId === 'academyLeagueCup') && ACADEMY_SEASON_SCHEDULE.academyKnockoutCup.every(week => activeCompetitionForWeek(week, 'academy')?.competitionId === 'academyKnockoutCup'), 'academy cup rounds also remain reachable')
 for (let week = 24; week <= 28; week++) {
   check(activeCompetitionForWeek(week, 'grassroots-season', 'school', true)?.competitionId === 'schoolDevelopment', `development route plays week ${week}`)

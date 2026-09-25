@@ -312,6 +312,7 @@ export function advanceCupStage(world: CupWorld): CupWorld {
 // Find the player's fixture for the CURRENT stage, if it hasn't been played —
 // used to know who they're facing next / whether they have a cup match this week.
 export function playerCupFixture(world: CupWorld): GenericFixture | null {
+  if (world.playerEliminated) return null
   if (world.stage === 'group') {
     const gid = playerGroupId(world)
     if (!gid) return null

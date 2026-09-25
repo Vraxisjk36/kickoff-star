@@ -20,6 +20,7 @@ import GazetteScreen from './GazetteScreen'
 import CaptaincyStoryCard from '../components/CaptaincyStoryCard'
 import InboxScreen from './InboxScreen'
 import StoryRevealCard from '../components/StoryRevealCard'
+import YearCalendarScreen from './YearCalendarScreen'
 
 // Phase 10: WeeklyHub is now a shell that hosts six real, routed tabs.
 // Tab state is owned by Career so it survives event resolution (training,
@@ -43,6 +44,7 @@ export default function WeeklyHub({
   const [energyOpen, setEnergyOpen] = useState(false)
   const [gazetteOpen, setGazetteOpen] = useState(false)
   const [inboxOpen, setInboxOpen] = useState(false)
+  const [yearCalendarOpen, setYearCalendarOpen] = useState(false)
   const pendingAchievements = useCareerStore((s) => s.pendingAchievements)
   const pendingArcVerdicts = useCareerStore((s) => s.pendingArcVerdicts)
   const pendingSeasonReview = useCareerStore((s) => s.pendingSeasonReview)
@@ -87,6 +89,7 @@ export default function WeeklyHub({
             latestGazetteMasthead={latestGazette?.masthead ?? null}
             onOpenGazette={() => setGazetteOpen(true)}
             onOpenInbox={() => setInboxOpen(true)}
+            onOpenYearCalendar={() => setYearCalendarOpen(true)}
           />
         )}
         {(tab === 'player' || tab === 'scouts') && <PlayerTab player={player} onOpenOffers={onOpenOffers} />}
@@ -112,6 +115,7 @@ export default function WeeklyHub({
       {energyOpen && <EnergySheet player={player} onClose={() => setEnergyOpen(false)} />}
       {gazetteOpen && latestGazette && <GazetteScreen issue={latestGazette} onClose={() => setGazetteOpen(false)} />}
       {inboxOpen && <InboxScreen items={player.inbox ?? []} onRead={markStoryRead} onClose={() => setInboxOpen(false)} />}
+      {yearCalendarOpen && <YearCalendarScreen player={player} calendar={calendar} cups={cups} onClose={() => setYearCalendarOpen(false)} />}
 
       {/* the season review takes precedence — it's the biggest beat of the year */}
       {pendingSeasonReview && (

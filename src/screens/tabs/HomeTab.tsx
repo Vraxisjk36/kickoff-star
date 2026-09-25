@@ -28,7 +28,7 @@ function ordinal(n: number): string {
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
 
-export default function HomeTab({ player, calendar, league, academyLeague, offerCount, onOpenOffers, onGoTo, onOpenEnergy, latestGazetteMasthead, onOpenGazette, onOpenInbox }: {
+export default function HomeTab({ player, calendar, league, academyLeague, offerCount, onOpenOffers, onGoTo, onOpenEnergy, latestGazetteMasthead, onOpenGazette, onOpenInbox, onOpenYearCalendar }: {
   player: Player
   calendar: CalendarState
   league: LeagueWorld | null
@@ -40,6 +40,7 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
   latestGazetteMasthead: string | null
   onOpenGazette: () => void
   onOpenInbox: () => void
+  onOpenYearCalendar: () => void
 }) {
   const consumeItem = useCareerStore((s) => s.consumeItem)
   const restoreEnergyFromAd = useCareerStore((s) => s.restoreEnergyFromAd)
@@ -230,6 +231,9 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
       <button onClick={() => onGoTo('player')} className="home-player-link"><span>PLAYER PROFILE</span><b>View development, form & career record →</b></button>
 
       <div className="home-section-label"><span>THIS WEEK</span><i/></div>
+      <button onClick={onOpenYearCalendar} className="w-full rounded-lg border border-ks-gold/40 bg-[#161308] px-3 py-3 flex items-center gap-3 text-left">
+        <Icon src={iconWeek} /><div className="flex-1"><b className="block font-display text-xs text-ks-gold">YEAR CALENDAR</b><span className="text-[10px] text-ks-muted">January–December · fixtures, cups & selection windows</span></div><span className="text-ks-gold">→</span>
+      </button>
       {/* Phase 25: the Gazette teaser — a fresh issue drops every week */}
       {latestGazetteMasthead && (
         <button

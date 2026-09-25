@@ -43,6 +43,7 @@ export const COMPETITION_SPECS: CompetitionRoundSpec[] = [
   { id: 'schoolFriendlies', rounds: 2 },
   { id: 'schoolLeague', rounds: 18 },
   { id: 'schoolCup', rounds: 8 },
+  { id: 'schoolDevelopment', rounds: 5 },
   { id: 'nationalChampionship', rounds: 5 },
   { id: 'sundayCup', rounds: 4 }, // pure knockout, field 16 -> 4 rounds — grassroots only
   // Phase 21: Academy gets the same cup depth as grassroots, per the locked
@@ -62,6 +63,7 @@ export const SCHOOL_SEASON_SCHEDULE: Record<string, number[]> = {
   schoolFriendlies: [4, 5],
   schoolLeague: Array.from({ length: 18 }, (_, i) => i + 6), // W6-W23
   schoolCup: Array.from({ length: 8 }, (_, i) => i + 24),   // W24-W31
+  schoolDevelopment: Array.from({ length: 5 }, (_, i) => i + 24), // W24-W28
   nationalChampionship: Array.from({ length: 5 }, (_, i) => i + 32), // W32-W36
   youthShowcase: [37],
 }
@@ -97,7 +99,7 @@ export function competitionForWeek(weekNumber: number, phase: CareerPhase = 'gra
 // as extra training instead (fixes the Phase 25 audit's "20 dead matchdays").
 export type CareerPhase = 'grassroots-trials' | 'grassroots-season' | 'academy'
 export type GrassrootsPath = 'school' | 'sunday'
-const SCHOOL_ACTIVE = new Set(['schoolLeague','schoolCup','schoolFriendlies','nationalChampionship','youthShowcase'])
+const SCHOOL_ACTIVE = new Set(['schoolLeague','schoolCup','schoolDevelopment','schoolFriendlies','nationalChampionship','youthShowcase'])
 const SUNDAY_ACTIVE = new Set(['sundayLeague', 'sundayCup', 'youthShowcase'])
 const ACADEMY_ACTIVE = new Set(['sundayLeague', 'academyLeagueCup', 'academyKnockoutCup'])
 

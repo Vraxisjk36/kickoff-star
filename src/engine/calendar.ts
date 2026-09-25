@@ -54,9 +54,27 @@ export const COMPETITION_SPECS: CompetitionRoundSpec[] = [
   { id: 'academyKnockoutCup', rounds: 4 }, // FA Youth Cup equivalent — pure knockout
 ]
 
-export const SCHOOL_SEASON_SCHEDULE: Record<string, number[]> = { schoolFriendlies:[1,2], schoolLeague:Array.from({length:18},(_,i)=>i+3), schoolCup:Array.from({length:8},(_,i)=>i+21), nationalChampionship:Array.from({length:5},(_,i)=>i+31), youthShowcase:[37] }
-export const SUNDAY_SEASON_SCHEDULE: Record<string, number[]> = { schoolLeague:Array.from({length:22},(_,i)=>i+1), sundayCup:[25,29,33,37], youthShowcase:[38] }
-export const ACADEMY_SEASON_SCHEDULE: Record<string, number[]> = { schoolLeague:Array.from({length:22},(_,i)=>i+1), academyLeagueCup:[24,27,30,33,36], academyKnockoutCup:[38,40,42,44] }
+// V4 career-year structure. Weeks 1-3 are onboarding trials and therefore
+// intentionally contain no season fixture. Weeks 4-5 are the two pre-season
+// friendlies. The existing V4 league/cup engines remain authoritative; this
+// registry only decides WHEN their rounds are played.
+export const SCHOOL_SEASON_SCHEDULE: Record<string, number[]> = {
+  schoolFriendlies: [4, 5],
+  schoolLeague: Array.from({ length: 18 }, (_, i) => i + 6), // W6-W23
+  schoolCup: Array.from({ length: 8 }, (_, i) => i + 24),   // W24-W31
+  nationalChampionship: Array.from({ length: 5 }, (_, i) => i + 32), // W32-W36
+  youthShowcase: [37],
+}
+export const SUNDAY_SEASON_SCHEDULE: Record<string, number[]> = {
+  schoolLeague: Array.from({ length: 22 }, (_, i) => i + 6), // routed to Sunday League, W6-W27
+  sundayCup: [12, 18, 24, 30],
+  youthShowcase: [37],
+}
+export const ACADEMY_SEASON_SCHEDULE: Record<string, number[]> = {
+  schoolLeague: Array.from({ length: 22 }, (_, i) => i + 1),
+  academyLeagueCup: [24, 27, 30, 33, 36],
+  academyKnockoutCup: [38, 40, 42, 44],
+}
 export const SEASON_SCHEDULE = SCHOOL_SEASON_SCHEDULE
 
 // Kept as a Set export for backward compatibility with existing call sites
@@ -152,7 +170,7 @@ export function generateWeek(weekNumber: number, seasonYear: number, phase: Care
     events.push({ id: id(), day: 'sat', type: 'training', title: 'extra training', resolved: false })
   }
   if (schoolMatch || events.some(e => e.day === 'sun' && e.type === 'match')) events.push({ id: id(), day: 'sat', type: 'rest', title: 'match recovery', resolved: false })
-  if (playsSundayFootball && phase !== 'academy' && grassrootsPath === 'school' && weekNumber <= 22) events.push({ id:id(), day:'sun', type:'match', title:'Sunday league fixture', resolved:false })
+  // A youth career has one active route. School players no longer receive a second Sunday fixture.
   if (!events.some(e => e.day === 'sun')) events.push({ id: id(), day: 'sun', type: 'rest', title: 'rest day', resolved: false })
   return { weekNumber, seasonYear, events }
 }
@@ -167,10 +185,9 @@ export function alignMatchDays(state: CalendarState, phase: CareerPhase, path: G
   })
   const hasThursdayMatch = events.some(e => e.type === 'match' && e.day === 'thu')
   if (hasThursdayMatch) events = events.filter(e => e.day !== 'thu' || e.type !== 'street' || e.resolved)
-  if (registered && path === 'school' && state.currentWeek.weekNumber <= 22 && !events.some(e => e.day === 'sun' && e.type === 'match')) {
-    const rest = events.find(e => e.day === 'sun' && e.type === 'rest')
-    if (!rest?.resolved) events = [...events.filter(e => e !== rest), { id: rest?.id ?? id(), day: 'sun', type: 'match', title: 'Sunday league fixture', resolved: false }]
-  }
+  // `registered` is retained in the signature for old saves/callers, but V4 now
+  // keeps School and Grassroots exclusive instead of injecting a side Sunday match.
+  void registered
   if (!events.some(e => e.day === 'sat')) events.push({ id: id(), day: 'sat', type: 'rest', title: 'match recovery', resolved: false })
   events = events.filter(e => !(e.day === 'sun' && e.type === 'rest' && !e.resolved && events.some(m => m.day === 'sun' && m.type === 'match')))
   return { ...state, currentWeek: { ...state.currentWeek, events } }

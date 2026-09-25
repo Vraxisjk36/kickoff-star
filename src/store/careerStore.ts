@@ -1290,7 +1290,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     // minus your agent's cut. This is the first real income in the game: a
     // £150/wk scholarship dwarfs a £30 monthly allowance, which is exactly the
     // step-change signing for an academy should feel like.
-    if (updatedPlayer.contract) {
+    if (updatedPlayer.contract && contractStatus(updatedPlayer).kind !== 'expired') {
       const gross = updatedPlayer.contract.terms.weeklyWage
       const fee = commissionOn(gross, updatedPlayer.agentId)
       // Digs, travel and food come straight back out — a scholarship is income
@@ -1344,13 +1344,20 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
             : { ...updatedPlayer.careerClock, phase: 'grassroots-season' },
           academyClubName: outcome.endsCareer ? updatedPlayer.academyClubName : null,
           squadRole: 'bench',
+          squadRoleSetWeek: updatedPlayer.totalWeeksElapsed ?? 0,
+          squad: outcome.endsCareer ? updatedPlayer.squad : generateSquad(2),
           coachTrust: 0,
+          negotiation: null,
+          contractOffers: outcome.endsCareer ? updatedPlayer.contractOffers : updatedPlayer.contractOffers.filter(o => o.kind === 'club'),
+          pathway: outcome.endsCareer ? updatedPlayer.pathway : { ...(updatedPlayer.pathway ?? initYouthPathway(updatedPlayer)), academyTrialStatus: 'none', academyTrialClubId: undefined },
+          finances: outcome.endsCareer ? updatedPlayer.finances : { ...(updatedPlayer.finances ?? initYouthFinance('grassroots-season')), clubSupport: defaultClubSupport('grassroots-season') },
         }
         lastContractNote = outcome.message
         if (!outcome.endsCareer) {
           // back to a grassroots world; the next tick rebuilds it
           updatedAcademyLeague = null
           updatedLeague = null
+          updatedCups = { ...EMPTY_CUPS }
         }
       }
     }
@@ -1854,6 +1861,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
         void getState().saveCurrent()
         return
       }
+      const stayingAtClub = player.sundayContract?.clubId === target.id && league.playerTeamId === target.id
       const movedLeague = simulateSundayThrough({ ...league, playerDivision: offer.divisionTier as 1 | 2 | 3, playerTeamId: target.id }, calendar.currentWeek.weekNumber - 1)
       let movedPlayer: Player = {
         ...player,
@@ -1861,14 +1869,14 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
         sundayContract: { clubId: target.id, clubName: target.name, division: offer.divisionTier as 1 | 2 | 3, season: calendar.currentWeek.seasonYear, weeklyWage: offer.weeklyWage },
         sundayContractsVersion: 1,
         pathway: { ...(player.pathway ?? initYouthPathway(player)), sundayStatus: 'registered' },
-        squad: sideRegistration ? player.squad : generateSquad(target.prestige),
+        squad: sideRegistration ? player.squad : stayingAtClub ? player.squad : generateSquad(target.prestige),
         sundayLeague: sideRegistration ? movedLeague : player.sundayLeague,
-        sundaySquad: sideRegistration ? generateSquad(target.prestige) : player.sundaySquad,
+        sundaySquad: sideRegistration ? stayingAtClub ? player.sundaySquad : generateSquad(target.prestige) : player.sundaySquad,
         leagueGoals: recordLeagueGoals(player, 'sundayLeague', league.playerDivision, 0),
-        squadRole: sideRegistration ? player.squadRole : 'bench',
+        squadRole: sideRegistration || stayingAtClub ? player.squadRole : 'bench',
         squadRoleSetWeek: player.totalWeeksElapsed ?? 0,
-        coachTrust: sideRegistration ? player.coachTrust : 0,
-        reputation: clamp((player.reputation ?? 0) + 3, 0, 100),
+        coachTrust: sideRegistration || stayingAtClub ? player.coachTrust : 0,
+        reputation: clamp((player.reputation ?? 0) + (stayingAtClub ? 0 : 3), 0, 100),
       }
       movedPlayer = withStory(movedPlayer, calendar, { kind: 'selection', eyebrow: 'Sunday season contract', title: offer.renewal ? 'CONTRACT RENEWED' : 'SUNDAY CONTRACT SIGNED',
         body: `${target.name} · Division ${offer.divisionTier} · £${offer.weeklyWage} per week.`,

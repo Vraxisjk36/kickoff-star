@@ -16,6 +16,9 @@ import { EMPTY_CUPS, writeSave, SAVE_SCHEMA_VERSION } from '../src/engine/save'
 import { reseed } from '../src/engine/rng'
 import { generateTeam } from '../src/engine/teams'
 import { initMatch, advanceToKeyMoment } from '../src/engine/match'
+import { initAcademyWorld } from '../src/engine/academy'
+import { initCupById } from '../src/engine/cup'
+import { defaultClubSupport } from '../src/engine/youthFinances'
 
 let checks = 0
 function check(value: unknown, message: string) { assert.ok(value, message); checks++; console.log('✓', message) }
@@ -181,4 +184,40 @@ await useCareerStore.getState().saveCurrent()
 await useCareerStore.getState().loadFromSlot(2)
 state = useCareerStore.getState()
 check(state.player?.grassrootsClubName === 'Central Juniors' && state.league?.divisions[state.league.playerDivision].teams.find(t => t.id === state.league!.playerTeamId)?.name === 'Central Juniors', 'Chosen club identity survives save and reload')
+const renewalWorld = state.league!
+const renewalTeam = renewalWorld.divisions[renewalWorld.playerDivision].teams.find(t => t.id === renewalWorld.playerTeamId)!
+const priorSquad = JSON.stringify(state.player!.squad)
+const renewalOffer = { ...state.player!.contractOffers.find(o => o.kind === 'club')!, id: 'same-club-renewal', clubId: renewalTeam.id, clubName: renewalTeam.name,
+  divisionTier: renewalWorld.playerDivision, contractSeason: 2, weekOffered: 44, expiresInWeeks: 1, renewal: true }
+useCareerStore.setState({ calendar: calendar(1, 2), player: { ...state.player!, totalWeeksElapsed: 44, squadRole: 'starting-xi', coachTrust: 6, reputation: 12,
+  sundayContract: { clubId: renewalTeam.id, clubName: renewalTeam.name, division: renewalWorld.playerDivision, season: 1, weeklyWage: 12 }, contractOffers: [renewalOffer] } })
+useCareerStore.getState().respondToOffer(renewalOffer.id, true)
+state = useCareerStore.getState()
+check(state.player?.sundayContract?.season === 2 && state.player.sundayContract.clubId === renewalTeam.id, 'Same-club renewal signs the next season')
+check(JSON.stringify(state.player?.squad) === priorSquad && state.player?.squadRole === 'starting-xi' && state.player.coachTrust === 6 && state.player.reputation === 12,
+  'Renewal keeps teammates, starting place, coach trust and reputation')
+await useCareerStore.getState().saveCurrent()
+await useCareerStore.getState().loadFromSlot(2)
+check(useCareerStore.getState().player?.sundayContract?.season === 2 && JSON.stringify(useCareerStore.getState().player?.squad) === priorSquad,
+  'Renewed club and teammates survive save and reload')
+const academyWorld = initAcademyWorld('Audit Academy', 6)
+const academyTeams = Object.values(academyWorld.divisions).flatMap(d => d.teams)
+const academyTeam = academyTeams.find(t => t.id === academyWorld.playerTeamId)!
+const academyCup = initCupById('academyLeagueCup', academyTeam, academyTeams)
+state = useCareerStore.getState()
+const payCount = state.player!.finances!.transactions.filter(t => t.description.includes('Audit Academy weekly allowance')).length
+useCareerStore.setState({ calendar: calendar(10, 3), league: null, academyLeague: academyWorld, cups: { ...EMPTY_CUPS, academyLeagueCup: academyCup },
+  player: { ...state.player!, careerClock: { ageYears: 17, phase: 'academy', grassrootsSeason: null }, academyClubName: 'Audit Academy', totalWeeksElapsed: 100,
+    negotiation: null, renewalDecided: true, contract: { clubName: 'Audit Academy', signedWeek: 50, expiresWeek: 101,
+      terms: { weeklyWage: 150, years: 1, appearanceFee: 10, goalBonus: 5, signingBonus: 100 } },
+    pathway: { ...state.player!.pathway!, academyTrialStatus: 'passed', academyTrialClubId: 'old-academy' },
+    finances: { ...state.player!.finances!, clubSupport: defaultClubSupport('academy') } } })
+useCareerStore.getState().advanceToNextWeek()
+state = useCareerStore.getState()
+check(state.player?.contract === null && state.player.careerClock.phase === 'grassroots-season' && state.academyLeague === null, 'Expired academy deal releases a 17-year-old to the grassroots route')
+check(state.player!.finances!.transactions.filter(t => t.description.includes('Audit Academy weekly allowance')).length === payCount, 'Academy does not pay salary after the expiry week')
+check(state.cups.academyLeagueCup === null && state.player?.pathway?.academyTrialStatus === 'none' && JSON.stringify(state.player.finances?.clubSupport) === JSON.stringify(defaultClubSupport('grassroots-season')),
+  'Release clears academy fixtures and restores grassroots recruitment and support')
+useCareerStore.getState().ensureLeagueWorld()
+check(!!useCareerStore.getState().league, 'Released player can enter a playable grassroots league')
 console.log(`\n${checks} Sunday football checks passed`)

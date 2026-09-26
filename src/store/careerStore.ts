@@ -43,7 +43,7 @@ import { evaluateCaptaincy, recordCaptainAppearance, clearCaptaincyStory } from 
 import { addQualification, archiveCompetitionSeason, initCompetitionCareer, recordCompetitionMatch, recordSelectionResult, scoutingPrestigeMultiplier, serveCompetitionSuspension } from '../engine/competitionCareer'
 import { defaultClubSupport, initYouthFinance, postTransaction, type FinanceCategory, type FinanceTransaction } from '../engine/youthFinances'
 import { addStoryMoment, createStoryMoment, type StoryMoment } from '../engine/presentation'
-import { academyEntryOpen, academyRecruitmentReport, academyTrialAvailable, migrateAcademyRecruitment, reviewAcademyShowcase } from '../engine/academyRecruitment'
+import { academyEntryOpen, academyRecruitmentReport, academyTrialAvailable, academyTrialBase, migrateAcademyRecruitment, reviewAcademyShowcase } from '../engine/academyRecruitment'
 import { ageGroupFor, initYouthPathway, representativeSelection, selectionPassed } from '../engine/pathway'
 import { initOctoberLeague, recordOctoberResult, simulateOctoberWeek, octoberStandings } from '../engine/octoberLeague'
 
@@ -135,7 +135,7 @@ interface CareerStore {
   applyMatchResult: (rating: number, goals: number, assists: number, finalMatchStamina: number, injury: { severity: string; weeksOut: number; description: string } | null, opponentId: string, playerGoalsScored: number, opponentGoalsScored: number, playerWasHome: boolean, squad: import('../engine/squad').SquadPlayer[] | undefined, opponentName: string | undefined, competitionId: string, shootoutWonByPlayer?: boolean, redCarded?: boolean, matchStats?: { tackle: number; interception: number; header: number; keyPass: number; save: number }, playerWonMotm?: boolean, participation?: { minutes: number; started: boolean }) => void
   respondToOffer: (offerId: string, accept: boolean) => void
   acceptSundayRegistration: () => void
-  resolveAcademyTrial: (offerId:string, passed:boolean, score:number) => void
+  resolveAcademyTrial: (offerId:string, points:number) => void
   ensureLeagueWorld: () => void
 }
 
@@ -179,7 +179,7 @@ function reviewAcademyOpportunities(player: Player, calendar: CalendarState): Pl
   const state: ScoutingState = {
     reputation: updated.reputation,
     watchers: updated.scoutWatchers.map(w => ({
-      club: { id: w.clubId, name: w.clubName, short: w.clubShort, ratings: w.ratings, prestige: w.prestige, primaryColor: '#888', secondaryColor: '#fff', notablePlayers: [] },
+      club: { id: w.clubId, name: w.clubName, short: w.clubShort, countryId: w.countryId, ratings: w.ratings, prestige: w.prestige, primaryColor: '#888', secondaryColor: '#fff', notablePlayers: [] },
       interest: w.interest, tier: w.tier as 'local' | 'regional' | 'national',
       watchedMatches: w.watchedMatches, lastObservedWeek: w.lastObservedWeek, addedWeek: w.addedWeek,
     })),
@@ -192,8 +192,8 @@ function reviewAcademyOpportunities(player: Player, calendar: CalendarState): Pl
   for (const offer of result.offers) {
     updated = { ...updated,
       scoutWatchers: updated.scoutWatchers.filter(w => w.clubId !== offer.club.id),
-      contractOffers: [...updated.contractOffers, { id: offer.id, clubId: offer.club.id, clubName: offer.club.name, clubShort: offer.club.short, ratings: offer.club.ratings, prestige: offer.club.prestige, kind: 'academy', weekOffered: offer.weekOffered, expiresInWeeks: offer.expiresInWeeks }],
-      pathway: updated.pathway?.academyTrialStatus === 'passed' ? updated.pathway : { ...(updated.pathway ?? initYouthPathway(updated)), academyTrialStatus: 'invited', academyTrialClubId: offer.club.id },
+      contractOffers: [...updated.contractOffers, { id: offer.id, clubId: offer.club.id, clubName: offer.club.name, clubShort: offer.club.short, countryId: offer.club.countryId, ratings: offer.club.ratings, prestige: offer.club.prestige, kind: 'academy', weekOffered: offer.weekOffered, expiresInWeeks: offer.expiresInWeeks }],
+      pathway: updated.pathway?.academyTrialStatus === 'passed' || updated.pathway?.academyTrialStatus === 'active' ? updated.pathway : { ...(updated.pathway ?? initYouthPathway(updated)), academyTrialStatus: 'invited', academyTrialClubId: offer.club.id, academyTrialSessions: 0, academyTrialPoints: 0, academyTrialBase: undefined, academyTrialLastWeek: undefined },
     }
     updated = withStory(updated, calendar, { kind: 'invitation', eyebrow: 'Academy invitation', title: `${offer.club.name.toUpperCase()} WANT YOU`,
       body: 'After reviewing your long-term record and repeated scouting visits, the academy has invited you to a trial.',
@@ -1857,7 +1857,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
         ...(player.contractOffers ?? []).filter((o) => o.kind === 'club'),
       ],
     }
-    if(newOffer?.kind==='academy')updatedPlayer={...updatedPlayer,pathway:{...(updatedPlayer.pathway??initYouthPathway(updatedPlayer)),academyTrialStatus:'invited',academyTrialClubId:newOffer.club.id}}
+    if(newOffer?.kind==='academy'&&updatedPlayer.pathway?.academyTrialStatus!=='active'&&updatedPlayer.pathway?.academyTrialStatus!=='passed')updatedPlayer={...updatedPlayer,pathway:{...(updatedPlayer.pathway??initYouthPathway(updatedPlayer)),academyTrialStatus:'invited',academyTrialClubId:newOffer.club.id,academyTrialSessions:0,academyTrialPoints:0,academyTrialBase:undefined,academyTrialLastWeek:undefined}}
     if (!isInAcademy && player.grassrootsPath === 'school' && ['schoolLeague', 'schoolReserveLeague', 'schoolCup'].includes(competitionId)) {
       const previousStatus = updatedPlayer.pathway?.sundayStatus
       updatedPlayer = ensureSundayClub(updateSundayRecruitment(updatedPlayer, rating), calendar.currentWeek.weekNumber)
@@ -1968,7 +1968,41 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const offer = player?.contractOffers.find(o => o.kind === 'club' && o.weeklyWage !== undefined)
     if (offer) getState().respondToOffer(offer.id, true)
   },
-  resolveAcademyTrial:(offerId,passed,score)=>{const{player,calendar}=getState();if(!player)return;const offer=player.contractOffers.find(x=>x.id===offerId);if(!offer||!academyTrialAvailable(player,offerId,calendar))return;passed=passed&&score>=62;let updated:Player={...player,contractOffers:passed?player.contractOffers:player.contractOffers.filter(x=>x.id!==offerId),pathway:{...(player.pathway??initYouthPathway(player)),academyTrialStatus:passed?'passed':'failed',academyTrialClubId:offer.clubId},competitionCareer:recordSelectionResult(player.competitionCareer,{competitionId:'academyTrials',season:calendar?.currentWeek.seasonYear??1,round:1,entrants:30,survivors:16,score,outcome:passed?'selected':'cut'})};updated=withStory(updated,calendar,{kind:passed?'selection':'elimination',eyebrow:`${offer.clubName} academy trial`,title:passed?'TRIAL PASSED':'TRIAL ENDS HERE',body:passed?'The academy have invited you into scholarship negotiations.':'The academy chose other players, but you return to your current team with the pathway still alive.',detail:`Trial score ${score}/100 · required 62.`,ceremony:'selection',metrics:[{label:'Trial score',value:score,suffix:'/100',tone:passed?'good':'bad'},{label:'Pass mark',value:62,suffix:'/100'}]});setState({player:updated});void getState().saveCurrent()},
+  resolveAcademyTrial: (offerId, points) => {
+    const { player, calendar } = getState()
+    if (!player || !academyTrialAvailable(player, offerId, calendar)) return
+    const offer = player.contractOffers.find(o => o.id === offerId)!
+    const previous = player.pathway ?? initYouthPathway(player)
+    const sameClub = previous.academyTrialClubId === offer.clubId
+    const sessions = sameClub ? previous.academyTrialSessions ?? 0 : 0
+    const week = player.totalWeeksElapsed ?? 0
+    if (sessions >= 3 || sameClub && previous.academyTrialLastWeek === week) return
+    const validPoints = [[12, 17, 8], [17, 13, 7], [19, 14, 10]][sessions]
+    if (!validPoints.includes(points)) return
+    const base = sameClub ? previous.academyTrialBase ?? academyTrialBase(player) : academyTrialBase(player)
+    const earned = (sameClub ? previous.academyTrialPoints ?? 0 : 0) + points
+    const count = sessions + 1
+    const score = Math.min(100, base + earned)
+    const complete = count === 3
+    const passed = complete && score >= 62
+    const pathway = { ...previous, academyTrialClubId: offer.clubId, academyTrialStatus: complete ? passed ? 'passed' as const : 'failed' as const : 'active' as const,
+      academyTrialSessions: count, academyTrialPoints: earned, academyTrialBase: base, academyTrialLastWeek: week }
+    let updated: Player = { ...player, pathway,
+      contractOffers: complete && !passed ? player.contractOffers.filter(o => o.id !== offerId) : player.contractOffers,
+      competitionCareer: recordSelectionResult(player.competitionCareer, { competitionId: 'academyTrials', season: calendar?.currentWeek.seasonYear ?? 1,
+        round: count, entrants: count === 1 ? 60 : count === 2 ? 35 : 20, survivors: count === 1 ? 35 : count === 2 ? 20 : 1,
+        score, outcome: complete ? passed ? 'selected' : 'cut' : 'advanced' }),
+    }
+    updated = withStory(updated, calendar, { kind: complete ? passed ? 'selection' : 'elimination' : 'selection',
+      eyebrow: `${offer.clubName} academy trial`, title: complete ? passed ? 'TRIAL PASSED' : 'TRIAL ENDS HERE' : `TRIAL SESSION ${count}/3`,
+      body: complete ? passed ? 'The academy have invited you into scholarship negotiations.' : 'The academy chose other players, but your current pathway remains open.'
+        : `Assessment ${count} is complete. Return next week for the next stage of the trial.`,
+      detail: `Trial score ${score}/100${complete ? ' · required 62.' : ' · one assessment per week.'}`,
+      ceremony: 'selection', metrics: [{ label: 'Trial score', value: score, suffix: '/100', tone: complete && !passed ? 'bad' : 'good' },
+        { label: 'Session', value: count, suffix: '/3' }] })
+    setState({ player: updated })
+    void getState().saveCurrent()
+  },
 
   completeAcademyMove: (clubName, prestige) => {
     const { player, calendar } = getState()

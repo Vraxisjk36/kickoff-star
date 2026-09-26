@@ -159,4 +159,28 @@ useCareerStore.setState({ player: { ...weeklyBase, ...young }, calendar: calenda
 useCareerStore.getState().advanceToNextWeek()
 check(useCareerStore.getState().player?.pathway?.regionalSelection === 'cut', 'Production regional review rejects a three-match record')
 
+const academyOffer = { id: 'three-week-trial', kind: 'academy' as const, clubId: club.id, clubName: club.name,
+  clubShort: club.short, countryId: 'eng', ratings: club.ratings, prestige: 6, weekOffered: 123, expiresInWeeks: 8 }
+useCareerStore.setState({ player: { ...proven, totalWeeksElapsed: 123, contractOffers: [academyOffer] }, calendar: calendar(3, 36) })
+useCareerStore.getState().resolveAcademyTrial(academyOffer.id, 17)
+check(useCareerStore.getState().player?.pathway?.academyTrialSessions === 1 && useCareerStore.getState().player?.pathway?.academyTrialStatus === 'active',
+  'First academy assessment is saved as an active weekly trial')
+useCareerStore.getState().resolveAcademyTrial(academyOffer.id, 17)
+check(useCareerStore.getState().player?.pathway?.academyTrialSessions === 1, 'Trial cannot complete two assessments in one week')
+await writeSave({ schemaVersion: SAVE_SCHEMA_VERSION, slotId: 2, savedAt: new Date().toISOString(),
+  player: useCareerStore.getState().player!, calendar: calendar(3, 36), league: null, academyLeague: null,
+  cups: { ...EMPTY_CUPS }, international: null, pendingTraining: null })
+await useCareerStore.getState().loadFromSlot(2)
+check(useCareerStore.getState().player?.pathway?.academyTrialSessions === 1 && useCareerStore.getState().player?.pathway?.academyTrialPoints === 17,
+  'Academy trial session and score survive save and reload')
+for (const [week, points] of [[37, 17], [38, 19]]) {
+  const current = useCareerStore.getState().player!
+  useCareerStore.setState({ player: { ...current, totalWeeksElapsed: current.totalWeeksElapsed + 1 }, calendar: calendar(3, week) })
+  useCareerStore.getState().resolveAcademyTrial(academyOffer.id, points)
+}
+check(useCareerStore.getState().player?.pathway?.academyTrialSessions === 3 && useCareerStore.getState().player?.pathway?.academyTrialStatus === 'passed',
+  'Three weekly assessments complete the academy trial before negotiations')
+check(useCareerStore.getState().player?.competitionCareer?.selections.filter(record => record.competitionId === 'academyTrials').length === 3,
+  'All three trial cuts are recorded in the career')
+
 console.log(`\n${checks} progression checks passed`)

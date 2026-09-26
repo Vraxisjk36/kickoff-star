@@ -4,6 +4,13 @@ import { SEASON_WEEKS } from './calendar'
 import { competitionDefinition } from './competitionCareer'
 import { initYouthPathway } from './pathway'
 import { addStoryMoment, createStoryMoment } from './presentation'
+import { computeCurrentAbility, toOvr } from './rating'
+
+export function academyTrialBase(player: Player): number {
+  const ratings = player.matchRatings.slice(-5)
+  const form = ratings.length ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length : 6
+  return Math.max(10, Math.min(45, Math.round((toOvr(computeCurrentAbility(player)) - 30) * 1.25 + (form - 5) * 5)))
+}
 
 export const ACADEMY_MIN_AGE = 16
 export const ACADEMY_FIRST_SEASON = 3

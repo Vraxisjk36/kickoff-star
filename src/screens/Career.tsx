@@ -503,7 +503,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
   if (mode.kind === 'negotiation') {
     return <NegotiationScreen player={player} onClose={() => setMode({ kind: 'hub' })} />
   }
-  if(mode.kind==='academy-trial')return <AcademyTrialScreen player={player} clubName={mode.clubName} onComplete={(passed,score)=>{resolveAcademyTrial(mode.offerId,passed,score);if(!passed){setMode({kind:'hub'});return}const fresh=useCareerStore.getState().player;if(!fresh?.agentId){setMode({kind:'agent'});return}beginNegotiation(mode.offerId);setMode({kind:'negotiation'})}}/>
+  if(mode.kind==='academy-trial')return <AcademyTrialScreen player={player} clubName={mode.clubName} clubId={player.contractOffers.find(o=>o.id===mode.offerId)?.clubId??''} onComplete={(points)=>{if(points===null){setMode({kind:'hub'});return}resolveAcademyTrial(mode.offerId,points);const fresh=useCareerStore.getState().player;if(fresh?.pathway?.academyTrialStatus!=='passed'){setMode({kind:'hub'});return}if(!fresh.agentId){setMode({kind:'agent'});return}beginNegotiation(mode.offerId);setMode({kind:'negotiation'})}}/>
 
   if (mode.kind === 'offers') {
     return (

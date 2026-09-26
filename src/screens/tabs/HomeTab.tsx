@@ -1,49 +1,35 @@
 import type { Player } from '../../types/player'
-import { SEASON_WEEKS } from '../../engine/calendar'
 import type { CalendarState } from '../../types/calendar'
-import { watchRewardedAd, remainingToday } from '../../engine/ads'
+import { watchRewardedAd, remainingToday, rewardedAdsAvailable } from '../../engine/ads'
 import type { LeagueWorld, Division } from '../../engine/league'
-import { sortStandings, divisionLabel } from '../../engine/league'
+import { sortStandings } from '../../engine/league'
 import type { AcademyWorld } from '../../engine/academy'
-import { academyDivisionLabel } from '../../engine/academy'
 import { computeCurrentAbility, toOvr } from '../../engine/rating'
-import { trustLabel, trustEmoji } from '../../engine/coachTrust'
-import { Panel, Bar, StatRow, Section, Icon } from '../../components/ui'
+import { Panel, Icon } from '../../components/ui'
 import iconEnergy from '../../assets/icons/energy.png'
-import iconConfidence from '../../assets/icons/confidence.png'
 import iconWeek from '../../assets/icons/week.png'
 import iconTeamSelection from '../../assets/icons/team_selection.png'
 import iconGazette from '../../assets/icons/gazette.png'
- import iconCareer from '../../assets/icons/career.png'
-import iconCoachTrust from '../../assets/icons/coach_trust.png'
 import { EnergyMeter } from '../../components/EnergySheet'
 import { bandSpec } from '../../engine/energy'
 import type { HubTab } from '../../components/navItems'
 import Avatar from '../../components/Avatar'
 import { getNation } from '../../engine/nations'
-import { arcProgressText, weeksLeft } from '../../engine/storylines'
+import { completedSeasonObjectives } from '../../engine/seasonObjectives'
 import { itemById } from '../../engine/economy'
 import { isLive, STAGE_LABEL } from '../../engine/negotiation'
 import { decideSelection, selectionAdvice } from '../../engine/selection'
 import { useCareerStore } from '../../store/careerStore'
-
-// color + emoji pairing for the confidence pill, matching the existing
-// trustEmoji/trustLabel pattern in coachTrust.ts rather than inventing a new
-// visual language for status indicators.
-function confidenceMeta(value: number): { label: string; emoji: string; color: string } {
-  if (value > 5) return { label: 'high', emoji: '🔥', color: 'text-green-500' }
-  if (value > 1) return { label: 'steady', emoji: '🙂', color: 'text-ks-gold' }
-  if (value > -2) return { label: 'shaky', emoji: '😬', color: 'text-orange-400' }
-  return { label: 'low', emoji: '😟', color: 'text-red-500' }
-}
+import { monthForWeek,pathwayNextStep } from '../../engine/pathway'
 
 function ordinal(n: number): string {
-  return `${n}${n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'}`
+  const suffix = n % 100 >= 11 && n % 100 <= 13 ? 'th' : n % 10 === 1 ? 'st' : n % 10 === 2 ? 'nd' : n % 10 === 3 ? 'rd' : 'th'
+  return `${n}${suffix}`
 }
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
 
-export default function HomeTab({ player, calendar, league, academyLeague, offerCount, onOpenOffers, onGoTo, onOpenEnergy, latestGazetteMasthead, onOpenGazette }: {
+export default function HomeTab({ player, calendar, league, academyLeague, offerCount, onOpenOffers, onGoTo, onOpenEnergy, latestGazetteMasthead, onOpenGazette, onOpenInbox, onOpenYearCalendar }: {
   player: Player
   calendar: CalendarState
   league: LeagueWorld | null
@@ -54,6 +40,8 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
   onOpenEnergy: () => void
   latestGazetteMasthead: string | null
   onOpenGazette: () => void
+  onOpenInbox: () => void
+  onOpenYearCalendar: () => void
 }) {
   const consumeItem = useCareerStore((s) => s.consumeItem)
   const restoreEnergyFromAd = useCareerStore((s) => s.restoreEnergyFromAd)
@@ -61,29 +49,32 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
   const negotiationBeat = useCareerStore((s) => s.negotiationBeat)
   const clearNegotiationBeat = useCareerStore((s) => s.clearNegotiationBeat)
   const selectionNote = useCareerStore((s) => s.selectionNote)
+  const sundayOffer = player.contractOffers.find(o => o.kind === 'club' && o.weeklyWage !== undefined)
+  const sundayDeal = player.sundayContract?.season === calendar.currentWeek.seasonYear ? player.sundayContract : undefined
+  const acceptSundayRegistration=useCareerStore(s=>s.acceptSundayRegistration)
   const eventsByDay = Object.fromEntries(calendar.currentWeek.events.map((e) => [e.day, e]))
   const ovr = toOvr(computeCurrentAbility(player))
   const isAcademy = player.careerClock.phase === 'academy'
   const world = isAcademy ? academyLeague : league
+  const inbox = player.inbox ?? []
+  const unreadInbox = inbox.filter((item) => !item.read).length
 
   let leaguePos: string | null = null
-  let leagueName: string | null = null
   if (world) {
     const division = (world.divisions as Record<number, Division>)[world.playerDivision]
     const sorted = sortStandings(division.standings)
     const pos = sorted.findIndex((s) => s.teamId === world.playerTeamId) + 1
-    leaguePos = pos > 0 ? ordinal(pos) : '—'
-    leagueName = isAcademy
-      ? academyDivisionLabel(world.playerDivision as 1 | 2)
-      : divisionLabel(world.playerDivision as 1 | 2 | 3)
+    const playerHasPlayed = division.standings.some((standing) => standing.teamId === world.playerTeamId && standing.played > 0)
+    leaguePos = (player.grassrootsPath === 'sunday' && !sundayDeal) || !playerHasPlayed ? '—' : pos > 0 ? ordinal(pos) : '—'
   }
 
   const nextEvent = DAYS.map((day) => eventsByDay[day]).find((e) => e && !e.resolved) ?? calendar.currentWeek.events.find((e) => !e.resolved) ?? calendar.currentWeek.events[0]
+  const unsignedSundayMatch = nextEvent?.type === 'match' && nextEvent.title === 'matchday' && player.grassrootsPath === 'sunday' && !sundayDeal
   return (
     <div className="career-home flex flex-col gap-2.5 stagger-children">
       <section className="career-hero">
         <div className="career-hero-glow"/>
-        <div className="career-hero-top"><span>KICKOFF STAR · CAREER</span><b>WEEK {calendar.currentWeek.weekNumber}</b></div>
+        <div className="career-hero-top"><span>KICKOFF STAR · {monthForWeek(calendar.currentWeek.weekNumber).toUpperCase()}</span><b>WEEK {calendar.currentWeek.weekNumber}</b></div>
         <div className="career-player">
           <Avatar id={player.avatarId ?? 0} size={62} className="career-avatar" />
           <div className="min-w-0"><small>{player.careerClock.phase.toUpperCase()} · {player.position}</small><h1>{player.name}</h1><p>{getNation(player.nationality).flag} AGE {player.careerClock.ageYears} · {player.squadRole === 'starting-xi' ? 'STARTING XI' : (player.squadRole ?? 'SQUAD').toUpperCase()}</p></div>
@@ -96,6 +87,28 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
           <div><span>NEXT</span><b>{nextEvent?.type?.replace(/-/g,' ') ?? 'OPEN'}</b></div>
         </div>
       </section>
+      {nextEvent && !nextEvent.resolved && (
+        <section className={`week-headliner ${nextEvent.type === 'match' ? 'match' : ''}`}>
+          <div><span>NEXT UP · {nextEvent.day.toUpperCase()}</span><h3>{unsignedSundayMatch ? 'community trial training' : nextEvent.title}</h3><p>{unsignedSundayMatch ? 'TRAIN TO EARN A CLUB OFFER' : nextEvent.type === 'match' ? 'MATCHDAY · Your next competitive test' : nextEvent.type.replace(/-/g,' ').toUpperCase()}</p></div>
+          <div className="week-headliner-arrow">→</div>
+        </section>
+      )}
+
+
+      {player.careerClock.phase!=='academy'&&<button onClick={()=>onGoTo('fixtures')} className="pathway-headliner text-left"><div><span>{player.pathway?.ageGroup??'YOUTH'} PATHWAY</span><h3>{pathwayNextStep(player)}</h3><p>{player.grassrootsPath === 'school' ? 'School → Regional XI → National schools → International' : 'Community club → Sunday League → Academy scouting'}</p></div><b>→</b></button>}
+
+      {player.communityTrialSessions !== undefined && player.pathway?.sundayStatus === 'training-invite' && <div className="rounded-lg border border-ks-gold/40 bg-ks-gold/10 px-3 py-3"><span className="font-display text-[10px] tracking-widest text-ks-gold">COMMUNITY TRIAL</span><p className="text-xs text-ks-ink mt-1">Train with a new club: {Math.min(3, player.communityTrialSessions)} of 3 sessions complete. A season offer follows the third session.</p></div>}
+
+      {player.pathway?.sundayStatus==='squad-offer'&&sundayOffer&&<div className="sunday-offer-card"><div><span>COMMUNITY CLUB OFFER</span><b>{sundayOffer.clubName} · Division {sundayOffer.divisionTier}</b><p>£{sundayOffer.weeklyWage}/week for the season. {player.grassrootsPath === 'school' ? 'School matches on Thursdays; club league matches on Sundays.' : 'League and cup matches are on Sundays after signing.'}</p></div><button onClick={acceptSundayRegistration}>accept place</button></div>}
+      {sundayDeal && <button className="text-left text-xs text-ks-gold px-3 py-2 border border-ks-border rounded-lg" onClick={() => onGoTo('table')}>{sundayDeal.clubName} · Division {sundayDeal.division} · £{sundayDeal.weeklyWage}/week · season contract →</button>}
+      <button onClick={onOpenInbox} className={`rounded-lg border px-3 py-2.5 flex items-center gap-3 text-left ${unreadInbox > 0 ? 'border-ks-gold/60 bg-ks-gold/10' : 'border-ks-border bg-[#0f0f0d]'}`}>
+        <div className={`w-8 h-8 rounded-full border flex items-center justify-center text-sm ${unreadInbox > 0 ? 'border-ks-gold text-ks-gold' : 'border-ks-border text-ks-muted'}`}>✉</div>
+        <div className="flex-1 min-w-0">
+          <div className="font-display text-[11px] text-ks-ink tracking-wide">Career inbox</div>
+          <div className="text-[9px] text-ks-muted truncate">{inbox.length > 0 ? inbox[inbox.length - 1].title : 'Announcements, selections and invitations'}</div>
+        </div>
+        <span className={`text-[10px] ${unreadInbox > 0 ? 'text-ks-gold' : 'text-ks-muted'}`}>{unreadInbox > 0 ? `${unreadInbox} new` : 'open'} →</span>
+      </button>
       {offerCount > 0 && (
         <button
           onClick={onOpenOffers}
@@ -142,7 +155,7 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
       {/* P31 — where you stand in the coach's thinking, and how to move up.
           Answers the question "how do I get in the starting eleven?", which
           previously had no visible answer anywhere in the game. */}
-      {(() => {
+      {(player.grassrootsPath === 'school' || !!sundayDeal) && (() => {
         // P63 — real, confirmed bug: this used to show `decideSelection`'s
         // live, ungated verdict directly — what the coach WOULD decide
         // right now — completely bypassing the sticky-selection lock that
@@ -202,27 +215,17 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
         </div>
       )}
 
-      {/* live storylines — a deadline you're carrying should never be buried */}
-      {(player.activeArcs ?? []).map((arc) => (
-        <button
-          key={arc.id}
-          onClick={() => onGoTo('people')}
-          className="rounded-lg border border-ks-gold/35 bg-ks-gold/5 px-3 py-2.5 text-left"
-        >
-          <div className="flex items-center justify-between mb-0.5">
-            <span className="font-display tracking-wide text-ks-gold text-[11px] uppercase">{arc.title}</span>
-            <span className="text-[9px] text-ks-muted uppercase tracking-wider">
-              {weeksLeft(arc, player)}w left
-            </span>
-          </div>
-          <p className="text-[11px] text-ks-ink leading-snug">{arc.brief}</p>
-          <p className="text-[10px] text-ks-muted mt-0.5">{arcProgressText(arc, player)}</p>
-        </button>
-      ))}
+      {player.seasonObjectives && <button onClick={() => onGoTo('player')} className="rounded-lg border border-ks-gold/35 bg-ks-gold/5 px-3 py-2.5 text-left">
+        <span className="font-display tracking-wide text-ks-gold text-[11px] uppercase">Coach's season goals</span>
+        <p className="text-[11px] text-ks-ink mt-1">{completedSeasonObjectives(player.seasonObjectives, player)} of 4 reached · view progress →</p>
+      </button>}
 
       <button onClick={() => onGoTo('player')} className="home-player-link"><span>PLAYER PROFILE</span><b>View development, form & career record →</b></button>
 
       <div className="home-section-label"><span>THIS WEEK</span><i/></div>
+      <button onClick={onOpenYearCalendar} className="w-full rounded-lg border border-ks-gold/40 bg-[#161308] px-3 py-3 flex items-center gap-3 text-left">
+        <Icon src={iconWeek} /><div className="flex-1"><b className="block font-display text-xs text-ks-gold">YEAR CALENDAR</b><span className="text-[10px] text-ks-muted">January–December · fixtures, cups & selection windows</span></div><span className="text-ks-gold">→</span>
+      </button>
       {/* Phase 25: the Gazette teaser — a fresh issue drops every week */}
       {latestGazetteMasthead && (
         <button
@@ -239,11 +242,8 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
 
       <div className="home-section-label"><span>PLAYER MANAGEMENT</span><i/></div>
       {/* energy — now a real meter with an explainer, not a bare number */}
-      <button
-        onClick={onOpenEnergy}
-        className="rounded-lg border border-ks-border bg-[#0f0f0d] px-3 py-2.5 text-left active:scale-[0.995] transition-transform"
-      >
-        <div className="flex items-center justify-between mb-1.5">
+      <div className="rounded-lg border border-ks-border bg-[#0f0f0d] px-3 py-2.5 text-left">
+        <button onClick={onOpenEnergy} className="w-full flex items-center justify-between mb-1.5 text-left">
           <span className="text-[9px] text-ks-muted uppercase tracking-wider flex items-center gap-1">
             <Icon src={iconEnergy} />energy
           </span>
@@ -253,7 +253,7 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
             </span>
             <span className="text-[9px] text-ks-muted">what's this? →</span>
           </span>
-        </div>
+        </button>
         <EnergyMeter stamina={player.fitness.stamina} showLabel={false} />
         {/* P29: energy is deliberately tight, so the fix is always one tap
             away when you're carrying a drink — no hunting through menus. */}
@@ -273,7 +273,7 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
         {/* P64 — free alternative for players without a drink (or who'd
             rather not spend one) — same 20% restore, paid for by watching
             a real rewarded ad instead of in-game money. */}
-        {player.fitness.stamina < 100 && remainingToday('energy') > 0 && (
+        {rewardedAdsAvailable() && player.fitness.stamina < 100 && remainingToday('energy') > 0 && (
           <button
             onClick={async () => {
               const reward = await watchRewardedAd('energy')
@@ -284,34 +284,7 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
             watch ad for +20% energy · {remainingToday('energy')} left today
           </button>
         )}
-      </button>
-
-      {/* status pills — color-coded confidence (was plain text, easy to miss
-          at a glance) plus small icons so the two pills read as distinct
-          stats rather than blending into the same gray-on-gray block */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-lg border border-ks-border bg-[#0f0f0d] px-2 py-2 text-center">
-          <div className="text-[9px] text-ks-muted uppercase tracking-wider">confidence</div>
-          <div className={`text-sm font-display capitalize flex items-center justify-center gap-1 ${confidenceMeta(player.confidence.value).color}`}>
-            <Icon src={iconConfidence} />
-            {confidenceMeta(player.confidence.value).label}
-          </div>
-        </div>
-        <div className="rounded-lg border border-ks-border bg-[#0f0f0d] px-2 py-2 text-center">
-          <div className="text-[9px] text-ks-muted uppercase tracking-wider">week</div>
-          <div className="text-ks-ink text-sm font-display flex items-center justify-center gap-1">
-            <Icon src={iconWeek} />
-            {calendar.currentWeek.weekNumber}
-          </div>
-        </div>
       </div>
-
-      {nextEvent && !nextEvent.resolved && (
-        <section className={`week-headliner ${nextEvent.type === 'match' ? 'match' : ''}`}>
-          <div><span>NEXT UP · ${nextEvent.day.toUpperCase()}</span><h3>{nextEvent.title}</h3><p>{nextEvent.type === 'match' ? 'MATCHDAY · Your next competitive test' : nextEvent.type.replace(/-/g,' ').toUpperCase()}</p></div>
-          <div className="week-headliner-arrow">→</div>
-        </section>
-      )}
 
       <div className="home-section-label"><span>SCHEDULE</span><i/></div>
       <Panel title={<span className="flex items-center gap-1"><Icon src={iconWeek} />week overview</span>}>
@@ -339,37 +312,6 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
         </div>
       </Panel>
 
-      <div className="home-section-label"><span>CAREER STATUS</span><i/></div>
-      <Section
-        title={<span className="flex items-center gap-1"><Icon src={iconCareer} />career</span>}
-        action={
-          <button onClick={() => onGoTo('table')} className="text-[9px] text-ks-gold tracking-wide">
-            table →
-          </button>
-        }
-      >
-        <div className="flex flex-col gap-1.5">
-          <StatRow label="path" value={isAcademy ? 'Academy' : 'Grassroots'} />
-          {!isAcademy && <StatRow label="season" value={`${player.careerClock.grassrootsSeason ?? '—'} / 4`} />}
-          <StatRow label="week" value={`${calendar.currentWeek.weekNumber} / ${SEASON_WEEKS}`} />
-          <StatRow label="squad role" value={<span className="capitalize">{player.squadRole ?? 'TBD'}</span>} />
-          {leagueName && <StatRow label={isAcademy ? 'academy' : 'league'} value={`${leagueName} · ${leaguePos}`} />}
-        </div>
-      </Section>
-
-      <Section
-        title={<span className="flex items-center gap-1"><Icon src={iconCoachTrust} />coach trust</span>}
-        action={
-          <button onClick={() => onGoTo('player')} className="text-[9px] text-ks-gold tracking-wide">
-            notebook →
-          </button>
-        }
-      >
-        <div className="flex items-center gap-3">
-          <Bar value={(player.coachTrust ?? 0) + 10} max={20} />
-          <span className="text-[11px] text-ks-ink w-20 text-right">{trustEmoji(player.coachTrust ?? 0)} {trustLabel(player.coachTrust ?? 0)}</span>
-        </div>
-      </Section>
     </div>
   )
 }

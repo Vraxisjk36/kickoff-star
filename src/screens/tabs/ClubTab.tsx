@@ -1,3 +1,4 @@
+import TopScorers from '../../components/TopScorers'
 import type { Player } from '../../types/player'
 import type { Division } from '../../engine/league'
 import { sortStandings, divisionLabel } from '../../engine/league'
@@ -21,11 +22,11 @@ export default function ClubTab({ player, playerTeam, division, isAcademy }: {
   const rivals = division.teams.filter((t) => t.id !== playerTeam.id)
   const divName = isAcademy
     ? academyDivisionLabel(division.tier as 1 | 2)
-    : divisionLabel(division.tier)
+    : player.grassrootsPath === 'school' ? 'Local School League' : divisionLabel(division.tier)
 
   return (
     <div className="flex flex-col gap-2.5">
-      <section className="club-hero" style={{'--club-primary':playerTeam.primaryColor,'--club-secondary':playerTeam.secondaryColor} as React.CSSProperties}><div className="club-stand"/><small>{isAcademy?'ACADEMY CLUB':'GRASSROOTS CLUB'} · {divName}</small><div className="club-identity"><TeamCrest primary={playerTeam.primaryColor} secondary={playerTeam.secondaryColor} short={playerTeam.short} /><div><h2>{playerTeam.name}</h2><p>{pos>0?ordinal(pos):'—'} IN LEAGUE · PRESTIGE {playerTeam.prestige}/10</p></div><div className="club-strength"><b>{teamOverall(playerTeam)}</b><span>TEAM OVR</span></div></div><div className="club-record"><div><span>PLAYED</span><b>{standing?.played??0}</b></div><div><span>W-D-L</span><b>{standing?.won??0}-{standing?.drawn??0}-{standing?.lost??0}</b></div><div><span>POINTS</span><b>{standing?.points??0}</b></div><div><span>GD</span><b>{((standing?.goalsFor??0)-(standing?.goalsAgainst??0))>0?'+':''}{(standing?.goalsFor??0)-(standing?.goalsAgainst??0)}</b></div></div></section>
+      <section className="club-hero" style={{'--club-primary':playerTeam.primaryColor,'--club-secondary':playerTeam.secondaryColor} as React.CSSProperties}><div className="club-stand"/><small>{isAcademy?'ACADEMY CLUB':player.grassrootsPath==='school'?'SCHOOL TEAM':'GRASSROOTS CLUB'} · {divName}</small><div className="club-identity"><TeamCrest primary={playerTeam.primaryColor} secondary={playerTeam.secondaryColor} short={playerTeam.short} /><div><h2>{playerTeam.name}</h2><p>{pos>0?ordinal(pos):'—'} IN LEAGUE · PRESTIGE {playerTeam.prestige}/10</p></div><div className="club-strength"><b>{teamOverall(playerTeam)}</b><span>TEAM OVR</span></div></div><div className="club-record"><div><span>PLAYED</span><b>{standing?.played??0}</b></div><div><span>W-D-L</span><b>{standing?.won??0}-{standing?.drawn??0}-{standing?.lost??0}</b></div><div><span>POINTS</span><b>{standing?.points??0}</b></div><div><span>GD</span><b>{((standing?.goalsFor??0)-(standing?.goalsAgainst??0))>0?'+':''}{(standing?.goalsFor??0)-(standing?.goalsAgainst??0)}</b></div></div></section>
 
       <div className="home-section-label"><span>SQUAD PROFILE</span><i/></div><Panel title="💪 team strength">
         <div className="flex flex-col gap-1.5">
@@ -56,7 +57,28 @@ export default function ClubTab({ player, playerTeam, division, isAcademy }: {
         </div>
       </Panel>
 
-      <div className="home-section-label"><span>THE DIVISION</span><i/></div><Panel title={`rivals — ${divName}`}>
+      <Panel title="🎽 squad">
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2 rounded-md border border-ks-gold/40 bg-ks-gold/10 px-2 py-2">
+            <span className="text-[9px] text-ks-gold w-8">YOU</span>
+            <span className="text-[11px] text-ks-ink flex-1 truncate">{player.name}</span>
+            <span className="text-[9px] text-ks-muted">{player.position}</span>
+            <span className="text-[9px] text-ks-gold uppercase">{player.squadRole ?? 'trial'}</span>
+          </div>
+          {[...(player.squad ?? [])].sort((a, b) => (a.squadRole === b.squadRole ? b.quality - a.quality : a.squadRole === 'starter' ? -1 : 1)).map((mate) => (
+            <div key={mate.id} className="flex items-center gap-2 px-2 py-1.5 border-b border-ks-border/35 last:border-0">
+              <span className={`text-[8px] uppercase w-10 ${mate.squadRole === 'starter' ? 'text-green-500' : 'text-ks-muted'}`}>{mate.squadRole === 'starter' ? 'XI' : 'bench'}</span>
+              <span className="text-[11px] text-ks-ink flex-1 truncate">{mate.name}</span>
+              <span className="text-[9px] text-ks-muted w-7">{mate.position}</span>
+              <span className="font-display text-[10px] text-ks-gold w-5 text-right">{mate.quality}</span>
+              <span className="text-[8px] text-ks-muted w-12 text-right">{mate.seasonGoals}G {mate.seasonAssists}A</span>
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <div className="home-section-label"><span>THE DIVISION</span><i/></div>
+      <Panel title={`rivals — ${divName}`}>
         <div className="flex flex-col gap-2">
           {rivals.map((t) => (
             <div key={t.id} className="flex items-center gap-2.5">
@@ -68,35 +90,7 @@ export default function ClubTab({ player, playerTeam, division, isAcademy }: {
         </div>
       </Panel>
 
-      {/* P63 — "we need top goalscorer/assist/rating screens." Real,
-          honest scope: other teams in the division are abstract entities
-          with no individual player roster at all (only your own team has
-          named players) — a true rival-player leaderboard would need full
-          generated squads for every team in the game, which is a much
-          bigger feature. What's genuinely real: team-level goals for/
-          against from the actual season, plus your own tracked stats in
-          context — shown here rather than faking opponent player names. */}
-      {/* P64 — real top-scorer leaderboard, now that every team has 4
-          tracked notable players and batch-sim actually attributes goals
-          to them. Not fabricated — every name/goal count here comes from
-          the real simulated season. */}
-      <Panel title={`top scorers — ${divName}`}>
-        <div className="flex flex-col gap-1.5">
-          {division.teams
-            .flatMap((t) => t.notablePlayers.map((p) => ({ ...p, teamShort: t.short, isPlayerTeam: t.id === playerTeam.id })))
-            .filter((p) => p.seasonGoals > 0)
-            .sort((a, b) => b.seasonGoals - a.seasonGoals)
-            .slice(0, 5)
-            .map((p, i) => (
-              <div key={`${p.teamShort}-${p.name}`} className="flex items-center gap-2 text-[11px]">
-                <span className="text-ks-muted w-4">{i + 1}</span>
-                <span className={`flex-1 truncate ${p.isPlayerTeam ? 'text-ks-gold' : 'text-ks-ink'}`}>{p.name}</span>
-                <span className="text-ks-muted w-9">{p.teamShort}</span>
-                <span className="text-ks-ink tabular-nums w-4 text-right">{p.seasonGoals}</span>
-              </div>
-            ))}
-        </div>
-      </Panel>
+      <TopScorers division={division} player={player} playerTeamId={playerTeam.id} competitionId={isAcademy ? 'academyLeague' : player.grassrootsPath === 'school' ? 'schoolLeague' : 'sundayLeague'} />
 
       <Panel title="⚽ top scoring teams">
         <div className="flex flex-col gap-1.5">

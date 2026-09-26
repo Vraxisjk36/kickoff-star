@@ -52,7 +52,7 @@ const career = (p: Player) => p.career ?? {
 export const ACHIEVEMENTS: Achievement[] = [
   // --- debut ---
   {
-    key: 'first-appearance', title: 'First Whistle', description: 'Play your first competitive match.',
+    key: 'first-appearance', title: 'First Whistle', description: 'Play your first match.',
     category: 'debut', tier: 'bronze',
     check: (c) => career(c.player).appearances >= 1,
   },

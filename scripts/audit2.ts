@@ -14,7 +14,7 @@ import { initCupById, recordCupPlayerResult, advanceCupStage, batchSimCupStage, 
 import { knockoutWinners } from '../src/engine/competitions'
 import { initInternationalWorld, batchSimQualifyingRound, advanceInternationalStage, recordNationResult, batchSimFinalsRound, nationFixture } from '../src/engine/international'
 import { generateTeam } from '../src/engine/teams'
-import { SEASON_SCHEDULE } from '../src/engine/calendar'
+import { SCHOOL_SEASON_SCHEDULE, SUNDAY_SEASON_SCHEDULE, ACADEMY_SEASON_SCHEDULE } from '../src/engine/calendar'
 
 reseed(20260727)
 let failures = 0
@@ -69,10 +69,10 @@ function auditB_shootoutConsistency() {
 function auditC_roundBudgets() {
   console.log('\n[C] cup round counts fit their scheduled calendar weeks')
   const expectations: Record<string, number> = {
-    schoolCup: (SEASON_SCHEDULE.schoolCup ?? []).length,
-    sundayCup: (SEASON_SCHEDULE.sundayCup ?? []).length,
-    academyLeagueCup: (SEASON_SCHEDULE.academyLeagueCup ?? []).length,
-    academyKnockoutCup: (SEASON_SCHEDULE.academyKnockoutCup ?? []).length,
+    schoolCup: SCHOOL_SEASON_SCHEDULE.schoolCup.length,
+    sundayCup: SUNDAY_SEASON_SCHEDULE.sundayCup.length,
+    academyLeagueCup: ACADEMY_SEASON_SCHEDULE.academyLeagueCup.length,
+    academyKnockoutCup: ACADEMY_SEASON_SCHEDULE.academyKnockoutCup.length,
   }
   for (const [cupId, weeksBudget] of Object.entries(expectations)) {
     // sim the whole cup NPC-only (player treated as NPC) counting stages

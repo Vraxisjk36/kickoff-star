@@ -227,13 +227,13 @@ export const ARC_TEMPLATES: ArcTemplate[] = [
     }),
   },
   {
-    key: 'iron-man', title: 'Every Single Week', weeks: 6, weight: 2,
+    key: 'iron-man', title: 'A regular in the side', weeks: 6, weight: 2,
     when: (p) => isStarter(p) && !p.injury && hasPlayed(p),
     build: () => ({
-      brief: 'Play 5 matches in 6 weeks. No missed games, no excuses.',
+      brief: 'Make 5 appearances over the next 6 weeks.',
       objective: { kind: 'appearances', count: 5 },
-      onSuccess: { coachTrust: 2, reputation: 1, confidence: 2, narrative: 'Six weeks, five starts. The coach calls you the first name on the sheet.' },
-      onFailure: { confidence: -1, narrative: 'Too many gaps. Availability is a skill and you did not show it.' },
+      onSuccess: { coachTrust: 2, reputation: 1, confidence: 2, narrative: 'Five appearances in six weeks. You are becoming a regular.' },
+      onFailure: { confidence: -1, narrative: 'You did not reach five appearances this time. There will be another chance to establish yourself.' },
     }),
   },
 ]

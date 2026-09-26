@@ -5,6 +5,7 @@ import { teamOverall } from '../engine/teams'
 import { bandSpec, matchSharpnessFrom } from '../engine/energy'
 import { TeamCrest } from '../components/ui'
 import Avatar from '../components/Avatar'
+import { matchTeamSheet, matchVenue } from '../engine/matchPresentation'
 
 // Phase 16: matches used to begin with no ceremony at all — you tapped "continue"
 // on the hub and were suddenly at 0'. This is the walk-out: who you're playing,
@@ -19,12 +20,13 @@ function formOf(player: Player): { letters: string[]; avg: number | null } {
   }
 }
 
-export default function MatchDayScreen({ player, playerTeam, opponent, isHome, onKickOff, competitionLabel }: {
+export default function MatchDayScreen({ player, playerTeam, opponent, isHome, onKickOff, competitionLabel, competitionId }: {
   player: Player
   playerTeam: Team
   opponent: Team
   isHome: boolean
   competitionLabel?: string
+  competitionId: string
   onKickOff: () => void
 }) {
   const [entered, setEntered] = useState(false)
@@ -40,9 +42,13 @@ export default function MatchDayScreen({ player, playerTeam, opponent, isHome, o
   const billing = gap >= 6 ? 'You should be winning this.'
     : gap <= -6 ? 'They\'re the better side on paper.'
     : 'There\'s very little between these two.'
+  const isRegional=competitionLabel?.toLowerCase().includes('regional');const isNational=competitionLabel?.toLowerCase().includes('national')||competitionLabel?.toLowerCase().includes('international')
+  const isContinental=competitionId==='academyChampionsCup'
+  const sheet = matchTeamSheet(player)
+  const venue = matchVenue(isHome ? playerTeam : opponent, competitionId, player.careerClock.phase === 'academy')
 
   return (
-    <div className="relative min-h-screen w-full bg-ks-black flex flex-col justify-center px-5 py-8">
+    <div className="relative min-h-screen w-full bg-ks-black flex flex-col justify-start px-5 py-8 overflow-y-auto">
       <div className="matchday-lights absolute inset-0"/><div className="matchday-crowd absolute inset-x-0 bottom-0 h-[34%]"/><div className="absolute inset-0" style={{
         background: 'radial-gradient(ellipse 70% 45% at 50% 30%, rgba(212,175,55,0.10), transparent 62%), linear-gradient(180deg,#0a0a09,#050504)',
       }} />
@@ -51,7 +57,7 @@ export default function MatchDayScreen({ player, playerTeam, opponent, isHome, o
       <div className={`relative z-10 max-w-md mx-auto w-full transition-all duration-700 ${
         entered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
       }`}>
-        <div className="matchday-kicker">KICKOFF STAR · MATCHDAY</div><div className="text-center font-display tracking-[0.3em] text-[10px] text-ks-gold uppercase mb-6">{competitionLabel ?? 'matchday'}</div>
+        <div className="matchday-kicker">KICKOFF STAR · MATCHDAY</div>{(isRegional||isNational||isContinental)&&<div className={`showpiece-ribbon ${isNational||isContinental?'national':'regional'}`}><i>★</i><span>{isContinental?'CONTINENTAL STAGE':isNational?'NATIONAL STAGE':'REGIONAL STAGE'}</span><i>★</i></div>}<div className="text-center font-display tracking-[0.3em] text-[10px] text-ks-gold uppercase mb-6">{competitionLabel ?? 'matchday'}</div>
 
         {/* the fixture */}
         <div className="fixture-stage flex items-center justify-center gap-4 mb-3">
@@ -69,9 +75,24 @@ export default function MatchDayScreen({ player, playerTeam, opponent, isHome, o
         </div>
 
         <div className="text-center text-[10px] text-ks-muted uppercase tracking-widest mb-1">
-          {isHome ? 'home' : 'away'}
+          {venue} · {isHome ? 'home' : 'away'}
         </div>
         <p className="text-center text-ks-muted text-[12px] mb-7">{billing}</p>
+
+        <section className="rounded-xl border border-ks-border bg-[#0f0f0d] px-3 py-3 mb-3" aria-label="Pre-match team sheet">
+          <div className="flex items-center justify-between mb-2"><h2 className="font-display tracking-widest text-[10px] text-ks-gold uppercase">team sheet</h2><span className="text-[9px] text-ks-muted">{playerTeam.short} · starting XI</span></div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+            {sheet.starters.map(member => <div key={`${member.number}-${member.name}`} className={`flex items-center gap-1.5 min-w-0 text-[10px] ${member.isPlayer ? 'text-ks-gold' : 'text-ks-ink'}`}>
+              <b className="w-5 shrink-0 text-right">{member.number}</b><span className="truncate">{member.name}</span><small className="ml-auto text-ks-muted">{member.position}</small>
+            </div>)}
+          </div>
+          <div className="border-t border-ks-border/60 mt-2 pt-2"><span className="text-[9px] uppercase tracking-widest text-ks-muted">bench</span>
+            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">{sheet.bench.map(member => <span key={`${member.number}-${member.name}`} className={`text-[9px] ${member.isPlayer ? 'text-ks-gold' : 'text-ks-muted'}`}>{member.number} {member.name} · {member.position}</span>)}</div>
+          </div>
+          {(opponent.notablePlayers?.length ?? 0) > 0 && <div className="border-t border-ks-border/60 mt-2 pt-2"><span className="text-[9px] uppercase tracking-widest text-ks-muted">{opponent.short} players to watch</span>
+            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">{opponent.notablePlayers.map(member => <span key={`${member.name}-${member.position}`} className="text-[9px] text-ks-muted">{member.name} · {member.position}</span>)}</div>
+          </div>}
+        </section>
 
         {/* your state going in */}
         <div className="rounded-xl border border-ks-border bg-[#0f0f0d] px-4 py-3.5 mb-3">
@@ -130,7 +151,7 @@ export default function MatchDayScreen({ player, playerTeam, opponent, isHome, o
         {sharpness < 60 && (
           <div className="rounded-lg border border-orange-500/40 bg-orange-500/10 px-3 py-2 mb-3">
             <p className="text-[11px] text-orange-400 leading-relaxed">
-              You're not match-ready. You'll start blunted and tire quickly.
+              {player.fitness.stamina < 50 ? 'Below 50% energy: you are limited to a substitute appearance. Below 30%, you cannot play.' : "You are short of match sharpness and will tire quickly."}
             </p>
           </div>
         )}

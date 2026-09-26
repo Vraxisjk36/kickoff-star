@@ -33,10 +33,13 @@ export function calculatePlayerRating(args:{
 
   // Calibrated to the measured ~5 playable moments per match. Average quality
   // is used so FB's higher moment frequency cannot farm rating.
-  const decisions=args.ratedMoments ? clamp((args.decisionQuality-.50)*1.8,-.90,.90) : 0
+  // A merely available option is not automatically a positive. The player
+  // earns credit by consistently choosing near the best read for the exact
+  // situation; middling choices sit close to neutral.
+  const decisions=args.ratedMoments ? clamp((args.decisionQuality-.62)*1.45,-.85,.65) : 0
   const execution=args.ratedMoments ? clamp((args.executionQuality-.60)*1.0,-.45,.40) : 0
 
-  let attacking=Math.min(1.35,stats.goals*.45)+Math.min(.96,stats.assists*.32)
+  let attacking=Math.min(1.20,stats.goals*.40)+Math.min(.75,stats.assists*.30)
   let defending=0
   let background=0
   let cleanSheet=0
@@ -85,9 +88,9 @@ export function calculatePlayerRating(args:{
 
   if(position==='GK'&&stats.saves>=7&&stats.goalsConceded===0) exceptional+=.45
   if((position==='CB'||position==='FB')&&stats.goalsConceded===0&&(stats.tacklesWon+stats.interceptions+stats.blocks+stats.headersWon)>=8){
-    exceptional+=.55
+    exceptional+=.85
   }
-  exceptional=Math.min(.65,exceptional)*scale
+  exceptional=Math.min(.90,exceptional)*scale
 
   const discipline=-(args.redCarded?.55:0)-Math.min(.24,(args.yellowCards??0)*.12)
 

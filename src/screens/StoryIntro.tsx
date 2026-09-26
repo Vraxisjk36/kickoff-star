@@ -31,12 +31,12 @@ const SLIDES: Slide[] = [
   {
     eyebrow: 'the path',
     title: 'grassroots → academy → pro',
-    body: () => `Four grassroots seasons first — school and Sunday league, real divisions, real promotion and relegation. Impress enough and an academy comes calling. Survive the academy, and a professional deal is the reward waiting at the end.`,
+    body: () => `Build your career in school and Sunday football. Academy scouts start watching at 16, with the first invitations possible in October of your third year. Survive the academy, and a professional deal is the reward waiting at the end.`,
   },
   {
     eyebrow: 'getting noticed',
-    title: 'scouts are always watching',
-    body: () => `Every match, every training session, every choice builds your reputation. Scouts track real players, not stat sheets — how you play your position is what actually gets you seen.`,
+    title: 'build a record worth watching',
+    body: () => `Your early seasons build the record academy scouts review from age 16. They look for sustained performances in your position, then watch you repeatedly. A few goals cannot skip the pathway.`,
   },
   {
     eyebrow: 'beyond the league',

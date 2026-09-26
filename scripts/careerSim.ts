@@ -10,6 +10,9 @@ import { reseed, rand } from '../src/engine/rng'
 import { useCareerStore } from '../src/store/careerStore'
 import { nextUnresolvedEvent, activeCompetitionForWeek, SEASON_WEEKS } from '../src/engine/calendar'
 import { playerCupFixture, type CupWorld } from '../src/engine/cup'
+import { playerOctoberFixture, octoberStandings } from '../src/engine/octoberLeague'
+import { matchAvailability } from '../src/engine/selection'
+import { hasSundayContract } from '../src/engine/sundayContracts'
 import { nationFixture, internationalTeamById } from '../src/engine/international'
 import { generateTeam } from '../src/engine/teams'
 import { pickRelationshipEvent } from '../src/engine/relationshipEvents'
@@ -38,7 +41,7 @@ function makePlayer(): Player {
     confidence: { value: 0, baseline: 0 },
     fitness: { stamina: 100 },
     careerClock: { ageYears: 14, phase: 'grassroots-trials', grassrootsSeason: 1 },
-    schoolId: 'greenwood', trialWeekCompleted: 0, squadRole: null, trainingMomentum: 0,
+    schoolId: 'greenwood', youthRoute: process.env.FORCE_SUNDAY === '1' ? 'grassroots' : 'school', grassrootsPath: process.env.FORCE_SUNDAY === '1' ? 'sunday' : 'school', trialWeekCompleted: 0, squadRole: null, trainingMomentum: 0,
     matchRatings: [], seasonGoals: 0, seasonAssists: 0, injury: null, recentInjuryCount: 0,
     matchesSinceReturn: 3, coachTrust: 0, reputation: 5, scoutWatchers: [], contractOffers: [],
     totalWeeksElapsed: 0, academyClubName: null, turnedPro: null,
@@ -69,6 +72,13 @@ async function main() {
   s().resolveCurrentEvent() // trial-week school event
   s().completeTrials('starting-xi', 0.7)
   s().ensureLeagueWorld()
+  const forceSunday = process.env.FORCE_SUNDAY === '1'
+  if (forceSunday) {
+    const offer = s().player?.contractOffers.find(o => o.kind === 'club')
+    assert(!!offer, 'grassroots starter receives a season club contract')
+    if (offer) s().respondToOffer(offer.id, true)
+    assert(!!s().player?.sundayContract, 'grassroots route signs its first club contract')
+  }
 
   // Optional forced paths so the harness exercises code organic careers
   // reach slowly: FORCE_INTL=1 boosts reputation past the call-up bar after
@@ -86,6 +96,8 @@ async function main() {
   let deadMatchdays = 0
   let intlMatches = 0
   let weeksTicked = 0
+  let octoberWindows = 0
+  let unavailableMatchdays = 0
 
   // Stop EXACTLY at the requested season boundary — overrunning into season
   // N+1 pollutes the per-season tallies the assertions check.
@@ -95,6 +107,15 @@ async function main() {
     const { player, calendar } = st
     if (!player || !calendar) break
     if (player.careerEnded || player.turnedPro) break
+
+    if (forceSunday && st.league && !hasSundayContract(player, calendar.currentWeek.seasonYear, st.league)) {
+      const renewal = player.contractOffers.find(o => o.kind === 'club' && o.contractSeason === calendar.currentWeek.seasonYear)
+      if (renewal && calendar.currentWeek.weekNumber === 1) {
+        st.respondToOffer(renewal.id, true)
+        assert(hasSundayContract(s().player!, calendar.currentWeek.seasonYear, s().league), `season ${calendar.currentWeek.seasonYear} club contract signed`)
+        continue
+      }
+    }
 
     if (forceIntl && !intlForced && weeksTicked >= 5) {
       intlForced = true
@@ -146,9 +167,11 @@ async function main() {
       weeksTicked++
       continue
     }
+    if (pending.title === 'October development fixture') octoberWindows++
     if (player.injury) { st.resolveCurrentEvent(); continue }
 
     if (pending.type === 'match') {
+      if (!matchAvailability(player).canPlay) { unavailableMatchdays++; st.resolveCurrentEvent(); continue }
       const phase = player.careerClock.phase
       const isInAcademy = phase === 'academy'
       const world = isInAcademy ? st.academyLeague : st.league
@@ -169,10 +192,22 @@ async function main() {
         continue
       }
 
-      const comp = activeCompetitionForWeek(calendar.currentWeek.weekNumber, phase)
+      if (pending.title === 'October development fixture') {
+        const league = player.octoberLeague
+        const fixture = league ? playerOctoberFixture(league, calendar.currentWeek.weekNumber) : null
+        if (!league || !fixture || fixture.homeGoals !== null) { deadMatchdays++; st.resolveCurrentEvent(); continue }
+        const home = fixture.homeId === league.playerTeamId
+        const opponent = league.teams.find(t => t.id === (home ? fixture.awayId : fixture.homeId))!
+        const m = fakeMatch()
+        st.applyMatchResult(m.rating, m.goals, m.assists, 60, null, opponent.id, m.ps, m.os, home, undefined, opponent.name, 'octoberDevelopment')
+        tallies.octoberDevelopment = (tallies.octoberDevelopment ?? 0) + 1
+        continue
+      }
+
+      const comp = activeCompetitionForWeek(calendar.currentWeek.weekNumber, phase, player.grassrootsPath, Boolean(st.cups.schoolDevelopment))
       if (!comp) { deadMatchdays++; st.resolveCurrentEvent(); continue }
 
-      if (comp.competitionId === 'sundayLeague') {
+      if (comp.competitionId === 'sundayLeague' || comp.competitionId === 'schoolLeague') {
         const division = (world!.divisions as Record<number, import('../src/engine/league').Division>)[world!.playerDivision]
         const fixture = division.fixtures
           .filter((f) => !f.played && f.week <= comp.round && (f.homeTeamId === world!.playerTeamId || f.awayTeamId === world!.playerTeamId))
@@ -181,8 +216,8 @@ async function main() {
         const isHome = fixture.homeTeamId === world!.playerTeamId
         const opp = division.teams.find((t) => t.id === (isHome ? fixture.awayTeamId : fixture.homeTeamId))!
         const m = fakeMatch()
-        st.applyMatchResult(m.rating, m.goals, m.assists, 60, null, opp.id, m.ps, m.os, isHome, undefined, opp.name, 'sundayLeague')
-        tallies['sundayLeague'] = (tallies['sundayLeague'] ?? 0) + 1
+        st.applyMatchResult(m.rating, m.goals, m.assists, 60, null, opp.id, m.ps, m.os, isHome, undefined, opp.name, comp.competitionId)
+        tallies[comp.competitionId] = (tallies[comp.competitionId] ?? 0) + 1
         continue
       }
 
@@ -223,6 +258,11 @@ async function main() {
       const chosen = d.options[Math.floor(rand() * d.options.length)]
       const success = rand() < chosen.successChance
       st.applyDecisionResult({ chosen, success, effect: (success ? chosen.onSuccess : chosen.onFailure) ?? {} }, d.relationshipId)
+      continue
+    }
+
+    if (pending.type === 'rest') {
+      st.applyRestChoice('full-rest')
       continue
     }
 
@@ -274,6 +314,7 @@ async function main() {
   console.log('weeks ticked:', weeksTicked, '| seasons:', Math.floor(weeksTicked / SEASON_WEEKS))
   console.log('matches by competition:', tallies)
   console.log('career appearances:', player.career?.appearances, '| dead matchdays:', deadMatchdays)
+  console.log('unavailable matchdays:', unavailableMatchdays, '| October windows:', octoberWindows)
   console.log('reputation:', player.reputation, '| trust:', player.coachTrust?.toFixed?.(2) ?? player.coachTrust, '| confidence:', player.confidence.value.toFixed(2))
   console.log('glory: personal', JSON.stringify(player.personalGlory ?? {}), '| club', JSON.stringify(player.clubGlory ?? {}), '| national', JSON.stringify(player.nationalGlory ?? {}))
 
@@ -287,24 +328,32 @@ async function main() {
   const perSeason = SEASONS
   assert(deadMatchdays === 0, `dead matchdays should be 0, got ${deadMatchdays}`)
   if (!forceAcademy) {
-    // Season 1's league round 1 falls in trial week — the team plays it without
-    // the player (batch-simmed). A mid-window transfer can additionally blank a
-    // Saturday or two (new club's fixture already played) — those become extra
-    // training, so matches + fallbacks must still account for every round.
-    const leaguePlayed = tallies['sundayLeague'] ?? 0
+    // A mid-window transfer can blank a fixture when the new club's round
+    // has already been played; count that as a training fallback.
+    const leaguePlayed = (tallies['schoolLeague'] ?? 0) + (tallies['sundayLeague'] ?? 0)
     const leagueBlanks = tallies['league:trainingFallback'] ?? 0
-    if (forceTransfer) {
+    if (forceSunday || forceTransfer) {
       assert(leaguePlayed + leagueBlanks >= 22 * perSeason - 3 && leaguePlayed + leagueBlanks <= 22 * perSeason, `league matches+blanks should cover the schedule, got ${leaguePlayed}+${leagueBlanks}`)
     } else {
-      assert(leaguePlayed === 22 * perSeason - 1, `league matches should be ${22 * perSeason - 1}, got ${leaguePlayed}`)
+      assert(leaguePlayed === 18 * perSeason, `school league matches should be ${18 * perSeason}, got ${leaguePlayed}`)
     }
   }
   if (!forceAcademy) {
-    assert((tallies['schoolFriendlies'] ?? 0) === 2 * perSeason, `friendlies should be ${2 * perSeason}, got ${tallies['schoolFriendlies']}`)
-    const cupMatches = (tallies['schoolCup'] ?? 0) + (tallies['sundayCup'] ?? 0)
-    assert(cupMatches >= 4 * perSeason, `cup matches should be at least ${4 * perSeason} (group floor + KO r1), got ${cupMatches}`)
+    assert((tallies['schoolFriendlies'] ?? 0) === (forceSunday ? 0 : 2 * perSeason), `route friendlies should be ${forceSunday ? 0 : 2 * perSeason}, got ${tallies['schoolFriendlies']}`)
+    const cupMatches = (tallies['schoolCup'] ?? 0) + (tallies['schoolDevelopment'] ?? 0) + (tallies['sundayCup'] ?? 0)
+    assert(cupMatches >= perSeason, `the route's cup or development competition should remain reachable, got ${cupMatches}`)
+    const records = [...(player.competitionCareer?.history ?? []), ...Object.values(player.competitionCareer?.current ?? {})]
+    for (let season = 1; season <= SEASONS; season++) {
+      const development = records.find(r => r.season === season && r.competitionId === 'schoolDevelopment')?.appearances ?? 0
+      const regional = records.find(r => r.season === season && r.competitionId === 'schoolCup')?.appearances ?? 0
+      assert(!(development > 0 && regional > 0), `season ${season} stays in one post-league school route`)
+    }
+    if (SEASONS === 1) {
+      assert(octoberWindows === 4, `under-16 route receives four October matchdays, got ${octoberWindows}`)
+      assert(!!player.octoberLeague && octoberStandings(player.octoberLeague).every(row => row.played === 4), 'October table finishes with four games per club')
+    }
   } else {
-    const academyCupMatches = (tallies['academyLeagueCup'] ?? 0) + (tallies['academyKnockoutCup'] ?? 0)
+    const academyCupMatches = (tallies['academyLeagueCup'] ?? 0) + (tallies['academyKnockoutCup'] ?? 0) + (tallies['academyChampionsCup'] ?? 0)
     assert(academyCupMatches >= 4, `academy cup matches should appear after transition, got ${academyCupMatches}`)
     assert(s().player!.careerClock.phase === 'academy', 'player should be in academy phase')
   }
@@ -313,14 +362,14 @@ async function main() {
     assert((tallies['international'] ?? 0) === intlMatches, 'international tally consistent')
   }
   const total = Object.entries(tallies).filter(([k]) => !k.includes(':')).reduce((a, [, v]) => a + v, 0)
-  if (!forceAcademy) assert(total >= 27 * perSeason, `total matches/season should be >= 27, got ${(total / perSeason).toFixed(1)}/season`)
+  if (!forceAcademy) assert(total >= 22 * perSeason, `school pathway should provide at least 22 matches/season, got ${(total / perSeason).toFixed(1)}/season`)
   if (process.env.FORCE_GK === '1') {
     assert((player.career?.cleanSheets ?? 0) > 0, `GK should bank clean sheets over ${total} matches, got ${player.career?.cleanSheets}`)
   } else {
     // Outfield player: the GK-only clean-sheet fix means an ST must bank ZERO
     assert((player.career?.cleanSheets ?? 0) === 0, `outfield player cleanSheets must be 0 (GK-only stat), got ${player.career?.cleanSheets}`)
   }
-  assert(player.career!.appearances === total, `career appearances (${player.career!.appearances}) should equal matches played (${total})`)
+  assert(player.career!.appearances === total, `career appearances (${player.career!.appearances}) should equal playable matches recorded (${total})`)
   if (forceTransfer) assert((s().player!.squadRole) === 'bench' || (s().player!.career!.appearances ?? 0) > 0, 'transfer leaves a playable state')
   // league integrity at the end of a completed season boundary is checked live below
 
@@ -328,7 +377,7 @@ async function main() {
   // same round count (checked continuously would be better; here we verify the
   // invariant that the player's team is never >1 round ahead of the field —
   // re-run a fresh short sim with a probe)
-  // ---- P28: relationships + storyline arcs, at STORE level ----
+  // Relationships and season-long coach objectives, at STORE level.
   // Engine-level sims can't catch wiring bugs (the P25 lesson), so these
   // assertions run against whatever the real store actually produced.
   const rels = player.relationships ?? []
@@ -337,11 +386,10 @@ async function main() {
   assert(new Set(rels.map((r) => r.id)).size === rels.length, 'no duplicate people in the cast')
   const drifted = rels.some((r) => r.bond !== Math.round(r.bond) || r.weeksSinceContact > 0)
   assert(drifted, 'relationship drift actually ran during the career')
-  const arcsSeen = (player.recentArcKeys ?? []).length
-  assert(arcsSeen > 0, `storyline arcs opened AND resolved through the store (${arcsSeen} resolved)`)
-  assert((player.activeArcs ?? []).length <= 2, `never more than 2 live arcs (${(player.activeArcs ?? []).length})`)
-  assert((player.activeArcs ?? []).every((a) => a.deadlineWeek > a.startedWeek), 'live arcs have sane deadlines')
-  console.log('relationships:', rels.length, '| arcs resolved:', arcsSeen, '| live arcs:', (player.activeArcs ?? []).length,
+  assert((player.activeArcs ?? []).length === 0, 'retired timed challenges cannot recur')
+  assert(player.seasonObjectives?.objectives.length === 4, 'four coach objectives persist into the new season')
+  assert(player.seasonObjectives?.seasonYear === useCareerStore.getState().calendar?.currentWeek.seasonYear, 'coach objectives roll over with the season')
+  console.log('relationships:', rels.length, '| season objectives:', player.seasonObjectives?.objectives.length,
     '| avg bond:', (rels.reduce((a, r) => a + r.bond, 0) / rels.length).toFixed(1))
 
   // ---- P29: economy + sub appearances, at STORE level ----
@@ -379,14 +427,16 @@ async function main() {
 
   // Save/load roundtrip through (fake) IndexedDB: everything the store holds
   // must survive persistence, including the new cup/international worlds.
-  const before = { cups: st.cups, international: st.international }
+  await st.saveCurrent()
+  const before = { cups: st.cups, international: st.international, octoberLeague: st.player?.octoberLeague }
   await st.loadFromSlot(0)
   const after = useCareerStore.getState()
   assert(JSON.stringify(after.cups) === JSON.stringify(before.cups), 'cups must roundtrip through save/load')
   assert(JSON.stringify(after.international) === JSON.stringify(before.international), 'international world must roundtrip through save/load')
+  assert(JSON.stringify(after.player?.octoberLeague) === JSON.stringify(before.octoberLeague), 'October league table and fixtures must roundtrip through save/load')
   assert(after.player?.career?.appearances === player.career?.appearances, 'career totals must roundtrip')
   assert(JSON.stringify(after.player?.relationships) === JSON.stringify(player.relationships), 'relationships must roundtrip through save/load')
-  assert(JSON.stringify(after.player?.activeArcs) === JSON.stringify(player.activeArcs), 'live storyline arcs must roundtrip through save/load')
+  assert(JSON.stringify(after.player?.seasonObjectives) === JSON.stringify(player.seasonObjectives), 'season objectives must roundtrip through save/load')
   assert(after.player?.money === player.money, 'money must roundtrip through save/load')
   assert(after.player?.agentId === player.agentId, 'agent must roundtrip through save/load')
   assert(JSON.stringify(after.player?.contract) === JSON.stringify(player.contract), 'contract must roundtrip through save/load')

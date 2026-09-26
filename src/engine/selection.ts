@@ -17,6 +17,38 @@
 // ============================================================================
 import type { Player } from '../types/player'
 import type { SquadPlayer } from './squad'
+import { currentPerformance } from './youthOpportunities'
+import { SUNDAY_ENERGY_MULTIPLIERS } from './sundayContracts'
+
+export function matchAvailability(player: Player) {
+  const energy = player.fitness.stamina
+  return { canPlay: energy >= 30, canStart: energy >= 50,
+    reason: energy < 30 ? 'Below 30% energy: you sit this match out.' : energy < 50 ? 'Below 50% energy: you can only play from the bench.' : '' }
+}
+
+/** Match-specific selection must never overwrite the player's school/club role. */
+export function playerForMatch(player: Player, competitionId: string): Player {
+  let squadRole = player.squadRole
+  let squad = player.squad
+  // Reserve/development fixtures are where a reserve earns competitive
+  // minutes. Their senior squad status remains "reserves" after the match.
+  if (competitionId === 'schoolReserveLeague' || competitionId === 'schoolDevelopmentLeague') squadRole = 'starting-xi'
+  if (competitionId === 'sundayLeague' && player.grassrootsPath === 'school') {
+    squad = player.sundaySquad
+    const record = currentPerformance(player, ['sundayLeague'])
+    squadRole = record.appearances >= 3 && record.average >= 6.8 ? decideSelection({ ...player, squadRole: 'bench' }, squad).role : 'bench'
+  }
+  if (competitionId === 'nationalChampionship' || competitionId === 'international') {
+    const record = currentPerformance(player, [competitionId])
+    squadRole = record.appearances >= 3 && record.average >= 7 ? 'starting-xi' : 'bench'
+  }
+  const availability = matchAvailability(player)
+  if (!availability.canPlay) squadRole = 'reserves'
+  else if (!availability.canStart && (squadRole === 'starting-xi' || !squadRole)) squadRole = 'bench'
+  const matchEnergyMultiplier = (competitionId === 'sundayLeague' || competitionId === 'sundayCup') && player.careerClock.phase !== 'academy'
+    ? SUNDAY_ENERGY_MULTIPLIERS[player.sundayContract?.division ?? player.sundayLeague?.playerDivision ?? 3] : 1
+  return { ...player, squadRole, squad, matchEnergyMultiplier }
+}
 
 export type SquadRole = 'starting-xi' | 'bench' | 'reserves'
 
@@ -62,6 +94,15 @@ export function competitionFor(player: Player, squad: SquadPlayer[] | undefined)
   return rivals.map((r) => r.quality)
 }
 
+export function promotionEvidence(player: Player): { played: number; required: number; average: number; ready: boolean } {
+  const role = player.squadRole
+  const required = role === 'reserves' ? 2 : 3
+  const played = Math.max(0, (player.career?.appearances ?? 0) - (player.squadRoleSetAppearances ?? player.career?.appearances ?? 0))
+  const ratings = (player.matchRatings ?? []).slice(-played)
+  const average = played && ratings.length ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length : 0
+  return { played, required, average, ready: played >= required && average >= (role === 'reserves' ? 6.4 : 6.7) }
+}
+
 /**
  * Decide the player's role for this matchday.
  *
@@ -96,9 +137,20 @@ export function decideSelection(player: Player, squad: SquadPlayer[] | undefined
   else if (pecking <= startingSlots + 2) role = 'bench'
   else role = 'reserves'
 
+  // A good training week can improve trust, but the coach needs match evidence
+  // before promoting a player. Reserves first earn a bench place, then starts.
+  if (rank(role) > rank(current)) {
+    if (!promotionEvidence(player).ready) role = current
+    else if (current === 'reserves' && role === 'starting-xi') role = 'bench'
+  }
+
+  const availability = matchAvailability(player)
+  if (!availability.canPlay) role = 'reserves'
+  else if (!availability.canStart && role === 'starting-xi') role = 'bench'
+
   const changed = role === current ? null : rank(role) > rank(current) ? 'promoted' : 'demoted'
 
-  return { role, pecking, competing, score, changed, reason: reasonFor(player, score, role, changed, pecking) }
+  return { role, pecking, competing, score, changed, reason: availability.reason || reasonFor(player, score, role, changed, pecking) }
 }
 
 function rank(role: SquadRole): number {
@@ -112,8 +164,9 @@ function reasonFor(player: Player, score: number, role: SquadRole, changed: Sele
   const tired = player.fitness.stamina < 40
 
   if (changed === 'promoted') {
-    if (role === 'starting-xi') return 'You have forced your way into the starting eleven.'
-    return 'You are back in the matchday squad.'
+    const evidence = promotionEvidence(player)
+    if (role === 'starting-xi') return `Your ${evidence.played} recent appearances and ${evidence.average.toFixed(1)} average earned you a start.`
+    return `Your ${evidence.played} recent appearances and ${evidence.average.toFixed(1)} average earned you a place on the bench.`
   }
   if (changed === 'demoted') {
     if (tired) return 'You are running on empty and the coach has noticed.'
@@ -131,7 +184,12 @@ function reasonFor(player: Player, score: number, role: SquadRole, changed: Sele
 
 /** What the player needs to do to move up, in plain language for the hub. */
 export function selectionAdvice(verdict: SelectionVerdict, player: Player): string {
+  if (!matchAvailability(player).canStart) return 'Recover to 50% energy to be considered for a start. Below 30%, you cannot play.'
   if (verdict.role === 'starting-xi' && verdict.pecking === 1) return 'Keep this up and the shirt is yours.'
+  if (player.squadRole === 'reserves' || player.squadRole === 'bench') {
+    const evidence = promotionEvidence(player)
+    if (!evidence.ready) return `Earn ${evidence.required} appearances in this role at an average of ${player.squadRole === 'reserves' ? '6.4' : '6.7'} or better (${evidence.played}/${evidence.required} played). Training helps, but match performances earn promotion.`
+  }
   const trust = player.coachTrust ?? 0
   const ratings = (player.matchRatings ?? []).slice(-5)
   const form = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0

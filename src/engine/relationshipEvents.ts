@@ -83,7 +83,7 @@ export const RELATIONSHIP_EVENTS: RelationshipEvent[] = [
       `${r.name} pulls you aside: "I'm not sure you want this as much as the others."`, 'coach',
       [
         opt('ask what he wants to see', 'get specific', 0.8,
-          { coachTrust: 1, relationshipDelta: 10, narrative: `He gives you three things. Clear, brutal, useful.`, startArc: 'coach-ultimatum' },
+          { coachTrust: 1, relationshipDelta: 10, narrative: `He gives you three things. Clear, brutal, useful.` },
           { relationshipDelta: -2, narrative: `"Figure it out." Not much to go on.` }),
         opt('tell him he\'s wrong', 'push back hard', 0.4,
           { confidence: 2, coachTrust: 1, relationshipDelta: 6, narrative: `He likes the fire. "Show me, then."` },
@@ -98,7 +98,7 @@ export const RELATIONSHIP_EVENTS: RelationshipEvent[] = [
       `${r.name} has been telling people he's ahead of you in the pecking order.`, 'rivalry',
       [
         opt('challenge him to settle it in training', 'prove it', 0.55,
-          { confidence: 3, relationshipDelta: 8, energy: -8, narrative: `You edge it. He shakes your hand, which costs him something.`, startArc: 'rival-duel' },
+          { confidence: 3, relationshipDelta: 8, energy: -8, narrative: `You edge it. He shakes your hand, which costs him something.` },
           { confidence: -2, relationshipDelta: -6, energy: -8, narrative: `He does you twice in a row. It's a long walk to the changing room.` }),
         opt('ignore it completely', 'let form talk', 1,
           { relationshipDelta: -2, narrative: 'You get on with your week. He keeps talking.' }),
@@ -162,7 +162,7 @@ export const RELATIONSHIP_EVENTS: RelationshipEvent[] = [
       `${r.name} offers you an extra one-to-one on your weakest foot. 6am, before school.`, 'development',
       [
         opt('every single morning', 'all in', 0.6,
-          { confidence: 2, coachTrust: 1, relationshipDelta: 12, energy: -14, narrative: `Brutal fortnight. Your weak foot stops being a weakness.`, startArc: 'mentor-trial' },
+          { confidence: 2, coachTrust: 1, relationshipDelta: 12, energy: -14, narrative: `Brutal fortnight. Your weak foot stops being a weakness.` },
           { confidence: -1, relationshipDelta: 4, energy: -18, narrative: `You burn out by day four and he notices.` }),
         opt('twice a week', 'sustainable', 1,
           { coachTrust: 1, relationshipDelta: 8, energy: -6, narrative: `Steady progress and you keep your legs.` }),
@@ -211,7 +211,7 @@ export const RELATIONSHIP_EVENTS: RelationshipEvent[] = [
           { relationshipDelta: 8, coachTrust: 1, addPerson: { kind: 'teammate', note: 'signed to compete with you — you welcomed him anyway', bond: 30 }, narrative: `He's grateful. The coach notices who did that.` },
           { relationshipDelta: 2, addPerson: { kind: 'rival', note: 'arrived to take your place, and you both know it', bond: -10 }, narrative: `The handshake is stiff. It's competition from day one.` }),
         opt('outwork him from day one', 'no free shirts', 0.6,
-          { confidence: 2, coachTrust: 1, energy: -8, addPerson: { kind: 'rival', note: 'the new signing you refuse to be replaced by', bond: -15 }, narrative: `You set the tempo all week. He's chasing.`, startArc: 'iron-man' },
+          { confidence: 2, coachTrust: 1, energy: -8, addPerson: { kind: 'rival', note: 'the new signing you refuse to be replaced by', bond: -15 }, narrative: `You set the tempo all week. He's chasing.` },
           { confidence: -2, energy: -10, addPerson: { kind: 'rival', note: 'the new signing who is currently ahead of you', bond: -20 }, narrative: `He matches you and then some. Sobering.` }),
       ]),
   },
@@ -223,7 +223,7 @@ export const RELATIONSHIP_EVENTS: RelationshipEvent[] = [
       `${r.name} threatens to write home unless your coursework improves this month.`, 'school',
       [
         opt('put the hours in', 'sort it properly', 0.8,
-          { relationshipDelta: 12, energy: -8, narrative: `Handed in on time. They actually apologise for doubting you.`, startArc: 'family-grades' },
+          { relationshipDelta: 12, energy: -8, narrative: `Handed in on time. They actually apologise for doubting you.` },
           { confidence: -1, relationshipDelta: 2, energy: -10, narrative: `You try, and it's still not enough. The letter goes home.` }),
         opt('ask for an extension', 'buy time', 0.55,
           { relationshipDelta: 6, narrative: `Granted, grudgingly. You've got a fortnight.` },
@@ -259,7 +259,7 @@ export const RELATIONSHIP_EVENTS: RelationshipEvent[] = [
           { coachTrust: -2, relationshipDelta: 18, confidence: 1, narrative: `Best night in months. The coach names a different sub.` }),
         opt('go to both, badly', 'try to have it all', 0.4,
           { relationshipDelta: 6, energy: -12, narrative: `Somehow you pull it off. You are exhausted.` },
-          { confidence: -2, relationshipDelta: -10, energy: -14, coachTrust: -1, narrative: `You do neither properly and annoy everyone.`, startArc: 'partner-balance' }),
+          { confidence: -2, relationshipDelta: -10, energy: -14, coachTrust: -1, narrative: `You do neither properly and annoy everyone.` }),
       ]),
   },
   {
@@ -269,7 +269,7 @@ export const RELATIONSHIP_EVENTS: RelationshipEvent[] = [
       `${r.name} asks you to have a word with a young lad who's losing his way.`, 'coach',
       [
         opt('take him under your wing', 'lead', 0.75,
-          { coachTrust: 2, confidence: 2, relationshipDelta: 10, energy: -5, narrative: `He turns a corner. The coach saw exactly who fixed it.`, startArc: 'captain-audition' },
+          { coachTrust: 2, confidence: 2, relationshipDelta: 10, energy: -5, narrative: `He turns a corner. The coach saw exactly who fixed it.` },
           { relationshipDelta: 4, energy: -5, narrative: `You try. Some people you can't reach at fifteen.` }),
         opt('say you\'re not the right person', 'stay in your lane', 1,
           { relationshipDelta: -6, narrative: `He nods, and asks somebody else.` }),
@@ -281,7 +281,7 @@ export const RELATIONSHIP_EVENTS: RelationshipEvent[] = [
       `${r.name} wants you to push for a move now, while "the interest is hot".`, 'career',
       [
         opt('trust him', 'ride the momentum', 0.5,
-          { reputation: 2, relationshipDelta: 10, narrative: `Doors open. Two clubs are suddenly asking about you.`, startArc: 'reputation-push' },
+          { reputation: 2, relationshipDelta: 10, narrative: `Doors open. Two clubs are suddenly asking about you.` },
           { confidence: -2, relationshipDelta: -6, coachTrust: -1, narrative: `Word gets back to your club that you're agitating. Bad look.` }),
         opt('tell him you\'re staying put', 'develop first', 1,
           { coachTrust: 1, relationshipDelta: -8, confidence: 1, narrative: `He's frustrated. Your coach hears you turned it down and says nothing — but he heard.` }),
@@ -407,7 +407,7 @@ export const RELATIONSHIP_EVENTS: RelationshipEvent[] = [
       `${r.name} names the side and you are not in it. He does not look at you once.`, 'coach',
       [
         opt('demand a reason after training', 'confront it', 0.5,
-          { coachTrust: 1, confidence: 2, relationshipDelta: 6, narrative: `He respects that you came to him. You get a route back.`, startArc: 'earn-your-shirt' },
+          { coachTrust: 1, confidence: 2, relationshipDelta: 6, narrative: `He respects that you came to him. You get a route back.` },
           { coachTrust: -2, confidence: -2, relationshipDelta: -14, narrative: `He does not take being challenged in front of others.` }),
         opt('be the best trainer all week', 'answer with work', 0.7,
           { coachTrust: 2, relationshipDelta: 8, energy: -10, narrative: `He names you Saturday without a word about it.` },

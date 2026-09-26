@@ -1,4 +1,5 @@
 import { rand } from './rng'
+import { matchAvailability, playerForMatch } from './selection'
 import { archetypeStaminaDrainMultiplier } from './archetypes'
 import type { Player } from '../types/player'
 import type { Team } from './teams'
@@ -101,6 +102,11 @@ export interface MatchEvent {
   minute: number
   text: string
   kind: 'info' | 'goal' | 'chance' | 'halftime' | 'fulltime'
+  /** Authoritative score immediately after this event. Goal presentation must
+   * never try to infer the scoring side from translated/commentary text. */
+  homeScore?: number
+  awayScore?: number
+  scoringSide?: 'home' | 'away'
 }
 
 // A key moment surfaced to the player (rendered via DecisionCard by the screen layer).
@@ -129,8 +135,9 @@ export function initMatch(player: Player, playerTeam: Team, opponent: Team, play
   const surname = surnameOf(player.name)
   // Bench players come on in the last half-hour; reserves who make the squad
   // at all get on later still. Starters play from the first whistle.
-  const role = player.squadRole
-  const entryMinute = role === 'starting-xi' || !role ? 0
+  const availability = matchAvailability(player)
+  const role = playerForMatch(player, '').squadRole
+  const entryMinute = !availability.canPlay ? 120 : role === 'starting-xi' || !role ? 0
     : role === 'bench' ? 55 + Math.floor(rand() * 16) // 55-70
     : 70 + Math.floor(rand() * 16) // reserves: 70-85, a cameo
   const base: MatchState & { _playerPosition?: import('../types/attributes').Position } = {
@@ -147,7 +154,7 @@ export function initMatch(player: Player, playerTeam: Team, opponent: Team, play
     midpointMomentUsed: false,
     matchStamina: clamp(player.fitness.stamina, 5, 100), // no artificial floor-inflation — a tired player starts genuinely tired
     squad,
-    substituted: false,
+    substituted: !availability.canPlay,
     subMinute: null,
     entryMinute,
     lastMomentMinute: entryMinute,
@@ -453,7 +460,7 @@ export function advanceToKeyMoment(state: MatchState, player: Player): AdvanceRe
     const wasNearInvolvement = drive.reached !== 'stalled'
 
     // Section 5: fatigue drain for the player every drive they're on the pitch for
-    s.matchStamina = clamp(s.matchStamina - driveStaminaCost(player.position, driveMinutes, wasNearInvolvement) * archetypeStaminaDrainMultiplier(player.archetype), 0, 100)
+    s.matchStamina = clamp(s.matchStamina - driveStaminaCost(player.position, driveMinutes, wasNearInvolvement) * archetypeStaminaDrainMultiplier(player.archetype) * (player.matchEnergyMultiplier ?? 1), 0, 100)
 
     // Section 6: sparing injury roll, only on drives with real intensity (near a chance)
     if (wasNearInvolvement) {
@@ -489,7 +496,11 @@ export function advanceToKeyMoment(state: MatchState, player: Player): AdvanceRe
     const sub = minutesOnPitch < 15
       ? { shouldSub: false, reason: 'none' as const }
       : evaluateSub(player.position, s.matchStamina, s.playerRating, s.minute, teamLosing)
-    if (sub.shouldSub) {
+    // Do not hook a starter before they have had enough playable football to
+    // understand the performance. This also keeps a full start meaningfully
+    // richer than a substitute cameo; emergency late changes can still happen.
+    const hasRepresentativeSample = s.entryMinute > 0 || s.playerMoments >= 2
+    if (sub.shouldSub && hasRepresentativeSample) {
       s.substituted = true
       s.onPitch = false // P31b: leaving the pitch must actually clear this flag
       s.subMinute = s.minute
@@ -796,12 +807,21 @@ function nextScore(s: MatchState, byPlayerTeam: boolean): MatchState {
 
 function applyGoal(s: MatchState, byPlayerTeam: boolean, text: string): MatchState {
   const scoredHome = (byPlayerTeam && s.playerIsHome) || (!byPlayerTeam && !s.playerIsHome)
+  const homeScore = s.homeScore + (scoredHome ? 1 : 0)
+  const awayScore = s.awayScore + (scoredHome ? 0 : 1)
   return {
     ...s,
-    homeScore: s.homeScore + (scoredHome ? 1 : 0),
-    awayScore: s.awayScore + (scoredHome ? 0 : 1),
+    homeScore,
+    awayScore,
     momentum: clamp(s.momentum + (byPlayerTeam ? 4 : -4), -10, 10),
-    events: [...s.events, { minute: s.minute, text, kind: 'goal' as const }],
+    events: [...s.events, {
+      minute: s.minute,
+      text,
+      kind: 'goal' as const,
+      homeScore,
+      awayScore,
+      scoringSide: scoredHome ? 'home' as const : 'away' as const,
+    }],
   }
 }
 
@@ -813,7 +833,7 @@ export function resolvePlayerMoment(
   isGkMoment = false, executionGrade: ExecutionGrade | null = null
 ): MatchState {
   let next = { ...s, events: [...s.events], playerStats: { ...s.playerStats } }
-  next.decisionQualityTotal += optionQuality
+  next.decisionQualityTotal += maxReward > 0 ? chosenReward / maxReward : .5
   next.executionQualityTotal += executionGrade === 'perfect' ? 1 : executionGrade === 'good' ? .82 : executionGrade === 'ok' ? .62 : executionGrade === 'miss' ? .28 : (success ? .72 : .42)
   next.ratedMoments += 1
 
@@ -886,19 +906,27 @@ export function resolvePlayerMoment(
 // by data instead of moment flags, and narrated with the scenario's OWN
 // authored text instead of a commentary-bank line.
 function applyBeatOutcome(s: MatchState, outcome: import('./matchScenarios').BeatOutcome, text: string, tier: ChanceTier): MatchState {
-  let next = { ...s, events: [...s.events] }
+  let next = { ...s, events: [...s.events], playerStats: { ...s.playerStats } }
   switch (outcome.kind) {
     case 'save':
+      next.playerStats.shotsFaced += 1
+      next.playerStats.saves += 1
+      if (tier === 'clear') next.playerStats.highDifficultySaves += 1
       next.events.push({ minute: s.minute, text, kind: 'chance' })
       next.momentum = clamp(next.momentum + 2, -10, 10)
       return next
     case 'beaten':
+      next.playerStats.shotsFaced += 1
+      next.playerStats.goalsConceded += 1
       return applyGoal(next, false, text)
     case 'distribution-good':
+      next.playerStats.distributionAttempted += 1
+      next.playerStats.distributionCompleted += 1
       next.events.push({ minute: s.minute, text, kind: 'chance' })
       next.momentum = clamp(next.momentum + 1, -10, 10)
       return next
     case 'distribution-poor': {
+      next.playerStats.distributionAttempted += 1
       const concedesDirectly = !!outcome.canConcedeDirectly && tier === 'clear' && rand() < 0.22
       if (concedesDirectly) return applyGoal(next, false, text)
       next.events.push({ minute: s.minute, text, kind: 'chance' })
@@ -908,11 +936,18 @@ function applyBeatOutcome(s: MatchState, outcome: import('./matchScenarios').Bea
     case 'goal':
       next = applyGoal(next, true, text)
       next.playerGoals += 1
+      next.playerStats.goals += 1
+      next.playerStats.shots += 1
+      next.playerStats.shotsOnTarget += 1
       return next
     case 'assist':
       next.playerAssists += 1
+      next.playerStats.assists += 1
+      next.playerStats.keyPasses += 1
+      next.playerStats.chancesCreated += 1
       return applyGoal(next, true, text)
     case 'chance-missed':
+      next.playerStats.shots += 1
       next.events.push({ minute: s.minute, text, kind: 'chance' })
       next.momentum = clamp(next.momentum + 1, -10, 10)
       return next
@@ -998,10 +1033,19 @@ export function resolveScenarioBeat(
   let carded = s
   if (option.cardRisk) carded = rollCardConsequence(s, option.cardRisk)
 
+  const decisionQuality = maxReward > 0 ? chosenReward / maxReward : .5
+  const executionQuality = executionGrade === 'perfect' ? 1 : executionGrade === 'good' ? .82 : executionGrade === 'ok' ? .62 : executionGrade === 'miss' ? .28 : (success ? .72 : .42)
+  const evaluated = {
+    ...carded,
+    decisionQualityTotal: carded.decisionQualityTotal + decisionQuality,
+    executionQualityTotal: carded.executionQualityTotal + executionQuality,
+    ratedMoments: carded.ratedMoments + 1,
+  }
+
   // A player who has just been sent off cannot continue a passage of play —
   // whatever the beat's outcome said, being dismissed overrides it.
-  if (carded.redCarded && !s.redCarded) {
-    return { ...carded, activeScenario: null }
+  if (evaluated.redCarded && !s.redCarded) {
+    return { ...evaluated, activeScenario: null }
   }
 
   if (outcome.kind === 'continue') {
@@ -1015,14 +1059,14 @@ export function resolveScenarioBeat(
     // leaving the drive loop the same overall 90 minutes to work with once
     // the scenario resolves and normal simulation resumes.
     return {
-      ...carded,
-      minute: carded.minute + 1,
-      events: [...carded.events, { minute: carded.minute, text, kind: 'chance' }],
+      ...evaluated,
+      minute: evaluated.minute + 1,
+      events: [...evaluated.events, { minute: evaluated.minute, text, kind: 'chance' }],
       activeScenario: { scenarioId: moment.scenarioId!, beatId: outcome.beatId, tier: moment.tier },
     }
   }
 
-  let next = applyBeatOutcome(carded, outcome, text, moment.tier)
+  let next = applyBeatOutcome(evaluated, outcome, text, moment.tier)
   next.activeScenario = null
   next.playerRating = updateRating(next.playerRating, optionQuality, success, moment.tier, chosenReward, maxReward)
   if (executionGrade) {

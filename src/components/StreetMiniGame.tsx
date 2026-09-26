@@ -19,6 +19,25 @@ export default function StreetMiniGame({ kind, prompt, onComplete }: {
   prompt: string
   onComplete: (quality: number) => void
 }) {
+  const [started, setStarted] = useState(false)
+  if (!started) {
+    const guide = {
+      placement: { icon: '◎', title: 'Pick your corner', body: 'The goalkeeper moves across the line. Choose a target away from them to finish.', tip: 'The bigger the gap from the keeper, the better the shot.' },
+      nutmeg: { icon: '◇', title: 'Wait for the commit', body: 'The defender is closing you down. Tap only when they are close enough to open their legs.', tip: 'Too early is obvious; too late and you lose the ball.' },
+      firsttime: { icon: '◉', title: 'Meet it first time', body: 'The ball drops toward the strike zone. Hit it while it is travelling through the green band.', tip: 'Clean timing matters more than tapping quickly.' },
+    }[kind]
+    return (
+      <div className="minigame-preview">
+        <div className="minigame-steps"><b>1</b><span>READ</span><i/><b>2</b><span>PLAY</span><i/><b>3</b><span>RESULT</span></div>
+        <div className="minigame-preview-icon">{guide.icon}</div>
+        <div className="text-[9px] uppercase tracking-[.24em] text-ks-gold">street challenge · how to play</div>
+        <h2>{guide.title}</h2>
+        <p>{guide.body}</p>
+        <div className="minigame-tip"><span>STREET TIP</span>{guide.tip}</div>
+        <button onClick={() => setStarted(true)}>I'm ready →</button>
+      </div>
+    )
+  }
   if (kind === 'placement') return <Placement prompt={prompt} onComplete={onComplete} />
   if (kind === 'nutmeg') return <Nutmeg prompt={prompt} onComplete={onComplete} />
   return <FirstTime prompt={prompt} onComplete={onComplete} />

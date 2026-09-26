@@ -129,6 +129,8 @@ export function itemById(id: string): ShopItem | undefined {
 export interface OwnedEquipment {
   itemId: string
   weeksRemaining: number
+  /** V4: physical condition is visible separately from the old expiry timer. */
+  condition?: number
 }
 
 export type Consumables = Record<string, number>
@@ -160,9 +162,12 @@ export function ageEquipment(equipment: OwnedEquipment[] | undefined): { equipme
   const expired: string[] = []
   const next: OwnedEquipment[] = []
   for (const owned of equipment ?? []) {
+    const item = itemById(owned.itemId)
     const weeksRemaining = owned.weeksRemaining - 1
-    if (weeksRemaining <= 0) expired.push(owned.itemId)
-    else next.push({ ...owned, weeksRemaining })
+    const weeklyWear = 100 / Math.max(1, item?.durationWeeks ?? owned.weeksRemaining)
+    const condition = Math.max(0, Math.round((owned.condition ?? Math.min(100, owned.weeksRemaining * weeklyWear)) - weeklyWear))
+    if (weeksRemaining <= 0 || condition <= 0) expired.push(owned.itemId)
+    else next.push({ ...owned, weeksRemaining, condition })
   }
   return { equipment: next, expired }
 }

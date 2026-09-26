@@ -38,6 +38,27 @@ function resolveExecutionComponent(bundle: MatchDecisionBundle, optIndex: number
   if (attrs.includes('passing') || attrs.includes('vision')) return PassingMinigame
   return TimingBar
 }
+
+const EXECUTION_GUIDES = {
+  shooting: { icon: '◎', title: 'Pick your finish', body: 'A marker sweeps across the goal. Tap when it reaches the green centre zone to make the cleanest contact.', tip: 'Gold is good. Green is perfect. Do not rush the first sweep.' },
+  passing: { icon: '↗', title: 'Thread the pass', body: 'Read the moving passing lane, then release the ball when your teammate is open and the route is clear.', tip: 'Wait for the lane to open—accuracy beats speed.' },
+  dribbling: { icon: '◇', title: 'Beat your marker', body: 'React to the defender and choose the open route before the space disappears.', tip: 'Watch the defender, not just the ball.' },
+  tackling: { icon: '◆', title: 'Time the challenge', body: 'Hold your position and commit when the attacker enters the winning zone.', tip: 'Too early gets beaten; too late gives away the chance.' },
+  keeping: { icon: '▣', title: 'Make the save', body: 'Track the shot and tap when your goalkeeper reaches the projected path of the ball.', tip: 'The smallest green zone produces the strongest save.' },
+  crossing: { icon: '⌁', title: 'Attack the cross', body: 'Let the delivery arrive, then tap as your player meets the ball in the central contact zone.', tip: 'The header phase starts only after the cross lands.' },
+  timing: { icon: '◉', title: 'Execute the action', body: 'Stop the moving marker as close to the green centre as possible.', tip: 'Read one pass of the marker before committing.' },
+} as const
+
+function executionGuideFor(bundle: MatchDecisionBundle, optIndex: number) {
+  const Component = resolveExecutionComponent(bundle, optIndex)
+  if (Component === ShootingMinigame) return EXECUTION_GUIDES.shooting
+  if (Component === PassingMinigame) return EXECUTION_GUIDES.passing
+  if (Component === DribbleMinigame) return EXECUTION_GUIDES.dribbling
+  if (Component === TackleMinigame) return EXECUTION_GUIDES.tackling
+  if (Component === KeeperMinigame) return EXECUTION_GUIDES.keeping
+  if (Component === CrossHeaderMinigame) return EXECUTION_GUIDES.crossing
+  return EXECUTION_GUIDES.timing
+}
 import TrainingMiniGame from '../components/TrainingMiniGame'
 import { gradeFromRatio } from '../engine/xp'
 import GoalCelebration, { type CelebrationKind } from '../components/GoalCelebration'
@@ -47,6 +68,8 @@ import { sfx, isMuted, toggleMuted } from '../engine/audio'
 import { syncMusicMute } from '../engine/music'
 import { archetypeMomentBonus } from '../engine/archetypes'
 import { captainMomentFor, applyCaptainMoment, type CaptainMoment } from '../engine/captainMomentsV32'
+import type { RatingBreakdown } from '../engine/ratingSystemV32'
+import type { PlayerMatchStats } from '../engine/matchStats'
 
 interface MatchScreenProps {
   player: Player
@@ -55,7 +78,7 @@ interface MatchScreenProps {
   playerIsHome: boolean
   autoResolve: boolean
   onToggleAutoResolve: () => void
-  onComplete: (result: { rating: number; goals: number; assists: number; won: boolean; drew: boolean; finalMatchStamina: number; injury: { severity: string; weeksOut: number; description: string } | null; wasSubbed: boolean; redCarded: boolean; playerScore: number; opponentScore: number; motm?: { playerWon: boolean; winnerName: string; winnerRating: number; winnerPosition: string }; squad?: import('../engine/squad').SquadPlayer[]; matchStats: { tackle: number; interception: number; header: number; keyPass: number; save: number } }) => void
+  onComplete: (result: { rating: number; goals: number; assists: number; won: boolean; drew: boolean; finalMatchStamina: number; injury: { severity: string; weeksOut: number; description: string } | null; wasSubbed: boolean; redCarded: boolean; playerScore: number; opponentScore: number; motm?: { playerWon: boolean; winnerName: string; winnerRating: number; winnerPosition: string }; squad?: import('../engine/squad').SquadPlayer[]; matchStats: { tackle: number; interception: number; header: number; keyPass: number; save: number }; playerStats: PlayerMatchStats; ratingBreakdown?: RatingBreakdown; minutesPlayed: number; yellowCards: number }) => void
 }
 
 const SPEEDS = [1, 2, 3] as const
@@ -66,7 +89,7 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
   const [moment, setMoment] = useState<KeyMoment | null>(null)
   const [bundle, setBundle] = useState<MatchDecisionBundle | null>(null)
   const [revealed, setRevealed] = useState<{ text: string; success: boolean; grade: ExecutionGrade | null; action?: PitchAction } | null>(null)
-  const [executing, setExecuting] = useState<{ optIndex: number } | null>(null)
+  const [executing, setExecuting] = useState<{ optIndex: number; started: boolean } | null>(null)
   const [muted, setMutedUi] = useState(isMuted())
   const [speed, setSpeed] = useState<1 | 2 | 3>(1)
   const [displayMinute, setDisplayMinute] = useState(0)
@@ -162,13 +185,14 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
     let away = displayScoreRef.current.away
     let lastKind: CelebrationKind = 'concede'
     for (const ev of newGoals) {
-      const homeMentioned = ev.text.includes(state.homeTeam.short)
-      const awayMentioned = ev.text.includes(state.awayTeam.short)
-      const homeScored = homeMentioned && !awayMentioned ? true
-        : awayMentioned && !homeMentioned ? false
-        : home < state.homeScore
-      if (homeScored) home++
-      else away++
+      // New match events carry their authoritative post-goal score. Keep the
+      // fallback only for transient states created by an older hot-reloaded
+      // build; never infer a side from commentary text.
+      const homeScored = ev.scoringSide
+        ? ev.scoringSide === 'home'
+        : ev.homeScore !== undefined ? ev.homeScore > home : false
+      home = ev.homeScore ?? (home + (homeScored ? 1 : 0))
+      away = ev.awayScore ?? (away + (homeScored ? 0 : 1))
       const playerSideScored = playerIsHome ? homeScored : !homeScored
       ;(playerSideScored ? sfx.goal : sfx.concede)()
       lastKind = state.playerGoals > priorPlayerGoals.current
@@ -227,7 +251,7 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
       settle(optIndex, autoResolveGrade(player, state.matchStamina))
       return
     }
-    setExecuting({ optIndex })
+    setExecuting({ optIndex, started: false })
   }
 
   const settle = (optIndex: number, grade: ExecutionGrade) => {
@@ -272,14 +296,14 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
   }
 
   const skipAhead = () => setDisplayMinute(state.minute)
-  const cycleSpeed = () => setSpeed((s) => SPEEDS[(SPEEDS.indexOf(s) + 1) % SPEEDS.length])
+
   const clockLabel = displayMinute > 90 ? `90+${displayMinute - 90}'` : `${displayMinute}'`
 
   return (
-    <div className="relative h-[100dvh] w-full bg-ks-black flex flex-col overflow-hidden">
+    <div className="match-screen relative h-[100dvh] w-full bg-ks-black flex flex-col overflow-hidden">
       {captainMoment && caughtUp && (
         <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center px-5">
-          <div className="w-full max-w-md rounded-2xl border border-ks-gold/40 bg-[#0f0f0d] p-5 shadow-2xl">
+          <div className="w-full max-w-md max-h-[85dvh] overflow-y-auto rounded-2xl border border-ks-gold/40 bg-[#0f0f0d] p-5 shadow-2xl">
             <div className="text-[10px] uppercase tracking-[0.28em] text-ks-gold font-display mb-2">© Captain's Moment</div>
             <div className="text-ks-ink text-base font-display mb-5">{captainMoment.situation}</div>
             <div className="flex flex-col gap-2">
@@ -294,8 +318,8 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
           scorerName={celebration.kind === 'player-goal' || celebration.kind === 'player-assist' ? player.name : undefined}
           homeShort={state.homeTeam.short}
           awayShort={state.awayTeam.short}
-          homeScore={state.homeScore}
-          awayScore={state.awayScore}
+          homeScore={displayScore.home}
+          awayScore={displayScore.away}
           minute={celebration.minute}
           avatarId={celebration.kind === 'player-goal' || celebration.kind === 'player-assist' ? player.avatarId : undefined}
           playerRating={state.playerRating}
@@ -330,24 +354,14 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
       </svg>
       <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 90% 55% at 50% 0%, transparent 30%, rgba(5,5,4,0.92) 78%)' }} />
 
-      <div className="relative z-10 px-5 pt-5 max-w-md mx-auto w-full">
+      <div className="match-broadcast relative z-10 px-5 pt-5 max-w-md mx-auto w-full">
         <div className="flex items-center justify-between mb-2">
-          <button
-            onClick={cycleSpeed}
-            className="text-[10px] font-display tracking-widest uppercase text-ks-gold border border-ks-gold/40 rounded-md px-2.5 py-1 bg-ks-gold/5"
-            aria-label="commentary speed"
-          >
-            {speed}x speed
-          </button>
-          <div className="font-display tracking-widest text-ks-ink text-lg tabular-nums bg-[#0f0f0dcc] border border-ks-border rounded-lg px-3 py-0.5">
-            {clockLabel}
+          <div className="playback-selector" aria-label="Match playback speed">
+            {!matchOver && SPEEDS.map(value=><button key={value} aria-label={`Playback speed ${value} times`} aria-pressed={speed===value} onClick={()=>setSpeed(value)}>{value}×</button>)}
           </div>
-          <button
-            onClick={() => { const m = toggleMuted(); setMutedUi(m); syncMusicMute() }}
-            className="text-[10px] font-display tracking-widest uppercase text-ks-muted border border-ks-border rounded-md px-2 py-1"
-            aria-label={muted ? 'unmute sound' : 'mute sound'}
-          >
-            {muted ? '🔇' : '🔊'}
+          <div className="broadcast-clock" aria-label="Match clock"><small>{matchOver ? 'FULL TIME' : halfTimeShown ? 'HALF TIME' : displayMinute > 45 ? 'SECOND HALF' : 'FIRST HALF'}</small><strong>{matchOver ? 'FT' : halfTimeShown ? 'HT' : clockLabel}</strong></div>
+          <button className="broadcast-audio" onClick={() => { const m = toggleMuted(); setMutedUi(m); syncMusicMute() }} aria-label={muted ? 'Unmute sound' : 'Mute sound'} aria-pressed={!muted}>
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/>{muted ? <path d="m17 9 5 6m0-6-5 6"/> : <><path d="M16 8q4 4 0 8"/><path d="M19 5q7 7 0 14"/></>}</svg>
           </button>
         </div>
         <div className="flex items-center justify-between gap-2 mb-1">
@@ -381,10 +395,10 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
       </div>
 
       <div className="relative z-10 px-5 max-w-md mx-auto w-full mb-2">
-        <LiveMatchPitch momentum={state.momentum} homeColor={state.homeTeam.primaryColor} awayColor={state.awayTeam.primaryColor} playerIsHome={playerIsHome} playerPosition={player.position} minute={displayMinute} action={pitchAction} focusPlayer={showMoment || executing !== null} />
+        <LiveMatchPitch momentum={state.momentum} homeColor={state.homeTeam.primaryColor} awayColor={state.awayTeam.primaryColor} homeShort={state.homeTeam.short} awayShort={state.awayTeam.short} playerIsHome={playerIsHome} player={player} playerOnPitch={state.onPitch} minute={displayMinute} action={pitchAction} scoringSide={lastVisibleEvent?.scoringSide} focusPlayer={showMoment || executing !== null} />
       </div>
 
-      <div ref={feedRef} className="relative z-10 flex-1 min-h-0 overflow-y-auto px-5 max-w-md mx-auto w-full" style={{ maxHeight: '30vh' }}>
+      <div ref={feedRef} className="match-feed relative z-10 flex-1 min-h-0 overflow-y-auto px-5 max-w-md mx-auto w-full" style={{ maxHeight: '30dvh' }}>
         <div className="flex flex-col gap-2 pb-4">
           {visibleEvents.map((e, i) => {
             const isLast = i === visibleEvents.length - 1
@@ -403,12 +417,12 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
         </div>
       </div>
 
-      {(showMoment || revealed) && (
+      {(showMoment || revealed) && !celebration && (
         <div
           className="fixed inset-0 z-[65] flex items-center justify-center p-5"
           style={{ background: 'radial-gradient(ellipse 70% 50% at 50% 40%, rgba(212,175,55,0.08), transparent 65%), #050504' }}
         >
-          <div className="max-w-md w-full max-h-[85vh] overflow-y-auto">
+          <div className="max-w-md w-full max-h-[85dvh] overflow-y-auto">
             {showMoment && executing && bundle && moment ? (
               <div className="flex flex-col gap-2.5">
                 <div className="rounded-xl border border-ks-gold/40 bg-ks-gold/5 px-4 py-3 mb-1">
@@ -421,15 +435,31 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
                     ceiling={bundle.ceilings[executing.optIndex]}
                     onComplete={(quality) => settle(executing.optIndex, gradeFromRatio(quality))}
                   />
-                ) : (() => {
+                ) : !executing.started ? (() => {
+                  const guide = executionGuideFor(bundle, executing.optIndex)
+                  return (
+                    <div className="minigame-preview">
+                      <div className="minigame-steps"><b>1</b><span>READ</span><i/><b>2</b><span>EXECUTE</span><i/><b>3</b><span>RESULT</span></div>
+                      <div className="minigame-preview-icon">{guide.icon}</div>
+                      <div className="text-[9px] uppercase tracking-[.24em] text-ks-gold">how to play</div>
+                      <h2>{guide.title}</h2>
+                      <p>{guide.body}</p>
+                      <div className="minigame-tip"><span>COACH'S TIP</span>{guide.tip}</div>
+                      <button onClick={() => setExecuting({ ...executing, started: true })}>I'm ready →</button>
+                    </div>
+                  )
+                })() : (() => {
                   const ExecutionComponent = resolveExecutionComponent(bundle, executing.optIndex)
                   return (
-                    <ExecutionComponent
-                      spec={executionSpecFor(player, bundle.ceilings[executing.optIndex], state.matchStamina)}
-                      label={bundle.decision.options[executing.optIndex].label}
-                      onResolve={(grade) => settle(executing.optIndex, grade)}
-                      tier={moment.tier}
-                    />
+                    <div className="minigame-live-stage">
+                      <div className="minigame-live-label"><span>2 / 3</span> EXECUTE</div>
+                      <ExecutionComponent
+                        spec={executionSpecFor(player, bundle.ceilings[executing.optIndex], state.matchStamina)}
+                        label={bundle.decision.options[executing.optIndex].label}
+                        onResolve={(grade) => settle(executing.optIndex, grade)}
+                        tier={moment.tier}
+                      />
+                    </div>
                   )
                 })()}
               </div>
@@ -512,6 +542,8 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
                 rating: Math.round(state.playerRating * 10) / 10, goals: state.playerGoals, assists: state.playerAssists,
                 won, drew, finalMatchStamina: state.matchStamina, injury: state.injury, wasSubbed: state.substituted, redCarded: state.redCarded,
                 playerScore, opponentScore, motm: state.motm ? { playerWon: state.motm.playerWon, winnerName: state.motm.winner.name, winnerRating: state.motm.winner.rating, winnerPosition: state.motm.winner.position } : undefined, squad: state.squad, matchStats: matchStatsRef.current,
+                playerStats: state.playerStats, ratingBreakdown: state.ratingBreakdown,
+                minutesPlayed: Math.max(0, Math.min(state.minute, state.subMinute ?? state.minute) - state.entryMinute), yellowCards: state.yellowCards,
               })
             }}
             className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-3.5 text-sm shadow-[0_0_25px_rgba(212,175,55,0.3)]"

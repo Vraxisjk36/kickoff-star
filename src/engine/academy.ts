@@ -1,17 +1,12 @@
 import { rand } from './rng'
 import { generateTeam, type Team } from './teams'
-import { sortStandings, attributeGoals, rescaleTeamToRange, type LeagueStanding, type Fixture, type Division, type DivisionTier } from './league'
+import { sortStandings, attributeGoals, resetTeamScorers, rescaleTeamToRange, type LeagueStanding, type Fixture, type Division, type DivisionTier } from './league'
 import { generateRoundRobin } from './competitions'
+import { academyClub } from './academyClubs'
 
 // ============================================================================
-// ACADEMY PHASE (Phase 9) — locked scope: full England academy pyramid intent
-// (U18 Premier League + U18 PL Cup + FA Youth Cup + Professional Development
-// League). V1.0 SCOPE NOTE, matching the same narrowing already applied to
-// Grassroots (School Cup/Regional not built): only the two-tier LEAGUE structure
-// (U18 Premier League + Professional Development League below it, with
-// promotion) is implemented here. The two cup competitions (U18 PL Cup, FA Youth
-// Cup) are NOT built — same pattern as Grassroots' un-built School Cup/Regional.
-// This reuses the exact verified round-robin fixture algorithm from league.ts.
+// Two-tier domestic academy league. Cup worlds are built in the career store;
+// the league here carries the same country identities through promotion.
 // ============================================================================
 
 export type AcademyTier = 1 | 2 // 1 = U18 Premier League, 2 = Professional Development League
@@ -45,22 +40,24 @@ function generateFixtures(teams: Team[], legs: 1 | 2 = 1): Fixture[] {
   }))
 }
 
-function initTier(tier: AcademyTier, playerTeam?: Team): Division {
+function initTier(tier: AcademyTier, playerTeam?: Team, countryId?: string, usedNames: string[] = []): Division {
   const [lo, hi] = TIER_PRESTIGE_RANGE[tier]
   const teams: Team[] = []
   if (playerTeam) teams.push(playerTeam)
   while (teams.length < 12) {
-    teams.push(generateTeam(lo + Math.floor(rand() * (hi - lo + 1))))
+    const prestige = lo + Math.floor(rand() * (hi - lo + 1))
+    const team = countryId ? academyClub(countryId, prestige, [...usedNames, ...teams.map(t => t.name)]) : generateTeam(prestige)
+    teams.push(team)
   }
   return { tier: tier as unknown as DivisionTier, teams, standings: teams.map(initStanding), fixtures: generateFixtures(teams, 2) }
 }
 
 // Player enters at tier 2 (Professional Development League) — a fresh academy signing
 // has to earn their way into the first team's U18 Premier League squad.
-export function initAcademyWorld(academyClubName: string, prestige: number): AcademyWorld {
-  const academyTeam: Team = { ...generateTeam(prestige), name: academyClubName, short: academyClubName.slice(0, 3).toUpperCase() }
-  const tier2 = initTier(2, academyTeam)
-  const tier1 = initTier(1)
+export function initAcademyWorld(academyClubName: string, prestige: number, countryId?: string): AcademyWorld {
+  const academyTeam: Team = { ...generateTeam(prestige), name: academyClubName, short: academyClubName.slice(0, 3).toUpperCase(), countryId }
+  const tier2 = initTier(2, academyTeam, countryId)
+  const tier1 = initTier(1, undefined, countryId, tier2.teams.map(t => t.name))
   return { divisions: { 1: tier1, 2: tier2 }, playerDivision: 2, playerTeamId: academyTeam.id }
 }
 
@@ -78,7 +75,7 @@ function updateStandingsFromResult(standings: LeagueStanding[], homeId: string, 
   })
 }
 
-export function recordAcademyMatchResult(world: AcademyWorld, opponentId: string, playerScored: number, opponentScored: number, playerWasHome: boolean): AcademyWorld {
+export function recordAcademyMatchResult(world: AcademyWorld, opponentId: string, playerScored: number, opponentScored: number, playerWasHome: boolean, personalGoals = 0): AcademyWorld {
   const division = world.divisions[world.playerDivision]
   const homeId = playerWasHome ? world.playerTeamId : opponentId
   const awayId = playerWasHome ? opponentId : world.playerTeamId
@@ -88,7 +85,8 @@ export function recordAcademyMatchResult(world: AcademyWorld, opponentId: string
     !f.played && f.homeTeamId === homeId && f.awayTeamId === awayId ? { ...f, played: true, homeGoals: hg, awayGoals: ag } : f
   )
   const standings = updateStandingsFromResult(division.standings, homeId, awayId, hg, ag)
-  return { ...world, divisions: { ...world.divisions, [world.playerDivision]: { ...division, fixtures, standings } } }
+  const teams = division.teams.map(t => t.id === world.playerTeamId ? attributeGoals(t, Math.max(0, playerScored - personalGoals)) : t.id === opponentId ? attributeGoals(t, opponentScored) : t)
+  return { ...world, divisions: { ...world.divisions, [world.playerDivision]: { ...division, fixtures, standings, teams } } }
 }
 
 function simpleScore(attack: number, defense: number): number {
@@ -128,7 +126,7 @@ export function batchSimAcademyRound(division: Division, round: number, playerTe
 // since academy squads are more talent-concentrated).
 /** Builds an academy tier from an explicit team list — fresh standings/fixtures for a new season, real identities carried forward. */
 function buildTierFromTeams(tier: AcademyTier, teams: Team[]): Division {
-  return { tier: tier as unknown as DivisionTier, teams, standings: teams.map(initStanding), fixtures: generateFixtures(teams, 2) }
+  return { tier: tier as unknown as DivisionTier, teams: teams.map(resetTeamScorers), standings: teams.map(initStanding), fixtures: generateFixtures(teams, 2) }
 }
 
 // P68 — same real gap fixed in league.ts: every academy team other than the

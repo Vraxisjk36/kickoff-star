@@ -395,7 +395,7 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
       </div>
 
       <div className="relative z-10 px-5 max-w-md mx-auto w-full mb-2">
-        <LiveMatchPitch momentum={state.momentum} homeColor={state.homeTeam.primaryColor} awayColor={state.awayTeam.primaryColor} playerIsHome={playerIsHome} playerPosition={player.position} minute={displayMinute} action={pitchAction} scoringSide={lastVisibleEvent?.scoringSide} focusPlayer={showMoment || executing !== null} />
+        <LiveMatchPitch momentum={state.momentum} homeColor={state.homeTeam.primaryColor} awayColor={state.awayTeam.primaryColor} homeShort={state.homeTeam.short} awayShort={state.awayTeam.short} playerIsHome={playerIsHome} player={player} playerOnPitch={state.onPitch} minute={displayMinute} action={pitchAction} scoringSide={lastVisibleEvent?.scoringSide} focusPlayer={showMoment || executing !== null} />
       </div>
 
       <div ref={feedRef} className="relative z-10 flex-1 min-h-0 overflow-y-auto px-5 max-w-md mx-auto w-full" style={{ maxHeight: '30vh' }}>

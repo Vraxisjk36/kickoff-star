@@ -1,4 +1,5 @@
 import type { Player } from '../types/player'
+import type { Position } from '../types/attributes'
 import type { Team } from './teams'
 import { teamOverall } from './teams'
 import type { SquadPlayer, SquadPosition } from './squad'
@@ -61,6 +62,24 @@ export function matchTeamSheet(player: Player): { starters: TeamSheetEntry[]; be
     ...(!playerStarts ? [{ name: player.name, position: player.position, isPlayer: true }] : [])]
     .map((entry, index) => ({ ...entry, number: 12 + index }))
   return { starters: numberedStarters, bench: numberedBench }
+}
+
+const PITCH_NUMBERS = [1, 2, 4, 5, 3, 6, 8, 10, 7, 9, 11]
+export const PITCH_POSITION_SLOT: Record<Position, number> = { GK: 0, FB: 1, CB: 2, CM: 6, WM: 5, WG: 8, ST: 9 }
+
+/** Keep the pitch marker for the user's role in sync with the matchday shirt. */
+export function pitchShirtNumbers(player: Player, onPitch: boolean): number[] {
+  const numbers = [...PITCH_NUMBERS]
+  if (!onPitch) return numbers
+  const sheet = matchTeamSheet(player)
+  const shirt = [...sheet.starters, ...sheet.bench].find(entry => entry.isPlayer)?.number
+  if (shirt === undefined) return numbers
+  const slot = PITCH_POSITION_SLOT[player.position]
+  const old = numbers[slot]
+  const swap = numbers.indexOf(shirt)
+  if (swap >= 0) numbers[swap] = old
+  numbers[slot] = shirt
+  return numbers
 }
 
 export function matchVenue(home: Team, competitionId: string, academy = false): string {

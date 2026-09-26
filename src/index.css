@@ -145,8 +145,8 @@ html.reduce-motion *::after {
 /* V3.2 UI2 — match broadcast motion language */
 .live-pitch{background:linear-gradient(90deg,#0c2d17 0 12.5%,#10371c 12.5% 25%,#0c2d17 25% 37.5%,#10371c 37.5% 50%,#0c2d17 50% 62.5%,#10371c 62.5% 75%,#0c2d17 75% 87.5%,#10371c 87.5%);box-shadow:inset 0 0 45px #0009,0 12px 35px #0008}
 .pitch-vignette{background:radial-gradient(ellipse at center,transparent 35%,rgba(0,0,0,.58) 100%);z-index:1;pointer-events:none}
-.match-dot{position:absolute;width:18px;height:18px;border:2px solid rgba(255,255,255,.8);border-radius:50%;transform:translate(-50%,-50%);z-index:3;box-shadow:0 3px 8px #000c,0 0 10px rgba(255,255,255,.12);transition:left .75s cubic-bezier(.2,.8,.2,1),top .75s cubic-bezier(.2,.8,.2,1);animation:playerBreathe 1.8s ease-in-out infinite}
-.match-dot span{position:absolute;inset:0;display:grid;place-items:center;font-size:6px;font-weight:900;color:white;text-shadow:0 1px 2px #000}
+.match-shirt{position:absolute;width:22px;height:20px;clip-path:polygon(21% 0,35% 0,43% 12%,57% 12%,65% 0,79% 0,100% 27%,82% 43%,78% 100%,22% 100%,18% 43%,0 27%);transform:translate(-50%,-50%);z-index:3;box-shadow:inset 0 0 0 2px #ffffff80;filter:drop-shadow(0 3px 3px #000);transition:left .75s cubic-bezier(.2,.8,.2,1),top .75s cubic-bezier(.2,.8,.2,1);animation:playerBreathe 1.8s ease-in-out infinite}
+.match-shirt span{position:absolute;inset:3px 0 0;display:grid;place-items:center;font-size:10px;line-height:1;font-weight:900;text-shadow:0 0 2px #ffffff80}
 .match-ball{position:absolute;z-index:5;font-size:13px;transform:translate(-50%,-50%);filter:drop-shadow(0 3px 3px #000);transition:left .55s cubic-bezier(.2,.8,.2,1),top .55s cubic-bezier(.2,.8,.2,1);animation:ballSpin .7s linear infinite}
 @keyframes playerBreathe{0%,100%{scale:1}50%{scale:1.08}}
 @keyframes ballSpin{to{rotate:360deg}}
@@ -164,11 +164,11 @@ html.reduce-motion *::after {
 .live-pitch.camera-third{transform:scale(1.035)}
 .live-pitch.camera-box{transform:scale(1.075);filter:saturate(1.18) brightness(1.06)}
 .live-pitch.player-focus{transform:scale(1.09);filter:saturate(1.2) brightness(.9)}
-.match-dot.user-player{width:22px;height:22px;border:2px solid #d4af37;box-shadow:0 0 0 4px #d4af3728,0 0 20px #d4af37aa,0 4px 10px #000;z-index:6}
-.match-dot.user-player:after{content:'';position:absolute;left:50%;top:-9px;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:6px solid #d4af37;transform:translateX(-50%);filter:drop-shadow(0 0 4px #d4af37)}
-.player-focus .match-dot:not(.user-player){opacity:.55;filter:blur(.2px)}
+.match-shirt.user-player{width:27px;height:25px;outline:2px solid #d4af37;filter:drop-shadow(0 0 7px #d4af37);z-index:6}
+.match-shirt.user-player span{font-size:12px}
+.player-focus .match-shirt:not(.user-player){opacity:.55;filter:blur(.2px)}
 .player-focus .user-player{animation:userPulse .7s ease-in-out infinite alternate}
-@keyframes userPulse{to{box-shadow:0 0 0 8px #d4af3715,0 0 28px #d4af37,0 4px 10px #000;transform:translate(-50%,-50%) scale(1.1)}}
+@keyframes userPulse{to{filter:drop-shadow(0 0 12px #d4af37);transform:translate(-50%,-50%) scale(1.12)}}
 .broadcast-stat{height:34px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(24,24,20,.92),rgba(7,7,6,.94));border-radius:7px;padding:4px 8px;display:flex;align-items:center;justify-content:space-between;box-shadow:inset 0 1px rgba(255,255,255,.04)}
 .broadcast-stat span{font-size:7px;letter-spacing:.16em;color:#777;text-transform:uppercase}
 .broadcast-stat b{font-family:var(--font-display,inherit);font-size:11px;color:#d4af37;letter-spacing:.04em}

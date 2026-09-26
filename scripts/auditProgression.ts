@@ -18,7 +18,7 @@ import { EMPTY_CUPS, writeSave, SAVE_SCHEMA_VERSION } from '../src/engine/save'
 import { reseed } from '../src/engine/rng'
 import { initSchoolLeagueWorld } from '../src/engine/league'
 import { generateSquad } from '../src/engine/squad'
-import { matchTeamSheet, matchVenue, representativeSquad } from '../src/engine/matchPresentation'
+import { matchTeamSheet, matchVenue, PITCH_POSITION_SLOT, pitchShirtNumbers, representativeSquad } from '../src/engine/matchPresentation'
 
 let checks = 0
 function check(condition: unknown, message: string) { assert.ok(condition, message); checks++; console.log('✓', message) }
@@ -220,6 +220,14 @@ check(startingSheet.starters.length === 11 && startingSheet.bench.length === 5 &
   'Pre-match team sheet names a numbered eleven and five substitutes')
 const benchSheet = matchTeamSheet({ ...lineupPlayer, squadRole: 'bench' })
 check(benchSheet.starters.length === 11 && benchSheet.bench.some(member => member.isPlayer), 'Bench selection appears on the bench before kickoff')
+const startingPitch = pitchShirtNumbers(lineupPlayer, true)
+const benchedPlayer = { ...lineupPlayer, squadRole: 'bench' as const }
+const benchPitch = pitchShirtNumbers(benchedPlayer, false)
+const substitutePitch = pitchShirtNumbers(benchedPlayer, true)
+check(startingPitch[PITCH_POSITION_SLOT[lineupPlayer.position]] === startingSheet.starters.find(member => member.isPlayer)?.number &&
+  new Set(startingPitch).size === 11 && benchPitch[PITCH_POSITION_SLOT[lineupPlayer.position]] !== benchSheet.bench.find(member => member.isPlayer)?.number &&
+  substitutePitch[PITCH_POSITION_SLOT[lineupPlayer.position]] === benchSheet.bench.find(member => member.isPlayer)?.number &&
+  new Set(substitutePitch).size === 11, 'Live pitch shirts track starters and substitutes without duplicate numbers')
 const representative = representativeSquad(topTeam)
 check(representative.length === 15 && JSON.stringify(representative) === JSON.stringify(representativeSquad(topTeam)) &&
   !representative.some(member => lineupPlayer.squad?.some(clubmate => clubmate.id === member.id)),

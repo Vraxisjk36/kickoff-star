@@ -4,7 +4,7 @@ import { NATIONS } from '../src/engine/nations'
 import { REGIONS, regionsFor, regionalSchoolNames, regionalClubNames } from '../src/engine/regions'
 import { schoolsForRegion, getSchool } from '../src/engine/schools'
 import { grassrootsClubsForRegion } from '../src/screens/GrassrootsSelection'
-import { initSchoolLeagueWorld, initLeagueWorld } from '../src/engine/league'
+import { initSchoolLeagueWorld, initLeagueWorld, migrateToSchoolLeagueWorld } from '../src/engine/league'
 import { nationalRegionalField } from '../src/engine/regionalRepresentatives'
 import { initCupById, advanceCupStage, batchSimCupStage } from '../src/engine/cup'
 import { initInternationalWorld, advanceInternationalStage } from '../src/engine/international'
@@ -62,8 +62,16 @@ let state = useCareerStore.getState()
 let teams = Object.values(state.league!.divisions).flatMap(division => division.teams)
 check(state.league?.regionId === regionId && state.league?.kind === 'school' && teams.length === 30, 'South African school world has 30 regional teams')
 check(teams.every(team => team.regionId === regionId && team.countryId === 'rsa') && new Set(teams.map(team => team.name)).size === 30, 'school teams have unique regional identities')
+check(teams.every(team => Object.values(team.ratings).every(rating => rating >= 28 && rating <= 56)), 'Local school teams stay in a youth-strength range')
 check(teams.find(team => team.id === state.league!.playerTeamId)?.name === school.name, 'selected school is the actual player team')
 const schoolSnapshot = JSON.stringify(state.league)
+const inflated = structuredClone(state.league!)
+inflated.divisions[1].teams[1].ratings = { attack: 92, midfield: 81, defense: 74 }
+const repaired = migrateToSchoolLeagueWorld(inflated, school.name, regionId)
+check(Object.values(repaired.divisions[1].teams[1].ratings).every(rating => rating <= 56) &&
+  repaired.divisions[1].teams[1].id === inflated.divisions[1].teams[1].id &&
+  JSON.stringify(repaired.divisions[1].standings) === JSON.stringify(inflated.divisions[1].standings),
+  'Older inflated school saves rebalance without losing teams or standings')
 await useCareerStore.getState().saveCurrent()
 await useCareerStore.getState().loadFromSlot(0)
 state = useCareerStore.getState()

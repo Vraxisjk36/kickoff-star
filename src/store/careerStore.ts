@@ -1483,7 +1483,9 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       ? (activeWorldForHeadlines.divisions as Record<number, import('../engine/league').Division>)[activeWorldForHeadlines.playerDivision]
       : null
     let nextFixtureInfo: { opponentName: string; isCupKnockout: boolean; cupRoundLabel?: string } | null = null
-    const liveCup = Object.values(updatedCups).find((c) => c && !c.playerEliminated && c.stage === 'knockout')
+    const headlineCompetition = activeCompetitionForWeek(result.calendar.currentWeek.weekNumber, finalPlayer.careerClock.phase, finalPlayer.grassrootsPath, Boolean(updatedCups.schoolDevelopment))
+    const scheduledCup = headlineCompetition ? updatedCups[headlineCompetition.competitionId as keyof CupWorlds] : null
+    const liveCup = scheduledCup && !scheduledCup.playerEliminated && scheduledCup.stage === 'knockout' ? scheduledCup : null
     if (liveCup) {
       const fx = playerCupFixture(liveCup)
       if (fx) {
@@ -1639,7 +1641,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
           : `${player.grassrootsClubName ?? 'The club'} selected you for the ${role === 'starting-xi' ? 'starting eleven' : role}. Your next fixtures are in the Sunday League and Sunday Cup.`
         : role === 'released'
           ? 'The school coaches cut you. Train with a community club three times to earn a Sunday contract offer and keep your academy route alive.'
-          : `The coaches selected you for the ${role === 'starting-xi' ? 'starting eleven' : role}. You will represent your school in the local league and Regional Schools Cup.`,
+          : `The coaches selected you for the ${role === 'starting-xi' ? 'starting eleven' : role}. Play the local league; a top-three finish earns a Regional Schools Cup place.`,
       detail: `Trial score: ${Math.round(performance * 100)}. The selection was earned from your performance, ability, fitness and coach trust.`,
     })
     setState({ player: updatedPlayer })

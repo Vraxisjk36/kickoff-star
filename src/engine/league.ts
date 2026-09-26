@@ -1,6 +1,7 @@
 import { rand } from './rng'
 import { generateTeam, generatePlayerTeam, type Team, type NotablePlayer, type NotablePosition } from './teams'
 import { getRegion, regionalSchoolNames, regionalClubNames } from './regions'
+import { schoolsForRegion } from './schools'
 import { generateRoundRobin } from './competitions'
 
 // ============================================================================
@@ -92,12 +93,20 @@ function generateFixtures(teams: Team[], legs: 1 | 2 = 1): Fixture[] {
   }))
 }
 
-function initDivision(tier: DivisionTier, playerTeam?: Team, teamCount = 12, names: string[] | null = null, regionId?: string): Division {
+function schoolTeam(name: string, prestige: number): Team {
+  const team = generateTeam(prestige)
+  const base = 28 + prestige * 5
+  const rating = () => Math.max(28, Math.min(56, Math.round(base + (rand() - 0.5) * 12)))
+  return { ...team, name, short: schoolShort(name), ratings: { attack: rating(), midfield: rating(), defense: rating() } }
+}
+
+function initDivision(tier: DivisionTier, playerTeam?: Team, teamCount = 12, names: string[] | null = null, regionId?: string, school = false): Division {
   const [lo, hi] = DIVISION_PRESTIGE_RANGE[tier]
   const teams: Team[] = []
   if (playerTeam) teams.push(playerTeam)
   while (teams.length < teamCount) {
-    const generated = generateTeam(lo + Math.floor(rand() * (hi - lo + 1)))
+    const prestige = school ? 2 + Math.floor(rand() * 3) : lo + Math.floor(rand() * (hi - lo + 1))
+    const generated = school ? schoolTeam(names?.[teams.length - (playerTeam ? 1 : 0)] ?? schoolName(teams.length), prestige) : generateTeam(prestige)
     if (names === null) teams.push(generated)
     else {
       const name = names[teams.length - (playerTeam ? 1 : 0)] ?? schoolName(teams.length)
@@ -128,11 +137,12 @@ export function initLeagueWorld(playerTeamName: string, regionId?: string): Leag
  * the other districts exist so regional cup draws still have real schools. */
 export function initSchoolLeagueWorld(playerSchoolName: string, regionId?: string): LeagueWorld {
   const region = getRegion(regionId)
-  const playerTeam = { ...generatePlayerTeam(playerSchoolName, 3), ...(region ? { regionId: region.id, countryId: region.countryId } : {}) }
+  const schoolIndex = schoolsForRegion(regionId).findIndex(choice => choice.name === playerSchoolName)
+  const playerTeam = { ...schoolTeam(playerSchoolName, schoolIndex === 0 ? 4 : schoolIndex === 2 ? 2 : 3), ...(region ? { regionId: region.id, countryId: region.countryId } : {}) }
   const availableNames = (region ? regionalSchoolNames(region.id) : SCHOOL_NAMES).filter((name) => name !== playerSchoolName)
-  const div1 = initDivision(1, playerTeam, 10, availableNames.slice(0, 9), region?.id)
-  const div2 = initDivision(2, undefined, 10, availableNames.slice(9, 19), region?.id)
-  const div3 = initDivision(3, undefined, 10, availableNames.slice(19, 29), region?.id)
+  const div1 = initDivision(1, playerTeam, 10, availableNames.slice(0, 9), region?.id, true)
+  const div2 = initDivision(2, undefined, 10, availableNames.slice(9, 19), region?.id, true)
+  const div3 = initDivision(3, undefined, 10, availableNames.slice(19, 29), region?.id, true)
   return { divisions: { 1: div1, 2: div2, 3: div3 }, playerDivision: 1, playerTeamId: playerTeam.id, kind: 'school', regionId: region?.id }
 }
 
@@ -142,11 +152,20 @@ export function initSchoolLeagueWorld(playerSchoolName: string, regionId?: strin
 export function migrateToSchoolLeagueWorld(world: LeagueWorld, playerSchoolName: string, regionId?: string): LeagueWorld {
   if (world.kind === 'school') {
     const current = world.divisions[world.playerDivision].teams.find(team => team.id === world.playerTeamId)
-    if (current?.name === playerSchoolName) return world // preserve saved regional identities and results
-    const division = world.divisions[world.playerDivision]
+    const hasInflatedRatings = Object.values(world.divisions).some(division => division.teams.some(team => Object.values(team.ratings).some(value => value > 56)))
+    if (current?.name === playerSchoolName && !hasInflatedRatings) return world // preserve balanced saves exactly
+    const scaled = hasInflatedRatings ? { ...world, divisions: Object.fromEntries(Object.entries(world.divisions).map(([tier, division]) => [tier, {
+      ...division, teams: division.teams.map(team => {
+        if (!Object.values(team.ratings).some(value => value > 56)) return team
+        const rating = (value: number) => Math.max(28, Math.min(56, Math.round(28 + (value - 20) * 0.4)))
+        return { ...team, ratings: { attack: rating(team.ratings.attack), midfield: rating(team.ratings.midfield), defense: rating(team.ratings.defense) } }
+      }),
+    }])) as LeagueWorld['divisions'] } : world
+    if (current?.name === playerSchoolName) return scaled
+    const division = scaled.divisions[scaled.playerDivision]
     const teams = division.teams.map(team => team.id === world.playerTeamId ? { ...team, name: playerSchoolName, short: schoolShort(playerSchoolName) } : team)
     const standings = division.standings.map(row => row.teamId === world.playerTeamId ? { ...row, teamName: playerSchoolName, teamShort: schoolShort(playerSchoolName) } : row)
-    return { ...world, divisions: { ...world.divisions, [world.playerDivision]: { ...division, teams, standings } } }
+    return { ...scaled, divisions: { ...scaled.divisions, [scaled.playerDivision]: { ...division, teams, standings } } }
   }
   const region = getRegion(regionId)
   const availableNames = (region ? regionalSchoolNames(region.id) : SCHOOL_NAMES).filter((name) => name !== playerSchoolName)

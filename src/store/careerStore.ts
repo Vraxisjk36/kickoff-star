@@ -1779,7 +1779,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     // a player subbed early or barely used ends up less drained (Section 5)
     let updatedPlayer: Player = {
       ...player,
-      squad: isSideSunday ? player.squad : squad ?? player.squad,
+      squad: isSideSunday || competitionId === 'nationalChampionship' || competitionId === 'international' ? player.squad : squad ?? player.squad,
       octoberLeague: competitionId === 'octoberDevelopment' && player.octoberLeague?.season === calendar.currentWeek.seasonYear
         ? recordOctoberResult(player.octoberLeague, calendar.currentWeek.weekNumber, opponentId, playerWasHome ? playerGoalsScored : opponentGoalsScored, playerWasHome ? opponentGoalsScored : playerGoalsScored)
         : player.octoberLeague,

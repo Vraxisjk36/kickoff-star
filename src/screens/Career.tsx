@@ -11,6 +11,7 @@ import { hasSundayContract } from '../engine/sundayContracts'
 import { matchAvailability, playerForMatch } from '../engine/selection'
 import { representativeEvidence } from '../engine/youthOpportunities'
 import { formQualifiesForSelection } from '../engine/international'
+import { representativeSquad } from '../engine/matchPresentation'
 import { rand } from '../engine/rng'
 import { sfx } from '../engine/audio'
 import { playMusic, pauseMusic } from '../engine/music'
@@ -153,7 +154,9 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
   const sundayWorld = player.sundayLeague
   const sundayTeam = sundayWorld?.divisions[sundayWorld.playerDivision].teams.find(t => t.id === sundayWorld.playerTeamId)
   const playerTeam = modeCompetitionId === 'sundayLeague' && !isInAcademy && player.grassrootsPath === 'school' && sundayTeam ? sundayTeam : inIntlMode && nationTeam ? nationTeam : cupPlayerTeam??clubTeam
-  const matchdayPlayer = playerForMatch(player, modeCompetitionId ?? '')
+  const selectedPlayer = playerForMatch(player, modeCompetitionId ?? '')
+  const representativeMatch = modeCompetitionId === 'nationalChampionship' || modeCompetitionId === 'international'
+  const matchdayPlayer = representativeMatch ? { ...selectedPlayer, squad: representativeSquad(playerTeam) } : selectedPlayer
   const pending = nextUnresolvedEvent(calendar)
 
   const handleContinue = () => {
@@ -342,6 +345,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
         opponent={mode.opponent}
         isHome={mode.isHome}
         competitionLabel={mode.competitionLabel}
+        competitionId={mode.competitionId}
         onKickOff={() => { sfx.whistle(); setMode({ kind: 'match', opponent: mode.opponent, isHome: mode.isHome, competitionId: mode.competitionId, competitionLabel: mode.competitionLabel, isKnockout: mode.isKnockout }) }}
       />
     )

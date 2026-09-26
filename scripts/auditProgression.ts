@@ -17,6 +17,8 @@ import { useCareerStore } from '../src/store/careerStore'
 import { EMPTY_CUPS, writeSave, SAVE_SCHEMA_VERSION } from '../src/engine/save'
 import { reseed } from '../src/engine/rng'
 import { initSchoolLeagueWorld } from '../src/engine/league'
+import { generateSquad } from '../src/engine/squad'
+import { matchTeamSheet, matchVenue, representativeSquad } from '../src/engine/matchPresentation'
 
 let checks = 0
 function check(condition: unknown, message: string) { assert.ok(condition, message); checks++; console.log('✓', message) }
@@ -211,5 +213,18 @@ const continental = useCareerStore.getState().cups.academyChampionsCup
 check(continental?.teams.length === 8 && new Set(continental.teams.map(team => team.countryId)).size === 8 &&
   useCareerStore.getState().player?.competitionCareer?.qualifications.some(q => q.qualifiedFor === 'academyChampionsCup'),
   'Top-four academy qualifies and receives an eight-country continental bracket')
+const lineupPlayer = { ...player(), squad: generateSquad(5), squadRole: 'starting-xi' as const }
+const startingSheet = matchTeamSheet(lineupPlayer)
+check(startingSheet.starters.length === 11 && startingSheet.bench.length === 5 &&
+  startingSheet.starters.some(member => member.isPlayer) && new Set(startingSheet.starters.map(member => member.number)).size === 11,
+  'Pre-match team sheet names a numbered eleven and five substitutes')
+const benchSheet = matchTeamSheet({ ...lineupPlayer, squadRole: 'bench' })
+check(benchSheet.starters.length === 11 && benchSheet.bench.some(member => member.isPlayer), 'Bench selection appears on the bench before kickoff')
+const representative = representativeSquad(topTeam)
+check(representative.length === 15 && JSON.stringify(representative) === JSON.stringify(representativeSquad(topTeam)) &&
+  !representative.some(member => lineupPlayer.squad?.some(clubmate => clubmate.id === member.id)),
+  'Representative lineup is stable and distinct from club teammates')
+check(matchVenue(topTeam, 'academyChampionsCup').includes(topTeam.name) && matchVenue(topTeam, 'academyChampionsCup').includes('Academy Park'),
+  'Home venue names the hosting academy')
 
 console.log(`\n${checks} progression checks passed`)

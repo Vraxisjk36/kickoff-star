@@ -193,6 +193,7 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
                 ['league', 'league'],
                 ['cup', 'cups'],
                 ['international', 'international'],
+                ['other', 'friendlies & other'],
               ] as const).map(([key, label]) => {
                 const b = player.careerByCompetition![key]
                 if (b.appearances === 0) return null

@@ -985,8 +985,9 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     }
     // 'schoolFriendlies' needs no batch sim — friendlies are self-contained.
 
-    // International windows run MIDWEEK, independent of the Saturday branch above.
-    if (updatedInternational && hasDuty) {
+    // The country plays its fixtures even when the player misses the squad.
+    // Recent form controls match invitations, not the national campaign clock.
+    if (updatedInternational) {
       const intlRound = internationalRoundForWeek(completedWeekNumber)
       if (intlRound) {
         if (updatedInternational.stage === 'qualifiers' && intlRound.stage === 'qualifiers') {
@@ -996,13 +997,15 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
           for (let r = 1; r <= intlRound.round; r++) {
             updatedInternational = batchSimQualifyingRound(updatedInternational, r, byId)
           }
-          // the nation's own missed fixtures (player injured) sim as NPC games
-          const pending = nationFixture(updatedInternational)
-          if (pending && pending.round <= intlRound.round) {
+          // Catch up every missed national fixture, including earlier windows
+          // when the player was not selected for the matchday squad.
+          let pending = nationFixture(updatedInternational)
+          while (pending && pending.round <= intlRound.round) {
             const home = byId.get(pending.homeTeamId)!, away = byId.get(pending.awayTeamId)!
             const hg = Math.max(0, Math.round((home.ratings.attack - away.ratings.defense) / 30 + 1))
             const ag = Math.max(0, Math.round((away.ratings.attack - home.ratings.defense) / 30 + 1))
             updatedInternational = recordNationResult(updatedInternational, pending.homeTeamId === updatedInternational.nationTeamId ? pending.awayTeamId : pending.homeTeamId, pending.homeTeamId === updatedInternational.nationTeamId ? hg : ag, pending.homeTeamId === updatedInternational.nationTeamId ? ag : hg, pending.homeTeamId === updatedInternational.nationTeamId)
+            pending = nationFixture(updatedInternational)
           }
           updatedInternational = advanceInternationalStage(updatedInternational)
         } else if (updatedInternational.stage === 'finals' && intlRound.stage === 'finals') {

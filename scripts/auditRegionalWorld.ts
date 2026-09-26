@@ -147,4 +147,19 @@ await useCareerStore.getState().saveCurrent()
 await useCareerStore.getState().loadFromSlot(1)
 check(JSON.stringify(useCareerStore.getState().cups.nationalChampionship) === beforeCup && JSON.stringify(useCareerStore.getState().international) === beforeInternational,
   'In-progress regional and international brackets survive save and reload')
+const quietCampaign = initInternationalWorld('South Africa', 'rsa')
+const beforeQuiet = useCareerStore.getState()
+useCareerStore.setState({ international: quietCampaign, player: { ...beforeQuiet.player!, matchRatings: [5, 5, 5, 5, 5] },
+  calendar: { currentWeek: { weekNumber: 38, seasonYear: 1, events: [] }, history: [] } })
+useCareerStore.getState().advanceToNextWeek()
+check(useCareerStore.getState().international?.qualifyingGroup.fixtures.filter(fixture => fixture.round === 1).every(fixture => fixture.played),
+  'International qualifier progresses when poor form leaves the player out')
+useCareerStore.getState().advanceToNextWeek()
+check(useCareerStore.getState().international?.qualifyingGroup.fixtures.filter(fixture => fixture.round === 2).every(fixture => fixture.played),
+  'A second unselected window advances the national campaign')
+useCareerStore.setState({ international: initInternationalWorld('South Africa', 'rsa'),
+  calendar: { currentWeek: { weekNumber: 40, seasonYear: 1, events: [] }, history: [] } })
+useCareerStore.getState().advanceToNextWeek()
+check(useCareerStore.getState().international?.qualifyingGroup.fixtures.filter(fixture => fixture.round <= 3).every(fixture => fixture.played),
+  'Late-starting international campaign catches up all missed qualifier rounds')
 console.log(`${checks} regional identity checks passed`)

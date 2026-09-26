@@ -15,7 +15,7 @@ import { bandSpec } from '../../engine/energy'
 import type { HubTab } from '../../components/navItems'
 import Avatar from '../../components/Avatar'
 import { getNation } from '../../engine/nations'
-import { arcProgressText, weeksLeft } from '../../engine/storylines'
+import { completedSeasonObjectives } from '../../engine/seasonObjectives'
 import { itemById } from '../../engine/economy'
 import { isLive, STAGE_LABEL } from '../../engine/negotiation'
 import { decideSelection, selectionAdvice } from '../../engine/selection'
@@ -215,23 +215,10 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
         </div>
       )}
 
-      {/* live storylines — a deadline you're carrying should never be buried */}
-      {(player.activeArcs ?? []).map((arc) => (
-        <button
-          key={arc.id}
-          onClick={() => onGoTo('people')}
-          className="rounded-lg border border-ks-gold/35 bg-ks-gold/5 px-3 py-2.5 text-left"
-        >
-          <div className="flex items-center justify-between mb-0.5">
-            <span className="font-display tracking-wide text-ks-gold text-[11px] uppercase">{arc.title}</span>
-            <span className="text-[9px] text-ks-muted uppercase tracking-wider">
-              {weeksLeft(arc, player)}w left
-            </span>
-          </div>
-          <p className="text-[11px] text-ks-ink leading-snug">{arc.brief}</p>
-          <p className="text-[10px] text-ks-muted mt-0.5">{arcProgressText(arc, player)}</p>
-        </button>
-      ))}
+      {player.seasonObjectives && <button onClick={() => onGoTo('player')} className="rounded-lg border border-ks-gold/35 bg-ks-gold/5 px-3 py-2.5 text-left">
+        <span className="font-display tracking-wide text-ks-gold text-[11px] uppercase">Coach's season goals</span>
+        <p className="text-[11px] text-ks-ink mt-1">{completedSeasonObjectives(player.seasonObjectives, player)} of 4 reached · view progress →</p>
+      </button>}
 
       <button onClick={() => onGoTo('player')} className="home-player-link"><span>PLAYER PROFILE</span><b>View development, form & career record →</b></button>
 

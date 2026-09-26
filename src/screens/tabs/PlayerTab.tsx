@@ -1,4 +1,5 @@
 import type { Player } from '../../types/player'
+import { objectiveProgress, completedSeasonObjectives } from '../../engine/seasonObjectives'
 import { computeCurrentAbility, toOvr } from '../../engine/rating'
 import { trustLabel, trustEmoji, generateNotebookEntry, notebookTone } from '../../engine/coachTrust'
 import { Panel, Bar, TickBar, VerticalBarChart, RadarChart, StatRow, EmptyNote, Section, Icon } from '../../components/ui'
@@ -167,6 +168,19 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
           </>
         )}
       </Section>
+
+      {player.seasonObjectives && <Section title="🎯 coach's season goals" defaultOpen>
+        <p className="text-[11px] text-ks-muted mb-3">{completedSeasonObjectives(player.seasonObjectives, player)} of 4 reached. The coach reviews these at season's end; missing one never automatically changes your squad role.</p>
+        <div className="flex flex-col gap-2">
+          {player.seasonObjectives.objectives.map(objective => {
+            const progress = objectiveProgress(player.seasonObjectives!, objective, player)
+            return <div key={objective.kind} className="rounded-lg border border-ks-border bg-[#11110e] px-3 py-2.5 flex items-center justify-between gap-2">
+              <span className="text-[11px] text-ks-ink">{objective.title}</span>
+              <span className={`text-[10px] text-right ${progress.met ? 'text-green-400' : 'text-ks-gold'}`}>{progress.met ? '✓ ' : ''}{progress.label}</span>
+            </div>
+          })}
+        </div>
+      </Section>}
 
       <Section title={<span className="flex items-center gap-1"><Icon src={iconScouts} />scouts & interest</span>}>
         <ScoutsTab player={player} onOpenOffers={onOpenOffers ?? (() => {})} />

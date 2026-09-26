@@ -13,7 +13,6 @@ import LeagueTab from './tabs/LeagueTab'
 import ShopTab from './tabs/ShopTab'
 import EnergySheet from '../components/EnergySheet'
 import AchievementCeremony from '../components/AchievementCeremony'
-import ArcVerdictCard from '../components/ArcVerdictCard'
 import SeasonReviewCard from '../components/SeasonReviewCard'
 import HeadlineToast from '../components/HeadlineToast'
 import GazetteScreen from './GazetteScreen'
@@ -46,10 +45,8 @@ export default function WeeklyHub({
   const [inboxOpen, setInboxOpen] = useState(false)
   const [yearCalendarOpen, setYearCalendarOpen] = useState(false)
   const pendingAchievements = useCareerStore((s) => s.pendingAchievements)
-  const pendingArcVerdicts = useCareerStore((s) => s.pendingArcVerdicts)
   const pendingSeasonReview = useCareerStore((s) => s.pendingSeasonReview)
   const clearSeasonReview = useCareerStore((s) => s.clearSeasonReview)
-  const clearArcVerdicts = useCareerStore((s) => s.clearArcVerdicts)
   const pendingHeadlines = useCareerStore((s) => s.pendingHeadlines)
   const clearHeadline = useCareerStore((s) => s.clearHeadline)
   const clearPendingAchievements = useCareerStore((s) => s.clearPendingAchievements)
@@ -127,10 +124,7 @@ export default function WeeklyHub({
       {!pendingSeasonReview && !unreadStory && player.captaincy?.pendingStory && (
         <CaptaincyStoryCard story={player.captaincy.pendingStory} onDismiss={clearCaptaincyStory} />
       )}
-      {!pendingSeasonReview && !unreadStory && !player.captaincy?.pendingStory && pendingArcVerdicts.length > 0 && (
-        <ArcVerdictCard queue={pendingArcVerdicts} onDismiss={() => clearArcVerdicts()} />
-      )}
-      {!pendingSeasonReview && !unreadStory && !player.captaincy?.pendingStory && pendingArcVerdicts.length === 0 && pendingAchievements.length > 0 && (
+      {!pendingSeasonReview && !unreadStory && !player.captaincy?.pendingStory && pendingAchievements.length > 0 && (
         <AchievementCeremony queue={pendingAchievements} onDismiss={clearPendingAchievements} />
       )}
 

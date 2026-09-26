@@ -377,7 +377,7 @@ async function main() {
   // same round count (checked continuously would be better; here we verify the
   // invariant that the player's team is never >1 round ahead of the field —
   // re-run a fresh short sim with a probe)
-  // ---- P28: relationships + storyline arcs, at STORE level ----
+  // Relationships and season-long coach objectives, at STORE level.
   // Engine-level sims can't catch wiring bugs (the P25 lesson), so these
   // assertions run against whatever the real store actually produced.
   const rels = player.relationships ?? []
@@ -386,11 +386,10 @@ async function main() {
   assert(new Set(rels.map((r) => r.id)).size === rels.length, 'no duplicate people in the cast')
   const drifted = rels.some((r) => r.bond !== Math.round(r.bond) || r.weeksSinceContact > 0)
   assert(drifted, 'relationship drift actually ran during the career')
-  const arcsSeen = (player.recentArcKeys ?? []).length
-  assert(arcsSeen > 0, `storyline arcs opened AND resolved through the store (${arcsSeen} resolved)`)
-  assert((player.activeArcs ?? []).length <= 2, `never more than 2 live arcs (${(player.activeArcs ?? []).length})`)
-  assert((player.activeArcs ?? []).every((a) => a.deadlineWeek > a.startedWeek), 'live arcs have sane deadlines')
-  console.log('relationships:', rels.length, '| arcs resolved:', arcsSeen, '| live arcs:', (player.activeArcs ?? []).length,
+  assert((player.activeArcs ?? []).length === 0, 'retired timed challenges cannot recur')
+  assert(player.seasonObjectives?.objectives.length === 4, 'four coach objectives persist into the new season')
+  assert(player.seasonObjectives?.seasonYear === useCareerStore.getState().calendar?.currentWeek.seasonYear, 'coach objectives roll over with the season')
+  console.log('relationships:', rels.length, '| season objectives:', player.seasonObjectives?.objectives.length,
     '| avg bond:', (rels.reduce((a, r) => a + r.bond, 0) / rels.length).toFixed(1))
 
   // ---- P29: economy + sub appearances, at STORE level ----
@@ -437,7 +436,7 @@ async function main() {
   assert(JSON.stringify(after.player?.octoberLeague) === JSON.stringify(before.octoberLeague), 'October league table and fixtures must roundtrip through save/load')
   assert(after.player?.career?.appearances === player.career?.appearances, 'career totals must roundtrip')
   assert(JSON.stringify(after.player?.relationships) === JSON.stringify(player.relationships), 'relationships must roundtrip through save/load')
-  assert(JSON.stringify(after.player?.activeArcs) === JSON.stringify(player.activeArcs), 'live storyline arcs must roundtrip through save/load')
+  assert(JSON.stringify(after.player?.seasonObjectives) === JSON.stringify(player.seasonObjectives), 'season objectives must roundtrip through save/load')
   assert(after.player?.money === player.money, 'money must roundtrip through save/load')
   assert(after.player?.agentId === player.agentId, 'agent must roundtrip through save/load')
   assert(JSON.stringify(after.player?.contract) === JSON.stringify(player.contract), 'contract must roundtrip through save/load')

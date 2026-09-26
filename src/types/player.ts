@@ -107,6 +107,8 @@ export interface Player {
   activeArcs?: import('../engine/storylines').ActiveArc[]
   /** Arc template keys recently resolved, for no-repeat pacing. */
   recentArcKeys?: string[]
+  /** Four position-specific coach objectives for the current season. */
+  seasonObjectives?: import('../engine/seasonObjectives').SeasonObjectives
 
   // Phase 27 — identity picked at onboarding
   nationality?: string // Nation.id (engine/nations.ts); drives the international layer

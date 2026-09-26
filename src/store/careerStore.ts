@@ -14,7 +14,8 @@ import { nationalRegionalField } from '../engine/regionalRepresentatives'
 import { academyOfferBatch, academyChampionsField } from '../engine/academyClubs'
 import { archetypeConfidenceSwingMultiplier, archetypeTrustGainMultiplier } from '../engine/archetypes'
 import { initialCast, driftRelationships, adjustBond, addPerson, relationshipEffects, resolveInteraction, interactedThisWeek, pruneCast, INTERACTIONS } from '../engine/relationships'
-import { maybeStartArc, tickArcs, ARC_TEMPLATES, baselineOf, type ActiveArc, type ArcVerdict } from '../engine/storylines'
+import { createSeasonObjectives, completedSeasonObjectives, seasonObjectivesBrief } from '../engine/seasonObjectives'
+import type { ArcVerdict } from '../engine/storylines'
 import { itemById, ageEquipment, monthlyAllowance, allowanceDue, rewardForStreak, shopFor, availableJobs, canWorkThisWeek, weeklyLivingCost, energyGainFromPct, type OwnedEquipment } from '../engine/economy'
 import { netWage, commissionOn } from '../engine/agents'
 import { hasSundayContract, migrateSundayContracts, openSundayContractWindow } from '../engine/sundayContracts'
@@ -249,8 +250,10 @@ function migratePlayer(player: Player): Player {
     // Phase 28 — saves predating the life layer get a cast on load, so an
     // in-flight career gains relationships instead of showing an empty list.
     relationships: player.relationships ?? initialCast(),
-    activeArcs: player.activeArcs ?? [],
-    recentArcKeys: player.recentArcKeys ?? [],
+    // Retire the old timed challenges on load. A saved goalkeeper must never
+    // be benched later for a goals target that was already in flight.
+    activeArcs: [],
+    recentArcKeys: [],
     // P29 — careers saved before the economy existed start it now, with the
     // same two free drinks a new career gets rather than nothing.
     money: player.money ?? 25,
@@ -325,7 +328,14 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       for (let week = 36; october && week < loadedCalendar.currentWeek.weekNumber && week <= 39; week++) october = simulateOctoberWeek(october, week)
       player = { ...player, octoberLeague: october }
     }
-    setState({ player, calendar: loadedCalendar, league, academyLeague: save.academyLeague ?? null, cups, international: save.international ?? null, activeSlot: slot, pendingTraining: save.pendingTraining ?? null })
+    if (player.careerClock.phase !== 'grassroots-trials' && !player.careerEnded && !player.turnedPro && player.seasonObjectives?.seasonYear !== loadedCalendar.currentWeek.seasonYear) {
+      const objectives = createSeasonObjectives(player, loadedCalendar.currentWeek.seasonYear, loadedCalendar.currentWeek.weekNumber)
+      player = withStory({ ...player, seasonObjectives: objectives }, loadedCalendar, {
+        kind: 'milestone', eyebrow: 'Coach · season plan', title: 'YOUR FOUR SEASON GOALS',
+        body: seasonObjectivesBrief(objectives), detail: 'The old short deadlines are gone. Missing one of these season goals never automatically benches you.',
+      })
+    }
+    setState({ player, calendar: loadedCalendar, league, academyLeague: save.academyLeague ?? null, cups, international: save.international ?? null, activeSlot: slot, pendingTraining: save.pendingTraining ?? null, pendingArcVerdicts: [] })
     void getState().saveCurrent()
   },
 
@@ -467,29 +477,8 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       // keep the cast bounded — see pruneCast for why
       updatedPlayer = { ...updatedPlayer, relationships: pruneCast(list) }
     }
-    if (effect.startArc) {
-      const template = ARC_TEMPLATES.find((t) => t.key === effect.startArc)
-      const live = updatedPlayer.activeArcs ?? []
-      // never stack the same arc, and honour the same 2-arc ceiling the
-      // random roller uses so a run of event choices can't bury the player
-      if (template && live.length < 2 && !live.some((a) => a.key === template.key)) {
-        const built = template.build(updatedPlayer)
-        const absWeek = updatedPlayer.totalWeeksElapsed ?? 0
-        const arc: ActiveArc = {
-          ...built,
-          id: crypto.randomUUID(),
-          key: template.key,
-          title: template.title,
-          startedWeek: absWeek,
-          deadlineWeek: absWeek + template.weeks,
-          baseline: baselineOf(updatedPlayer),
-        }
-        const needsPerson = arc.objective.kind === 'keepBond' || arc.objective.kind === 'raiseBond'
-        if (!needsPerson || (arc.objective as { relationshipId?: string }).relationshipId) {
-          updatedPlayer = { ...updatedPlayer, activeArcs: [...live, arc] }
-        }
-      }
-    }
+    // Older life-event choices may still carry a startArc field. Short timed
+    // challenges have been retired; the choice's immediate effect still applies.
 
     const updatedCalendar = event ? markResolved(calendar, event.id) : calendar
     setState({ player: updatedPlayer, calendar: updatedCalendar })
@@ -1425,28 +1414,29 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       }
     }
 
-    // 4) storyline arcs: judge the live ones, then maybe open a new one.
-    //    Verdicts are applied here so a deadline that expires this week lands
-    //    with real consequences (trust, confidence, even losing your place).
-    const { remaining, verdicts } = tickArcs(updatedPlayer.activeArcs ?? [], updatedPlayer)
-    let arcPlayer: Player = { ...updatedPlayer, activeArcs: remaining }
-    for (const v of verdicts) {
-      const cons = v.consequence
+    // The coach now sets four season-long objectives. Missing one never
+    // overrides the normal selection system or deducts confidence.
+    let arcPlayer: Player = { ...updatedPlayer, activeArcs: [], recentArcKeys: [] }
+    if (result.seasonEnded && player.seasonObjectives?.seasonYear === calendar.currentWeek.seasonYear) {
+      const completed = completedSeasonObjectives(player.seasonObjectives, player)
       arcPlayer = {
         ...arcPlayer,
-        confidence: { ...arcPlayer.confidence, value: clamp(arcPlayer.confidence.value + (cons.confidence ?? 0), -10, 10) },
-        coachTrust: clamp((arcPlayer.coachTrust ?? 0) + (cons.coachTrust ?? 0), -10, 10),
-        reputation: clamp((arcPlayer.reputation ?? 0) + (cons.reputation ?? 0), 0, 100),
-        fitness: { stamina: Math.round(clamp(arcPlayer.fitness.stamina + (cons.energy ?? 0), 0, 100)) },
-        squadRole: cons.setSquadRole ?? arcPlayer.squadRole,
-        recentArcKeys: [...(arcPlayer.recentArcKeys ?? []), v.arc.key].slice(-10),
+        coachTrust: clamp((arcPlayer.coachTrust ?? 0) + completed * 0.2, -10, 10),
+        confidence: { ...arcPlayer.confidence, value: clamp(arcPlayer.confidence.value + completed * 0.2, -10, 10) },
       }
-      if (cons.bond && v.arc.relationshipId) {
-        arcPlayer = { ...arcPlayer, relationships: adjustBond(arcPlayer.relationships ?? [], v.arc.relationshipId, cons.bond, cons.narrative) }
-      }
+      arcPlayer = withStory(arcPlayer, result.calendar, {
+        kind: 'milestone', eyebrow: 'Coach · season objectives', title: 'SEASON GOALS REVIEWED',
+        body: `You completed ${completed} of the four goals the coach set. ${completed ? 'Your work earned a small boost to trust and confidence.' : 'No penalty—your place is decided by your performances and fitness.'}`,
+        detail: 'These objectives are a guide for the season. Missing a target never benches you.',
+      })
     }
-    const newArc = maybeStartArc(arcPlayer, result.calendar.currentWeek.weekNumber, arcPlayer.activeArcs ?? [], arcPlayer.recentArcKeys ?? [])
-    if (newArc) arcPlayer = { ...arcPlayer, activeArcs: [...(arcPlayer.activeArcs ?? []), newArc] }
+    if (result.seasonEnded && !arcPlayer.careerEnded && !arcPlayer.turnedPro) {
+      const objectives = createSeasonObjectives(arcPlayer, result.calendar.currentWeek.seasonYear)
+      arcPlayer = withStory({ ...arcPlayer, seasonObjectives: objectives }, result.calendar, {
+        kind: 'milestone', eyebrow: 'Coach · new season', title: 'YOUR FOUR SEASON GOALS',
+        body: seasonObjectivesBrief(objectives), detail: 'Track these all year on your player screen. There is no automatic benching for a missed goal.',
+      })
+    }
 
     // Career end: reaching the age cap (20) without turning pro is the fail-state
     let finalPlayer = result.reachedAgeCap
@@ -1503,7 +1493,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       worldTeamNames: divisionForHeadlines?.teams.map((t) => t.name) ?? [],
     })
 
-    setState({ player: finalPlayer, calendar: alignOctoberDevelopment(alignMatchDays(result.calendar, finalPlayer.careerClock.phase, finalPlayer.grassrootsPath ?? 'school', finalPlayer.pathway?.sundayStatus === 'registered'), finalPlayer.careerClock.ageYears, finalPlayer.careerClock.phase, finalPlayer.grassrootsPath ?? 'school', finalPlayer.pathway?.showcaseInvited === true), league: updatedLeague, academyLeague: updatedAcademyLeague, cups: updatedCups, international: updatedInternational, pendingArcVerdicts: [...getState().pendingArcVerdicts, ...verdicts], pendingHeadlines: [...getState().pendingHeadlines, ...weeklyHeadlines], pendingSeasonReview: seasonReview, economyNote: lastContractNote ?? lastEconomyNote, selectionNote: lastSelectionNote, negotiationBeat: negotiationBeatThisWeek ?? getState().negotiationBeat })
+    setState({ player: finalPlayer, calendar: alignOctoberDevelopment(alignMatchDays(result.calendar, finalPlayer.careerClock.phase, finalPlayer.grassrootsPath ?? 'school', finalPlayer.pathway?.sundayStatus === 'registered'), finalPlayer.careerClock.ageYears, finalPlayer.careerClock.phase, finalPlayer.grassrootsPath ?? 'school', finalPlayer.pathway?.showcaseInvited === true), league: updatedLeague, academyLeague: updatedAcademyLeague, cups: updatedCups, international: updatedInternational, pendingArcVerdicts: [], pendingHeadlines: [...getState().pendingHeadlines, ...weeklyHeadlines], pendingSeasonReview: seasonReview, economyNote: lastContractNote ?? lastEconomyNote, selectionNote: lastSelectionNote, negotiationBeat: negotiationBeatThisWeek ?? getState().negotiationBeat })
     // Non-match achievements (scouts noticing you, offers arriving, coach trust,
     // reputation, squad role, injury comeback) have no match to hang off, so the
     // week tick is their trigger. Runs after setState so it reads the new state.
@@ -1641,6 +1631,11 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
           ? 'The school coaches cut you. Train with a community club three times to earn a Sunday contract offer and keep your academy route alive.'
           : `The coaches selected you for the ${role === 'starting-xi' ? 'starting eleven' : role}. You will represent your school in the local league and Regional Schools Cup.`,
       detail: `Trial score: ${Math.round(performance * 100)}. The selection was earned from your performance, ability, fitness and coach trust.`,
+    })
+    const seasonObjectives = createSeasonObjectives(updatedPlayer, calendar?.currentWeek.seasonYear ?? 1, calendar?.currentWeek.weekNumber ?? 4)
+    updatedPlayer = withStory({ ...updatedPlayer, seasonObjectives }, calendar, {
+      kind: 'milestone', eyebrow: 'Coach · season plan', title: 'YOUR FOUR SEASON GOALS',
+      body: seasonObjectivesBrief(seasonObjectives), detail: 'Work toward these across the season. A missed goal never automatically costs your place.',
     })
     setState({ player: updatedPlayer })
     void getState().saveCurrent()

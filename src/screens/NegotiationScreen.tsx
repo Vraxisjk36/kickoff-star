@@ -97,6 +97,7 @@ export default function NegotiationScreen({ player, onClose }: { player: Player;
       <h1 className="font-display text-ks-ink text-2xl tracking-wide mb-0.5">{negotiation.clubName}</h1>
       <p className="text-[10px] text-ks-muted mb-4">
         {STAGE_LABEL[negotiation.stage]}
+        {negotiation.kind === 'academy' && <> · week {Math.min(2, (player.totalWeeksElapsed ?? 0) - negotiation.startedWeek + 1)} of 2</>}
         {agent && <> · represented by {agent.name}</>}
       </p>
 
@@ -165,7 +166,7 @@ export default function NegotiationScreen({ player, onClose }: { player: Player;
         ) : (
           <>
             <div className="rounded-xl border border-ks-border bg-[#0f0f0d] px-4 py-3 text-[11px] text-ks-muted text-center">
-              The ball is in their court. Play your week and see where it stands.
+              {negotiation.kind === 'academy' ? 'The club is arranging your medical. Advance one week to return for signing.' : 'The ball is in their court. Play your week and see where it stands.'}
             </div>
             <button onClick={onClose} className="w-full bg-ks-gold text-ks-black font-display tracking-widest rounded-xl py-3.5 text-sm uppercase">
               back to your week

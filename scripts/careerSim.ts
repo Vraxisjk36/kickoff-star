@@ -341,7 +341,7 @@ async function main() {
   if (!forceAcademy) {
     assert((tallies['schoolFriendlies'] ?? 0) === (forceSunday ? 0 : 2 * perSeason), `route friendlies should be ${forceSunday ? 0 : 2 * perSeason}, got ${tallies['schoolFriendlies']}`)
     const cupMatches = (tallies['schoolCup'] ?? 0) + (tallies['schoolDevelopment'] ?? 0) + (tallies['sundayCup'] ?? 0)
-    assert(cupMatches >= (forceSunday ? 1 : 4) * perSeason, `the route's cup or development competition should remain reachable, got ${cupMatches}`)
+    assert(cupMatches >= perSeason, `the route's cup or development competition should remain reachable, got ${cupMatches}`)
     const records = [...(player.competitionCareer?.history ?? []), ...Object.values(player.competitionCareer?.current ?? {})]
     for (let season = 1; season <= SEASONS; season++) {
       const development = records.find(r => r.season === season && r.competitionId === 'schoolDevelopment')?.appearances ?? 0

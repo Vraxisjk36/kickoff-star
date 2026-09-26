@@ -95,6 +95,14 @@ for (const nation of NATIONS) {
   check(finished.stage === 'complete' && finished.knockoutRounds.map(fixtures => fixtures.length).join(',') === '8,4,2,1', `${nation.name} completes four knockout rounds`)
 }
 const northCapeSchool = initSchoolLeagueWorld(school.name, regionId).divisions[1].teams[0]
+const regionalSchools = Object.values(initSchoolLeagueWorld(school.name, regionId).divisions).flatMap(division => division.teams)
+const regionalCup = initCupById('schoolCup', regionalSchools[0], regionalSchools)
+check(regionalCup.stage === 'knockout' && regionalCup.teams.length === 16 && regionalCup.knockoutRounds[0].length === 8,
+  'Regional Schools Cup starts with sixteen schools in the Round of 16')
+let regionalFinished = regionalCup
+for (let round = 1; round <= 4; round++) regionalFinished = advanceCupStage(batchSimCupStage(regionalFinished, round, true))
+check(regionalFinished.stage === 'complete' && regionalFinished.knockoutRounds.map(fixtures => fixtures.length).join(',') === '8,4,2,1',
+  'Regional Schools Cup completes in four rounds')
 const seasonOne = nationalRegionalField(northCapeSchool, regionId, 1)
 const seasonTwo = nationalRegionalField(northCapeSchool, regionId, 2)
 check(new Set([...seasonOne.opponents, ...seasonTwo.opponents].map(team => team.regionId)).size === 8, 'South African national draws rotate through all other provinces')
@@ -115,6 +123,17 @@ const finalistRecord = { competitionId: 'nationalChampionship', season: 1, appea
 const finalist = { ...newPlayer(regionId), pathway: { regionalSelection: 'selected' },
   competitionCareer: { ...initCompetitionCareer(), current: { nationalChampionship: finalistRecord } } } as Player
 check(!representativeEvidence(finalist, 'national').eligible, 'Non-finalist cannot reach international selection on appearances alone')
+const regionalPlayer = { ...newPlayer(regionId), competitionCareer: { ...initCompetitionCareer(), current: {
+  schoolLeague: { ...finalistRecord, competitionId: 'schoolLeague', appearances: 10, ratingTotal: 60 },
+  schoolCup: { ...finalistRecord, competitionId: 'schoolCup' },
+} } } as Player
+check(!representativeEvidence(regionalPlayer, 'regional').eligible, 'Weak league form alone does not win a regional selection place')
+for (const position of [1, 2]) {
+  const qualified = { ...regionalPlayer, competitionCareer: addQualification(regionalPlayer.competitionCareer, {
+    competitionId: 'schoolCup', qualifiedFor: 'nationalChampionship', season: 1, reason: 'cup-result', position,
+  }) }
+  check(representativeEvidence(qualified, 'regional').eligible, `Regional finalist in place ${position} reaches representative selection`)
+}
 for (const position of [1, 2]) {
   const qualified = { ...finalist, competitionCareer: addQualification(finalist.competitionCareer, {
     competitionId: 'nationalChampionship', qualifiedFor: 'international', season: 1, reason: 'cup-result', position,

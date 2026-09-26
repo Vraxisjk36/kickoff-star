@@ -44,7 +44,7 @@ export function markResolved(state: CalendarState, eventId: string): CalendarSta
 export const COMPETITION_SPECS: CompetitionRoundSpec[] = [
   { id: 'schoolFriendlies', rounds: 2 },
   { id: 'schoolLeague', rounds: 18 },
-  { id: 'schoolCup', rounds: 8 },
+  { id: 'schoolCup', rounds: 8 }, // fifth through eighth slots retain legacy group draws
   { id: 'schoolDevelopment', rounds: 5 },
   { id: 'nationalChampionship', rounds: 5 }, // fifth slot keeps in-progress legacy group draws playable
   { id: 'sundayCup', rounds: 4 }, // pure knockout, field 16 -> 4 rounds — grassroots only
@@ -64,7 +64,7 @@ export const COMPETITION_SPECS: CompetitionRoundSpec[] = [
 export const SCHOOL_SEASON_SCHEDULE: Record<string, number[]> = {
   schoolFriendlies: [4, 5],
   schoolLeague: Array.from({ length: 18 }, (_, i) => i + 6), // W6-W23
-  schoolCup: Array.from({ length: 8 }, (_, i) => i + 24),   // W24-W31
+  schoolCup: Array.from({ length: 8 }, (_, i) => i + 24),   // new knockout W24-W27; legacy draws through W31
   schoolDevelopment: Array.from({ length: 5 }, (_, i) => i + 24), // W24-W28
   nationalChampionship: Array.from({ length: 5 }, (_, i) => i + 32), // new knockout W32-W35; W36 supports legacy draws
   youthShowcase: [37],

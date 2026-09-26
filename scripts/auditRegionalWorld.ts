@@ -10,6 +10,9 @@ import { initCupById, advanceCupStage, batchSimCupStage } from '../src/engine/cu
 import { initInternationalWorld, advanceInternationalStage } from '../src/engine/international'
 import { addQualification, initCompetitionCareer } from '../src/engine/competitionCareer'
 import { representativeEvidence } from '../src/engine/youthOpportunities'
+import { academyClubNames } from '../src/engine/academyClubs'
+import { initAcademyWorld } from '../src/engine/academy'
+import { maybeAddWatcher } from '../src/engine/scouting'
 import { useCareerStore } from '../src/store/careerStore'
 import { OUTFIELD_ATTRIBUTES } from '../src/types/attributes'
 import type { Player } from '../src/types/player'
@@ -33,6 +36,10 @@ for (const nation of NATIONS) {
   }
 }
 check(REGIONS.length > NATIONS.length, 'country and region are distinct choices')
+let scouts = { reputation: 55, watchers: [], offers: [] } as ReturnType<typeof maybeAddWatcher>
+for (let week = 1; week <= 200 && scouts.watchers.length === 0; week++) scouts = maybeAddWatcher(scouts, 16, week, 'rsa')
+check(scouts.watchers.length > 0 && scouts.watchers.every(w => !!w.club.countryId && academyClubNames(w.club.countryId).includes(w.club.name)),
+  'Academy scouting names a club from a real country pool')
 
 function newPlayer(regionId: string): Player {
   return {
@@ -93,6 +100,14 @@ for (const nation of NATIONS) {
   let finished = cup
   for (let round = 1; round <= 4; round++) finished = advanceCupStage(batchSimCupStage(finished, round, true))
   check(finished.stage === 'complete' && finished.knockoutRounds.map(fixtures => fixtures.length).join(',') === '8,4,2,1', `${nation.name} completes four knockout rounds`)
+  const names = academyClubNames(nation.id)
+  check(names.length === 24 && new Set(names).size === 24, `${nation.name} has twenty-four distinct academy clubs`)
+  const academy = initAcademyWorld(names[0], 6, nation.id)
+  const academyTeams = Object.values(academy.divisions).flatMap(division => division.teams)
+  check(academyTeams.length === 24 && new Set(academyTeams.map(team => team.name)).size === 24 &&
+    academyTeams.every(team => team.countryId === nation.id), `${nation.name} academy league stays domestic`)
+  const academyCup = initCupById('academyKnockoutCup', academyTeams[0], academyTeams)
+  check(academyCup.teams.every(team => team.countryId === nation.id), `${nation.name} academy cup uses domestic clubs`)
 }
 const northCapeSchool = initSchoolLeagueWorld(school.name, regionId).divisions[1].teams[0]
 const regionalSchools = Object.values(initSchoolLeagueWorld(school.name, regionId).divisions).flatMap(division => division.teams)

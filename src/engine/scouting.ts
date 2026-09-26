@@ -1,6 +1,8 @@
 import { rand } from './rng'
 import { generateTeam, type Team } from './teams'
 import { MIN_SCOUT_VISITS, type academyRecruitmentReport } from './academyRecruitment'
+import { academyClub } from './academyClubs'
+import { NATIONS } from './nations'
 
 // ============================================================================
 // SCOUTING — locked spec, and Joel's explicit design requirement:
@@ -120,7 +122,7 @@ const TIER_PRESTIGE_RANGE: Record<'local' | 'regional' | 'national', [number, nu
 
 // Weekly chance a new scout starts watching — small, tier-gated, so most weeks nothing happens
 // and most clubs in the world never notice the player (per Joel's requirement).
-export function maybeAddWatcher(state: ScoutingState, playerAge = 0, currentWeek?: number): ScoutingState {
+export function maybeAddWatcher(state: ScoutingState, playerAge = 0, currentWeek?: number, homeCountryId?: string): ScoutingState {
   if (playerAge < 16 || currentWeek !== undefined && state.watchers.some(w => w.addedWeek === currentWeek)) return state
   const maxTier = reputationUnlocksTier(state.reputation)
   if (!maxTier) return state
@@ -132,7 +134,11 @@ export function maybeAddWatcher(state: ScoutingState, playerAge = 0, currentWeek
   const tiers: ('local' | 'regional' | 'national')[] = maxTier === 'national' ? ['local', 'regional', 'national'] : maxTier === 'regional' ? ['local', 'regional'] : ['local']
   const tier = tiers[Math.floor(rand() * tiers.length)]
   const [lo, hi] = TIER_PRESTIGE_RANGE[tier]
-  const club = generateTeam(lo + Math.floor(rand() * (hi - lo + 1)))
+  const prestige = lo + Math.floor(rand() * (hi - lo + 1))
+  const countryId = homeCountryId && NATIONS.some(n => n.id === homeCountryId)
+    ? rand() < 0.7 ? homeCountryId : NATIONS[Math.floor(rand() * NATIONS.length)].id
+    : undefined
+  const club = countryId ? academyClub(countryId, prestige, state.watchers.filter(w => w.club.countryId === countryId).map(w => w.club.name)) : generateTeam(prestige)
   if (state.watchers.some((w) => w.club.id === club.id)) return state
 
   return { ...state, watchers: [...state.watchers, { club, interest: 8, tier, watchedMatches: 0, addedWeek: currentWeek }] }

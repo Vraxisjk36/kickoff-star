@@ -198,14 +198,15 @@ export interface Player {
 
   // Scouting state (per-club interest, reputation-gated per Joel's locked design)
   reputation: number
-  scoutWatchers: { clubId: string; clubName: string; clubShort: string; interest: number; tier: string; prestige: number; watchedMatches?: number; lastObservedWeek?: number; addedWeek?: number; ratings: { attack: number; midfield: number; defense: number } }[]
-  contractOffers: { id: string; clubId: string; clubName: string; clubShort: string; weekOffered: number; expiresInWeeks: number; prestige: number; ratings: { attack: number; midfield: number; defense: number }; kind: 'academy' | 'professional' | 'club'; divisionTier?: number; weeklyWage?: number; contractSeason?: number; renewal?: boolean }[]
+  scoutWatchers: { clubId: string; clubName: string; clubShort: string; countryId?: string; interest: number; tier: string; prestige: number; watchedMatches?: number; lastObservedWeek?: number; addedWeek?: number; ratings: { attack: number; midfield: number; defense: number } }[]
+  contractOffers: { id: string; clubId: string; clubName: string; clubShort: string; countryId?: string; weekOffered: number; expiresInWeeks: number; prestige: number; ratings: { attack: number; midfield: number; defense: number }; kind: 'academy' | 'professional' | 'club'; divisionTier?: number; weeklyWage?: number; contractSeason?: number; renewal?: boolean }[]
 
   // Absolute week counter, never resets at season boundary (used for offer expiry math)
   totalWeeksElapsed: number
 
   // Academy club name once transitioned from Grassroots (set when an 'academy' offer is accepted)
   academyClubName: string | null
+  academyCountryId?: string
 
   // Win-state: signed a professional contract (the V1.0 end goal)
   turnedPro: { clubName: string; weekSigned: number } | null

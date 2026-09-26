@@ -1719,7 +1719,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const scoutingIn: ScoutingState = {
       reputation: player.reputation ?? 5,
       watchers: (player.scoutWatchers ?? []).map((w) => ({
-        club: { id: w.clubId, name: w.clubName, short: w.clubShort, ratings: w.ratings, prestige: w.prestige, primaryColor: '#888', secondaryColor: '#fff', notablePlayers: [] },
+        club: { id: w.clubId, name: w.clubName, short: w.clubShort, countryId: w.countryId, ratings: w.ratings, prestige: w.prestige, primaryColor: '#888', secondaryColor: '#fff', notablePlayers: [] },
         interest: w.interest, tier: w.tier as 'local' | 'regional' | 'national',
         watchedMatches: w.watchedMatches, lastObservedWeek: w.lastObservedWeek, addedWeek: w.addedWeek,
       })),
@@ -1727,7 +1727,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       // engine doesn't know about — hold them aside and merge back after.
       offers: (player.contractOffers ?? []).filter((o) => o.kind !== 'club').map((o) => ({
         id: o.id, weekOffered: o.weekOffered, expiresInWeeks: o.expiresInWeeks, kind: o.kind as 'academy' | 'professional',
-        club: { id: o.clubId, name: o.clubName, short: o.clubShort, ratings: o.ratings, prestige: o.prestige, primaryColor: '#888', secondaryColor: '#fff', notablePlayers: [] },
+        club: { id: o.clubId, name: o.clubName, short: o.clubShort, countryId: o.countryId, ratings: o.ratings, prestige: o.prestige, primaryColor: '#888', secondaryColor: '#fff', notablePlayers: [] },
       })),
     }
     let scoutingOut = updateReputation(scoutingIn, {
@@ -1739,7 +1739,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     })
     if (player.careerClock.ageYears >= 16) {
       scoutingOut = updateWatcherInterest(scoutingOut, rating, player.totalWeeksElapsed ?? 0)
-      scoutingOut = maybeAddWatcher(scoutingOut, player.careerClock.ageYears, player.totalWeeksElapsed ?? 0)
+      scoutingOut = maybeAddWatcher(scoutingOut, player.careerClock.ageYears, player.totalWeeksElapsed ?? 0, player.academyCountryId ?? getNation(player.nationality).id)
     } else {
       scoutingOut = { ...scoutingOut, watchers: [] }
     }
@@ -1851,9 +1851,9 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       })),
       coachTrust: trustState.value,
       reputation: scoutingOut.reputation,
-      scoutWatchers: scoutingOut.watchers.map((w) => ({ clubId: w.club.id, clubName: w.club.name, clubShort: w.club.short, interest: w.interest, tier: w.tier, prestige: w.club.prestige, ratings: w.club.ratings, watchedMatches: w.watchedMatches, lastObservedWeek: w.lastObservedWeek, addedWeek: w.addedWeek })),
+      scoutWatchers: scoutingOut.watchers.map((w) => ({ clubId: w.club.id, clubName: w.club.name, clubShort: w.club.short, countryId: w.club.countryId, interest: w.interest, tier: w.tier, prestige: w.club.prestige, ratings: w.club.ratings, watchedMatches: w.watchedMatches, lastObservedWeek: w.lastObservedWeek, addedWeek: w.addedWeek })),
       contractOffers: [
-        ...scoutingOut.offers.map((o) => ({ id: o.id, clubId: o.club.id, clubName: o.club.name, clubShort: o.club.short, weekOffered: o.weekOffered, expiresInWeeks: o.expiresInWeeks, prestige: o.club.prestige, ratings: o.club.ratings, kind: o.kind as 'academy' | 'professional' | 'club' })),
+        ...scoutingOut.offers.map((o) => ({ id: o.id, clubId: o.club.id, clubName: o.club.name, clubShort: o.club.short, countryId: o.club.countryId, weekOffered: o.weekOffered, expiresInWeeks: o.expiresInWeeks, prestige: o.club.prestige, ratings: o.club.ratings, kind: o.kind as 'academy' | 'professional' | 'club' })),
         ...(player.contractOffers ?? []).filter((o) => o.kind === 'club'),
       ],
     }
@@ -1979,6 +1979,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     let updatedPlayer: Player = {
       ...player,
       academyClubName: clubName,
+      academyCountryId: player.contractOffers.find(o => o.clubId === player.negotiation?.clubId)?.countryId ?? getNation(player.nationality).id,
       sundayLeague: undefined, sundaySquad: undefined, sundayContract: undefined,
       squadRole: 'bench', // a new academy signing starts as unproven, not an automatic starter (was carrying over stale Grassroots trial status)
       squadRoleSetWeek: player.totalWeeksElapsed ?? 0,
@@ -1997,7 +1998,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     // originating scout's own prestige (which can be as low as 1 for a local watcher)
     // must not become the academy team's strength, or the player could be dropped into
     // a division of prestige-5-7 teams with an unplayably weak prestige-1 team of their own.
-    const academyWorld = initAcademyWorld(clubName, Math.max(5, Math.min(7, prestige)))
+    const academyWorld = initAcademyWorld(clubName, Math.max(5, Math.min(7, prestige)), updatedPlayer.academyCountryId)
     const academyTeam = academyWorld.divisions[academyWorld.playerDivision].teams.find((t) => t.id === academyWorld.playerTeamId)!
     const allAcademyTeams = Object.values(academyWorld.divisions).flatMap((d) => d.teams)
     // Grassroots cups end with the grassroots career; academy cups spin up in

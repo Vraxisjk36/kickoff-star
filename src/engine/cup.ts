@@ -35,6 +35,19 @@ export interface CupWorld {
   qualifiersPerGroup?: number
 }
 
+/** Brackets grow one round at a time, so their current array length is not
+ * the tournament's total round count. Name a round from the ties in it. */
+export function knockoutRoundLabel(world: CupWorld, index = world.currentKnockoutRound - 1): string {
+  const ties = world.knockoutRounds[index]?.length ?? 0
+  if (ties === 1) return 'Final'
+  if (ties === 2) return 'Semi-final'
+  if (ties === 4) return 'Quarter-final'
+  if (ties > 4) return `Round of ${ties * 2}`
+  const entrants = world.groups.length ? world.groups.length * (world.qualifiersPerGroup ?? 1) : world.teams.length
+  const remaining = Math.max(2, entrants / 2 ** Math.max(0, index))
+  return remaining === 2 ? 'Final' : remaining === 4 ? 'Semi-final' : remaining === 8 ? 'Quarter-final' : `Round of ${remaining}`
+}
+
 /** Keep an in-progress cup's displayed identities aligned with its source
  * league after a save migration. Results and brackets remain untouched. */
 export function syncCupTeamIdentities(world: CupWorld, sourceTeams: Team[]): CupWorld {

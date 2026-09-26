@@ -5,6 +5,7 @@ import type { Division } from '../../engine/league'
 import { divisionLabel, type LeagueWorld } from '../../engine/league'
 import { academyDivisionLabel, type AcademyWorld } from '../../engine/academy'
 import StandingsTable from '../../components/StandingsTable'
+import { getRegion } from '../../engine/regions'
 
 // P27 (Joel: "i dont see the other 2 divisions"): the table tab now shows the
 // WHOLE pyramid — tap between divisions. Your own division opens by default
@@ -27,7 +28,7 @@ export default function TableTab({ world, playerTeamId, isAcademy }: {
 
   return (
     <div className="flex flex-col gap-2.5">
-      <section className="table-hero"><small>{isAcademy?'ACADEMY':isSchool?'SCHOOL FOOTBALL':'SUNDAY LEAGUE'} · COMPETITION CENTRE</small><h1>{isAcademy?academyDivisionLabel(tier as 1|2):isSchool?'Local School League':divisionLabel(tier as 1|2|3)}</h1><div className="table-story">{playerStanding?<><div><span>YOUR POSITION</span><b>{playerPos}</b></div><div><span>POINTS</span><b>{playerStanding.points}</b></div><div><span>LEADER</span><strong>{leader?.teamName??'—'}</strong></div><div><span>GAP</span><b>{Math.max(0,(leader?.points??0)-playerStanding.points)}</b></div></>:<><div><span>LEADER</span><strong>{leader?.teamName??'—'}</strong></div><div><span>POINTS</span><b>{leader?.points??0}</b></div></>}</div></section>
+      <section className="table-hero"><small>{isAcademy?'ACADEMY':isSchool?'SCHOOL FOOTBALL':'SUNDAY LEAGUE'} · COMPETITION CENTRE</small><h1>{isAcademy?academyDivisionLabel(tier as 1|2):isSchool?`${getRegion(player?.regionId)?.name ?? 'Local'} Schools League`:divisionLabel(tier as 1|2|3)}</h1><div className="table-story">{playerStanding?<><div><span>YOUR POSITION</span><b>{playerPos}</b></div><div><span>POINTS</span><b>{playerStanding.points}</b></div><div><span>LEADER</span><strong>{leader?.teamName??'—'}</strong></div><div><span>GAP</span><b>{Math.max(0,(leader?.points??0)-playerStanding.points)}</b></div></>:<><div><span>LEADER</span><strong>{leader?.teamName??'—'}</strong></div><div><span>POINTS</span><b>{leader?.points??0}</b></div></>}</div></section>
 
       {!isSchool && <div className="division-switcher flex gap-1.5">
         {tiers.map((t) => (

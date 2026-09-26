@@ -46,12 +46,13 @@ function optionSuccessChance(player: Player, baseCeiling: number, keyAttributes:
   const avgAttr = keyAttributes.length
     ? keyAttributes.reduce((s, a) => s + attrValue(player, a), 0) / keyAttributes.length
     : 10
-  // attribute modifier: maps attr avg (1-20) to ~0.5..1.05 of the ceiling
-  const attributeModifier = 0.5 + (avgAttr / 20) * 0.55
+  // New youth players start with modest attributes. The old .5 modifier made
+  // even a safe 90% option fail roughly a third of the time at age 14.
+  const attributeModifier = 0.78 + (avgAttr / 20) * 0.32
   // mental-state modifier: confidence nudges, disproportionately affecting riskier (lower ceiling) options
   const riskFactor = 1 - baseCeiling // riskier options are more confidence-sensitive
   const mentalMod = 1 + (player.confidence.value / 40) * (0.5 + riskFactor)
-  return clamp(baseCeiling * attributeModifier * mentalMod, 0.05, 0.97)
+  return clamp(baseCeiling * attributeModifier * mentalMod, 0.12, 0.97)
 }
 
 // --- Objectives (locked spec Section 2) ---

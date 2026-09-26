@@ -38,6 +38,11 @@ const SHOWCASE_PROMPT: Record<number, { situation: string; label: string; ceilin
   1: { situation: 'Small-sided game, level. The ball drops to you at the top of the box with your rival tracking back.', label: 'hit it first time', ceiling: 0.5 },
   2: { situation: 'Trial match, last minute. It breaks to you eight yards out. This is the moment they decide on.', label: 'finish it', ceiling: 0.45 },
 }
+const GK_SHOWCASE_PROMPT: typeof SHOWCASE_PROMPT = {
+  0: { situation: 'The coach fires shots through a crowd of players. Track the ball and get your hands behind it.', label: 'make the save', ceiling: 0.7 },
+  1: { situation: 'A counterattack leaves you one-on-one with a striker. Close the angle and react.', label: 'stop the shot', ceiling: 0.65 },
+  2: { situation: 'Trial match, final minute. A hard shot bends toward the corner. The coaches are watching your positioning.', label: 'dive for it', ceiling: 0.6 },
+}
 
 export default function TrialsScreen({ player, school, onComplete }: TrialsScreenProps) {
   const [trial, setTrial] = useState<TrialState>(() => initTrialState(school.id, generateRival(school)))
@@ -48,12 +53,13 @@ export default function TrialsScreen({ player, school, onComplete }: TrialsScree
   const [showcaseDone, setShowcaseDone] = useState(false)
 
   const weekCfg = TRIAL_WEEKS[weekIdx]
-  const showcase = SHOWCASE_PROMPT[weekIdx]
+  const showcase = (player.position === 'GK' ? GK_SHOWCASE_PROMPT : SHOWCASE_PROMPT)[weekIdx]
   const rivalScore = rivalScoreAt(trial.rival, trial.drillsPlayed, TOTAL_TRIAL_MOMENTS)
   const xiBar = requiredPerformance(school, 'startingXI')
 
   const startWeek = () => {
-    const s = generateSession(player, weekCfg.drillTheme as TrainingSessionType)
+    const keeperThemes: TrainingSessionType[] = ['gk-reactions', 'gk-positioning', 'gk-shot-stopping']
+    const s = generateSession(player, player.position === 'GK' ? keeperThemes[weekIdx] : weekCfg.drillTheme as TrainingSessionType)
     // Weeks are deliberately shorter now — the old 4-drill blocks dragged.
     setSession({ ...s, drills: s.drills.slice(0, weekCfg.drills), currentDrill: 0 })
     setPhase('drills')
@@ -174,7 +180,7 @@ export default function TrialsScreen({ player, school, onComplete }: TrialsScree
   }
 
   if (phase === 'drills' && session) {
-    return <DecisionCard key={`${weekIdx}-${session.currentDrill}`} decision={drillToDecision(player, session)} onResolved={handleDrillResolved} />
+    return <DecisionCard key={`${weekIdx}-${session.currentDrill}`} decision={{ ...drillToDecision(player, session), context: 'trial' }} onResolved={handleDrillResolved} />
   }
 
   if (phase === 'showcase' && showcase) {

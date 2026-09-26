@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { Player } from '../../types/player'
 import { objectiveProgress, completedSeasonObjectives } from '../../engine/seasonObjectives'
 import { computeCurrentAbility, toOvr } from '../../engine/rating'
@@ -8,7 +9,7 @@ import iconScouts from '../../assets/icons/scouts.png'
 import iconMedical from '../../assets/icons/medical.png'
 import iconGlory from '../../assets/icons/glory.png'
 import iconCoachNotebook from '../../assets/icons/coach_notebook.png'
-import { decideSelection } from '../../engine/selection'
+import { decideSelection, promotionEvidence, selectionAdvice } from '../../engine/selection'
 import AchievementList from '../../components/AchievementList'
 import GloryCabinet from '../../components/GloryCabinet'
 import Avatar from '../../components/Avatar'
@@ -40,6 +41,7 @@ function ratingColor(r: number): string {
 }
 
 export default function PlayerTab({ player, onOpenOffers }: { player: Player; onOpenOffers?: () => void }) {
+  const [view, setView] = useState<'overview' | 'development' | 'career'>('overview')
   const c = player.career
   const values = player.attributes.values as Record<string, number>
   const isGk = player.attributes.kind === 'goalkeeper'
@@ -77,12 +79,15 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
       </div>
 
       <div className="player-quick-strip"><div><span>APPS</span><b>{c?.appearances ?? 0}</b></div><div><span>GOALS</span><b>{c?.goals ?? 0}</b></div><div><span>ASSISTS</span><b>{c?.assists ?? 0}</b></div><div><span>BEST</span><b>{c?.bestRating?.toFixed(1) ?? '—'}</b></div></div>
+      <nav className="player-view-switch" aria-label="Player details">{(['overview','development','career'] as const).map(tab => <button key={tab} aria-pressed={view === tab} onClick={() => setView(tab)}>{tab}</button>)}</nav>
+      {view === 'overview' && <>
       {/* P50 — the coach's verdict used to only ever surface as a one-time
           weekly note that scrolled away. Now it's always visible: where you
           actually stand, and how long until it can change — the real
           substance behind the "sticky" selection system. */}
       {player.squadRole && player.squadRole !== 'released' && (() => {
         const verdict = decideSelection(player, player.squad)
+        const evidence = promotionEvidence(player)
         const SETTLE_WEEKS = 3
         const weeksSinceSet = (player.totalWeeksElapsed ?? 0) - (player.squadRoleSetWeek ?? 0)
         const weeksLeft = Math.max(0, SETTLE_WEEKS - weeksSinceSet)
@@ -94,11 +99,11 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
               <span className="text-[11px] text-ks-muted">{verdict.pecking} of {verdict.competing} for your position</span>
             </div>
             <p className="text-[11px] text-ks-muted leading-relaxed">
-              {weeksLeft > 0
-                ? `The coach won't reconsider the side for ${weeksLeft} more week${weeksLeft === 1 ? '' : 's'}.`
-                : verdict.changed
-                ? `Your recent form is enough to change this — expect a decision soon.`
-                : `You've settled into this role. Keep performing to move up.`}
+              {player.squadRole !== 'starting-xi' && !evidence.ready
+                ? selectionAdvice(verdict, player)
+                : weeksLeft > 0
+                ? `The coach reviews the side in ${weeksLeft} week${weeksLeft === 1 ? '' : 's'}.`
+                : verdict.changed ? 'Your performances have earned a selection review.' : 'Keep performing to move up.'}
             </p>
           </Panel>
         )
@@ -117,10 +122,11 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
           <p className="text-[10px] text-ks-muted leading-relaxed mt-2">Leadership is earned through trust, consistency, standing and time in the side.</p>
         </Panel>
       )}
+      </>}
 
       {/* P60 — reference: a radar/hexagon chart showing the player's
           attribute "shape" at a glance, alongside (not replacing) the bars. */}
-      <div className="development-card"><div className="development-title"><span><Icon src={iconShape} /> PLAYER DNA</span><b>OVR {ovr}</b></div><div className="development-radar"><RadarChart
+      {view === 'development' && <><div className="development-card"><div className="development-title"><span><Icon src={iconShape} /> PLAYER DNA</span><b>OVR {ovr}</b></div><div className="development-radar"><RadarChart
           points={groups.flatMap((g) => g.attrs.slice(0, isGk ? 4 : 2)).map((attr) => ({
             label: ATTR_LABELS[attr] ?? attr,
             value: values[attr] ?? 0,
@@ -153,7 +159,8 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
         </div>
       )}
 
-      <Section title="📈 form & season" defaultOpen>
+      </>}
+      {view === 'overview' && <><Section title="📈 form & season" defaultOpen>
         {recent.length === 0 ? (
           <EmptyNote>No matches played yet. Your recent ratings will show here.</EmptyNote>
         ) : (
@@ -182,7 +189,8 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
         </div>
       </Section>}
 
-      <Section title={<span className="flex items-center gap-1"><Icon src={iconScouts} />scouts & interest</span>}>
+      </>}
+      {view === 'career' && <><Section title={<span className="flex items-center gap-1"><Icon src={iconScouts} />scouts & interest</span>}>
         <ScoutsTab player={player} onOpenOffers={onOpenOffers ?? (() => {})} />
       </Section>
 
@@ -251,8 +259,9 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
       <Section title="🎖️ trophy cabinet & achievements">
         <AchievementList player={player} />
       </Section>
+      </>}
 
-      <Section title={<span className="flex items-center gap-1"><Icon src={iconCoachNotebook} />coach's notebook</span>}>
+      {view === 'overview' && <><Section title={<span className="flex items-center gap-1"><Icon src={iconCoachNotebook} />coach's notebook</span>}>
         <div className="flex items-center gap-3 mb-2.5">
           <Bar value={(player.coachTrust ?? 0) + 10} max={20} />
           <span className="text-[11px] text-ks-ink w-20 text-right">{trustEmoji(player.coachTrust ?? 0)} {trustLabel(player.coachTrust ?? 0)}</span>
@@ -287,6 +296,7 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
           <p className="text-[11px] text-ks-muted leading-relaxed mt-2">{player.injury.description}</p>
         </Panel>
       )}
+      </>}
     </div>
   )
 }

@@ -215,6 +215,10 @@ export interface Player {
   squadRole: 'starting-xi' | 'bench' | 'reserves' | 'released' | null
   /** P50 — the week (totalWeeksElapsed) squadRole last changed. Selection is now STICKY: a trial or coach verdict has to hold for a settling-in period before the coach reconsiders, so it actually means something rather than being recomputed away within a week. */
   squadRoleSetWeek?: number
+  /** Career appearances when this squad role began, for evidence-based promotion. */
+  squadRoleSetAppearances?: number
+  /** Preseason friendlies are not league fixtures but still belong on the schedule. */
+  friendlyResults?: { season: number; week: number; opponentId: string; opponentName: string; isHome: boolean; goalsFor: number; goalsAgainst: number }[]
 }
 
 type AttributeValue = number

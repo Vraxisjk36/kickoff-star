@@ -5,6 +5,8 @@ import { playerCupFixture, CUP_CONFIGS } from '../engine/cup'
 import { playerOctoberFixture } from '../engine/octoberLeague'
 import { nationFixture, internationalTeamById } from '../engine/international'
 import { generateTeam } from '../engine/teams'
+import { friendlyOpponent } from '../engine/friendlies'
+import { getRegion } from '../engine/regions'
 import { canPlayYouthShowcase } from '../engine/academyRecruitment'
 import { academyOfferCleared } from '../engine/academyRecruitment'
 import { hasSundayContract } from '../engine/sundayContracts'
@@ -234,16 +236,15 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
         const isHome = fixture.homeTeamId === activeWorld.playerTeamId
         const opponent = playerDivision.teams.find((t) => t.id === (isHome ? fixture.awayTeamId : fixture.homeTeamId))
         if (!opponent) { resolveCurrentEvent(); return }
-        const competitionLabel = isInAcademy ? 'League' : comp.competitionId === 'schoolLeague' ? 'Local School League' : 'Sunday League'
+        const competitionLabel = isInAcademy ? 'Academy League' : comp.competitionId === 'schoolLeague' ? `${getRegion(player.regionId)?.name ?? 'Local'} Schools League` : 'Sunday League'
         setMode({ kind: 'matchday', opponent, isHome, competitionId: comp.competitionId, competitionLabel, isKnockout: false })
         return
       }
 
       if (comp.competitionId === 'schoolFriendlies') {
-        // Friendlies: an ad-hoc opponent near the player's level; nothing at
-        // stake but sharpness, reputation and scout eyes.
-        const opponent = generateTeam(Math.max(1, Math.min(10, playerTeam.prestige + (rand() < 0.5 ? -1 : 1))))
-        setMode({ kind: 'matchday', opponent, isHome: rand() < 0.5, competitionId: 'schoolFriendlies', competitionLabel: 'School Friendly', isKnockout: false })
+        const opponent = friendlyOpponent(playerDivision, activeWorld.playerTeamId, calendar.currentWeek.weekNumber, calendar.currentWeek.seasonYear)
+        if (!opponent) { resolveCurrentEvent(); return }
+        setMode({ kind: 'matchday', opponent, isHome: calendar.currentWeek.weekNumber % 2 === 0, competitionId: 'schoolFriendlies', competitionLabel: 'Preseason Friendly', isKnockout: false })
         return
       }
       if(comp.competitionId==='youthShowcase'){if(!canPlayYouthShowcase(player,calendar)){setMode({kind:'training'});return}const opponent=generateTeam(Math.max(5,Math.min(9,playerTeam.prestige+3)));setMode({kind:'matchday',opponent,isHome:true,competitionId:'youthShowcase',competitionLabel:'National Youth Showcase',isKnockout:false});return}
@@ -259,7 +260,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
       const opponent = cupWorld.teams.find((t) => t.id === (isHome ? cupFixture.awayTeamId : cupFixture.homeTeamId))
       if (!opponent) { resolveCurrentEvent(); return }
       const isKnockout = cupWorld.stage === 'knockout'
-      setMode({ kind: 'matchday', opponent, isHome, competitionId: comp.competitionId, competitionLabel: CUP_CONFIGS[comp.competitionId]?.label ?? 'Cup', isKnockout })
+      setMode({ kind: 'matchday', opponent, isHome, competitionId: comp.competitionId, competitionLabel: comp.competitionId === 'schoolCup' ? `${getRegion(player.regionId)?.name ?? 'Regional'} Schools Cup` : CUP_CONFIGS[comp.competitionId]?.label ?? 'Cup', isKnockout })
       return
     }
     // Phase 15: the school slot now draws from the state-gated life-event pool

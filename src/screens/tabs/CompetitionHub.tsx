@@ -14,8 +14,8 @@ function competitionStatus(cup: CupWorld): string {
   if (cup.playerWonCup) return 'Champions'
   if (cup.playerEliminated) return 'Eliminated'
   if (cup.stage === 'group') return 'Group stage'
-  if (cup.stage === 'knockout') return (cup.competitionId === 'nationalChampionship' || cup.competitionId === 'schoolCup') && cup.groups.length === 0
-    ? ['Round of 16', 'Quarter-final', 'Semi-final', 'Final'][cup.currentKnockoutRound - 1] ?? 'Knockout'
+  if (cup.stage === 'knockout') return (cup.competitionId === 'nationalChampionship' || cup.competitionId === 'schoolCup' || cup.competitionId === 'academyChampionsCup') && cup.groups.length === 0
+    ? (cup.teams.length === 8 ? ['Quarter-final', 'Semi-final', 'Final'] : ['Round of 16', 'Quarter-final', 'Semi-final', 'Final'])[cup.currentKnockoutRound - 1] ?? 'Knockout'
     : `Knockout round ${cup.currentKnockoutRound}`
   return 'Complete'
 }

@@ -47,3 +47,8 @@ export function academyOfferBatch(original: Player['contractOffers'][number], ho
   })
   return [lead, ...others]
 }
+
+export function academyChampionsField(playerTeam: Team, countryId: string): Team[] {
+  const opponents = NATIONS.filter(nation => nation.id !== countryId).sort(() => rand() - 0.5).slice(0, 7)
+  return [{ ...playerTeam, countryId }, ...opponents.map(nation => academyClub(nation.id, nation.strength + 1))]
+}

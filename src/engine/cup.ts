@@ -337,6 +337,7 @@ export const CUP_CONFIGS: Record<string, Omit<CupConfig, 'competitionId' | 'labe
   sundayCup: { label: 'Sunday Cup', groupSize: 0, fieldSize: 16, prestigeRange: [2, 6] },
   academyLeagueCup: { label: 'U18 Premier Cup', groupSize: 4, fieldSize: 16, prestigeRange: [5, 8] },
   academyKnockoutCup: { label: 'Youth Cup', groupSize: 0, fieldSize: 16, prestigeRange: [5, 8] },
+  academyChampionsCup: { label: 'Academy Champions Cup', groupSize: 0, fieldSize: 8, prestigeRange: [7, 9] },
 }
 
 export function initCupById(competitionId: string, playerTeam: Team, realTeamPool?: Team[]): CupWorld {

@@ -69,6 +69,7 @@ check(SUNDAY_SEASON_SCHEDULE.sundayCup.every(week => !SUNDAY_SEASON_SCHEDULE.sch
 const excludedCup = initCupById('schoolCup', schoolDivision.teams.find(team => team.id === schoolWorld.playerTeamId)!, schoolDivision.teams)
 check(playerCupFixture({ ...excludedCup, playerEliminated: true }) === null, 'development route cannot re-enter Regional Cup group fixtures')
 check(ACADEMY_SEASON_SCHEDULE.academyLeagueCup.every(week => activeCompetitionForWeek(week, 'academy')?.competitionId === 'academyLeagueCup') && ACADEMY_SEASON_SCHEDULE.academyKnockoutCup.every(week => activeCompetitionForWeek(week, 'academy')?.competitionId === 'academyKnockoutCup'), 'academy cup rounds also remain reachable')
+check(ACADEMY_SEASON_SCHEDULE.academyChampionsCup.every((week, index) => activeCompetitionForWeek(week, 'academy')?.competitionId === 'academyChampionsCup' && activeCompetitionForWeek(week, 'academy')?.round === index + 1), 'three continental academy rounds have their own matchdays')
 for (let week = 24; week <= 28; week++) {
   check(activeCompetitionForWeek(week, 'grassroots-season', 'school', true)?.competitionId === 'schoolDevelopment', `development route plays week ${week}`)
   check(activeCompetitionForWeek(week, 'grassroots-season', 'school')?.competitionId === 'schoolCup', `qualified route plays Regional Cup week ${week}`)

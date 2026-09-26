@@ -44,7 +44,7 @@ export default function CupBracket({ world, onClose }: { world: CupWorld; onClos
         </button>
       </div>
 
-      <div className="cup-stage-hero"><div className="cup-orbit"><i/><i/><i/><b>★</b></div><small>{world.competitionId==='nationalChampionship'?`${world.teams.length} REGIONAL XIS · ONE NATIONAL CHAMPION`:world.competitionId==='schoolCup'?`${world.teams.length} SCHOOLS · REGIONAL STAGE`:'KNOCKOUT FOOTBALL'}</small><h1>{world.label}</h1><p>{world.stage==='group'?'Every point moves the live group table.':world.stage==='knockout'?'One match. One route forward.':'Tournament complete.'}</p></div>
+      <div className="cup-stage-hero"><div className="cup-orbit"><i/><i/><i/><b>★</b></div><small>{world.competitionId==='nationalChampionship'?`${world.teams.length} REGIONAL XIS · ONE NATIONAL CHAMPION`:world.competitionId==='schoolCup'?`${world.teams.length} SCHOOLS · REGIONAL STAGE`:world.competitionId==='academyChampionsCup'?'8 COUNTRIES · ONE ACADEMY CHAMPION':'KNOCKOUT FOOTBALL'}</small><h1>{world.label}</h1><p>{world.stage==='group'?'Every point moves the live group table.':world.stage==='knockout'?'One match. One route forward.':'Tournament complete.'}</p></div>
       {world.playerWonCup && (
         <div className="mx-4 mt-4 rounded-xl border border-ks-gold bg-ks-gold/10 px-4 py-3 text-center">
           <div className="text-2xl mb-1">🏆</div>

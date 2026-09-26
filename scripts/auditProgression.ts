@@ -198,5 +198,18 @@ useCareerStore.getState().completeAcademyMove(alternative.clubName, alternative.
 const signedAcademy = useCareerStore.getState()
 check(signedAcademy.player?.academyCountryId === alternative.countryId && signedAcademy.academyLeague?.divisions[2].teams.every(team => team.countryId === alternative.countryId),
   'Signing an alternate academy creates its domestic league in the offered country')
+const academyPlayer = signedAcademy.player!
+const academyWorld = signedAcademy.academyLeague!
+useCareerStore.setState({ player: academyPlayer, academyLeague: academyWorld, calendar: calendar(3, 23) })
+useCareerStore.getState().advanceToNextWeek()
+check(useCareerStore.getState().cups.academyChampionsCup === null, 'Lower-tier academy does not receive a continental cup place')
+const topTeam = academyWorld.divisions[1].teams[0]
+useCareerStore.setState({ player: academyPlayer, academyLeague: { ...academyWorld, playerDivision: 1, playerTeamId: topTeam.id },
+  calendar: calendar(3, 23), cups: { ...EMPTY_CUPS } })
+useCareerStore.getState().advanceToNextWeek()
+const continental = useCareerStore.getState().cups.academyChampionsCup
+check(continental?.teams.length === 8 && new Set(continental.teams.map(team => team.countryId)).size === 8 &&
+  useCareerStore.getState().player?.competitionCareer?.qualifications.some(q => q.qualifiedFor === 'academyChampionsCup'),
+  'Top-four academy qualifies and receives an eight-country continental bracket')
 
 console.log(`\n${checks} progression checks passed`)

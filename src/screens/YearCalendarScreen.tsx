@@ -18,12 +18,14 @@ function weekItems(week: number, current: number, player: Player, cups: CupWorld
     schoolCup: 'Regional Schools Cup', schoolDevelopment: 'School Development Competition',
     nationalChampionship: 'National Schools Championship', sundayLeague: academy ? 'Academy League' : 'Sunday League',
     sundayCup: 'Sunday Cup', academyLeagueCup: 'Academy League Cup',
-    academyKnockoutCup: 'Academy Knockout Cup', youthShowcase: 'October academy showcase',
+    academyKnockoutCup: 'Academy Knockout Cup', academyChampionsCup: 'Academy Champions Cup', youthShowcase: 'October academy showcase',
   }
   if (fixture?.competitionId === 'youthShowcase' && !academy && player.careerClock.ageYears <= 15) {
     // The 16+ showcase is replaced by the October development fixture below.
   } else if (school && week >= 24 && week <= 28 && current <= 23) {
     items.push({ label: 'Regional Cup / development route', tone: 'window' })
+  } else if (fixture?.competitionId === 'academyChampionsCup' && current > 23 && !cups.academyChampionsCup) {
+    items.push({ label: 'Academy training', tone: 'rest' })
   } else if (fixture) {
     items.push({ label: names[fixture.competitionId] ?? fixture.competitionId, tone: 'match' })
   }

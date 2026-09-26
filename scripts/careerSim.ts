@@ -353,7 +353,7 @@ async function main() {
       assert(!!player.octoberLeague && octoberStandings(player.octoberLeague).every(row => row.played === 4), 'October table finishes with four games per club')
     }
   } else {
-    const academyCupMatches = (tallies['academyLeagueCup'] ?? 0) + (tallies['academyKnockoutCup'] ?? 0)
+    const academyCupMatches = (tallies['academyLeagueCup'] ?? 0) + (tallies['academyKnockoutCup'] ?? 0) + (tallies['academyChampionsCup'] ?? 0)
     assert(academyCupMatches >= 4, `academy cup matches should appear after transition, got ${academyCupMatches}`)
     assert(s().player!.careerClock.phase === 'academy', 'player should be in academy phase')
   }

@@ -443,7 +443,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
           // more development" rule wasn't actually reaching academy cups.
           const tier: import('../engine/xp').CompetitionTier =
             mode.competitionId === 'international' ? 'international'
-            : mode.competitionId === 'schoolCup' || mode.competitionId === 'nationalChampionship' || mode.competitionId === 'sundayCup' || mode.competitionId === 'academyLeagueCup' || mode.competitionId === 'academyKnockoutCup' ? 'cup'
+            : mode.competitionId === 'schoolCup' || mode.competitionId === 'nationalChampionship' || mode.competitionId === 'sundayCup' || mode.competitionId === 'academyLeagueCup' || mode.competitionId === 'academyKnockoutCup' || mode.competitionId === 'academyChampionsCup' ? 'cup'
             : freshPlayer?.careerClock.phase === 'academy' ? 'academy' : 'grassroots'
           const matchXp = matchXpEarned(tier, mode.rating, mode.goals, mode.assists)
           setMode({ kind: 'impact', before, after, matchXp, tier, playerName: player.name, rating: mode.rating, goals: mode.goals, assists: mode.assists, won: mode.won, drew: mode.drew })

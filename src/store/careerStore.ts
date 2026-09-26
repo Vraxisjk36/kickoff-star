@@ -11,7 +11,7 @@ import { getSchool } from '../engine/schools'
 import { getNation } from '../engine/nations'
 import { regionalClubNames } from '../engine/regions'
 import { nationalRegionalField } from '../engine/regionalRepresentatives'
-import { academyOfferBatch } from '../engine/academyClubs'
+import { academyOfferBatch, academyChampionsField } from '../engine/academyClubs'
 import { archetypeConfidenceSwingMultiplier, archetypeTrustGainMultiplier } from '../engine/archetypes'
 import { initialCast, driftRelationships, adjustBond, addPerson, relationshipEffects, resolveInteraction, interactedThisWeek, pruneCast, INTERACTIONS } from '../engine/relationships'
 import { maybeStartArc, tickArcs, ARC_TEMPLATES, baselineOf, type ActiveArc, type ArcVerdict } from '../engine/storylines'
@@ -1094,6 +1094,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
         sundayCup: !isInAcademy && updatedLeague?.kind === 'sunday' && grassrootsTeam ? initCupById('sundayCup', grassrootsTeam, allLeagueTeams) : null,
         academyLeagueCup: isInAcademy && academyTeam ? initCupById('academyLeagueCup', academyTeam, allAcademyTeams) : null,
         academyKnockoutCup: isInAcademy && academyTeam ? initCupById('academyKnockoutCup', academyTeam, allAcademyTeams) : null,
+        academyChampionsCup: null,
       }
       // P36 — National glory: capture BEFORE the campaign resets. A completed
       // campaign that was actually won earns the trophy; anything else
@@ -1225,6 +1226,23 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     }
     if (updatedPlayer.octoberLeague?.season === calendar.currentWeek.seasonYear && completedWeekNumber >= 36 && completedWeekNumber <= 39) {
       updatedPlayer = { ...updatedPlayer, octoberLeague: simulateOctoberWeek(updatedPlayer.octoberLeague, completedWeekNumber) }
+    }
+    if (isInAcademy && completedWeekNumber === 23 && updatedAcademyLeague) {
+      const division = updatedAcademyLeague.divisions[updatedAcademyLeague.playerDivision]
+      const position = sortStandings(division.standings).findIndex(row => row.teamId === updatedAcademyLeague!.playerTeamId) + 1
+      const qualified = updatedAcademyLeague.playerDivision === 1 && position > 0 && position <= 4
+      const team = division.teams.find(candidate => candidate.id === updatedAcademyLeague!.playerTeamId)
+      if (qualified && team) {
+        const field = academyChampionsField(team, updatedPlayer.academyCountryId ?? getNation(updatedPlayer.nationality).id)
+        updatedCups = { ...updatedCups, academyChampionsCup: initCupById('academyChampionsCup', field[0], field) }
+        updatedPlayer = { ...updatedPlayer, competitionCareer: addQualification(updatedPlayer.competitionCareer, {
+          competitionId: 'academyLeague', qualifiedFor: 'academyChampionsCup', season: calendar.currentWeek.seasonYear,
+          reason: 'league-position', position,
+        }) }
+        updatedPlayer = withStory(updatedPlayer, result.calendar, { kind: 'qualification', eyebrow: 'Academy league · continental places',
+          title: 'CHAMPIONS CUP QUALIFIED', body: 'A top-four academy finish sends your club into the eight-team continental cup.',
+          detail: 'Three knockout rounds against academies from seven other countries begin in week 25.', ceremony: 'draw' })
+      }
     }
     if (!isInAcademy && updatedLeague?.kind === 'school' && !result.seasonEnded) {
       const pathway=updatedPlayer.pathway??initYouthPathway(updatedPlayer)
@@ -1808,7 +1826,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
         const bucket: keyof typeof prev =
           competitionId === 'international' ? 'international'
           : competitionId === 'sundayLeague' || competitionId === 'schoolLeague' ? 'league'
-          : competitionId === 'schoolCup' || competitionId === 'nationalChampionship' || competitionId === 'sundayCup' || competitionId === 'academyLeagueCup' || competitionId === 'academyKnockoutCup' ? 'cup'
+          : competitionId === 'schoolCup' || competitionId === 'nationalChampionship' || competitionId === 'sundayCup' || competitionId === 'academyLeagueCup' || competitionId === 'academyKnockoutCup' || competitionId === 'academyChampionsCup' ? 'cup'
           : 'other'
         return {
           ...prev,
@@ -2050,6 +2068,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       sundayCup: null,
       academyLeagueCup: initCupById('academyLeagueCup', academyTeam, allAcademyTeams),
       academyKnockoutCup: initCupById('academyKnockoutCup', academyTeam, allAcademyTeams),
+      academyChampionsCup: null,
     }
     setState({ player: updatedPlayer, league: null, academyLeague: academyWorld, cups: academyCups })
     // Signing is the biggest moment in the game so far — celebrate it now, not

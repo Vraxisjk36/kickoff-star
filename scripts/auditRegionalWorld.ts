@@ -10,7 +10,7 @@ import { initCupById, advanceCupStage, batchSimCupStage } from '../src/engine/cu
 import { initInternationalWorld, advanceInternationalStage } from '../src/engine/international'
 import { addQualification, initCompetitionCareer } from '../src/engine/competitionCareer'
 import { representativeEvidence } from '../src/engine/youthOpportunities'
-import { academyClubNames } from '../src/engine/academyClubs'
+import { academyClubNames, academyChampionsField } from '../src/engine/academyClubs'
 import { initAcademyWorld } from '../src/engine/academy'
 import { maybeAddWatcher } from '../src/engine/scouting'
 import { useCareerStore } from '../src/store/careerStore'
@@ -108,6 +108,14 @@ for (const nation of NATIONS) {
     academyTeams.every(team => team.countryId === nation.id), `${nation.name} academy league stays domestic`)
   const academyCup = initCupById('academyKnockoutCup', academyTeams[0], academyTeams)
   check(academyCup.teams.every(team => team.countryId === nation.id), `${nation.name} academy cup uses domestic clubs`)
+  const championsField = academyChampionsField(academyTeams[0], nation.id)
+  const championsCup = initCupById('academyChampionsCup', championsField[0], championsField)
+  check(championsCup.teams.length === 8 && new Set(championsCup.teams.map(team => team.countryId)).size === 8 &&
+    championsCup.playerTeamId === academyTeams[0].id, `${nation.name} draws seven distinct foreign academy opponents`)
+  let continentalFinished = championsCup
+  for (let round = 1; round <= 3; round++) continentalFinished = advanceCupStage(batchSimCupStage(continentalFinished, round, true))
+  check(continentalFinished.stage === 'complete' && continentalFinished.knockoutRounds.map(fixtures => fixtures.length).join(',') === '4,2,1',
+    `${nation.name} continental cup finishes in three rounds`)
 }
 const northCapeSchool = initSchoolLeagueWorld(school.name, regionId).divisions[1].teams[0]
 const regionalSchools = Object.values(initSchoolLeagueWorld(school.name, regionId).divisions).flatMap(division => division.teams)
@@ -133,6 +141,10 @@ check(finals.stage === 'finals' && finals.finalsTeams.length === 8 && new Set(fi
   'International finals have eight distinct named nations')
 check(JSON.parse(JSON.stringify(finals)).finalsTeams.every((team: { countryId?: string }) => !!team.countryId), 'Named international finalists survive serialization')
 const nationalCup = initCupById('nationalChampionship', seasonOne.playerTeam, seasonOne.opponents)
+const savedAcademy = initAcademyWorld('Audit Academy', 6, 'rsa')
+const savedAcademyTeam = savedAcademy.divisions[2].teams.find(team => team.id === savedAcademy.playerTeamId)!
+const savedChampionsField = academyChampionsField(savedAcademyTeam, 'rsa')
+const savedChampions = initCupById('academyChampionsCup', savedChampionsField[0], savedChampionsField)
 const finalistRecord = { competitionId: 'nationalChampionship', season: 1, appearances: 3, starts: 3, minutes: 270,
   goals: 0, assists: 0, cleanSheets: 0, ratingTotal: 18, averageRating: 6, yellowCards: 0, redCards: 0, playerOfMatchAwards: 0 }
 const finalist = { ...newPlayer(regionId), pathway: { regionalSelection: 'selected' },
@@ -155,13 +167,15 @@ for (const position of [1, 2]) {
   }) }
   check(representativeEvidence(qualified, 'national').eligible, `National finalist in place ${position} reaches selection`)
 }
-const beforeCup = JSON.stringify(nationalCup), beforeInternational = JSON.stringify(finals)
+const beforeCup = JSON.stringify(nationalCup), beforeInternational = JSON.stringify(finals), beforeChampions = JSON.stringify(savedChampions)
 const live = useCareerStore.getState()
-useCareerStore.setState({ cups: { ...live.cups, nationalChampionship: nationalCup }, international: finals })
+useCareerStore.setState({ cups: { ...live.cups, nationalChampionship: nationalCup, academyChampionsCup: savedChampions }, international: finals })
 await useCareerStore.getState().saveCurrent()
 await useCareerStore.getState().loadFromSlot(1)
 check(JSON.stringify(useCareerStore.getState().cups.nationalChampionship) === beforeCup && JSON.stringify(useCareerStore.getState().international) === beforeInternational,
   'In-progress regional and international brackets survive save and reload')
+check(JSON.stringify(useCareerStore.getState().cups.academyChampionsCup) === beforeChampions,
+  'Continental academy bracket survives save and reload')
 const quietCampaign = initInternationalWorld('South Africa', 'rsa')
 const beforeQuiet = useCareerStore.getState()
 useCareerStore.setState({ international: quietCampaign, player: { ...beforeQuiet.player!, matchRatings: [5, 5, 5, 5, 5] },

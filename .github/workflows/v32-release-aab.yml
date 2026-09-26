@@ -54,8 +54,8 @@ jobs:
           AAB=android/app/build/outputs/bundle/release/app-release.aab
           test -s "$AAB"
           grep -q 'applicationId "com.vraxis.kickoffstar"' android/app/build.gradle
-          grep -q 'versionCode 7' android/app/build.gradle
-          grep -q 'versionName "4.0.1"' android/app/build.gradle
+          grep -q 'versionCode 8' android/app/build.gradle
+          grep -q 'versionName "4.0.2"' android/app/build.gradle
           jarsigner -verify -verbose -certs "$AAB" >/tmp/jarsigner.txt
           keytool -list -v -keystore "$RUNNER_TEMP/kickoff-star-release.jks" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" | grep -E 'SHA256:|Owner:|Valid from:' > /tmp/signing.txt
           sha256sum "$AAB" > /tmp/aab-sha256.txt
@@ -64,6 +64,6 @@ jobs:
       - name: Upload signed AAB
         uses: actions/upload-artifact@v4
         with:
-          name: kickoff-star-v4-unified-signed-aab
+          name: kickoff-star-v8-signed-aab
           path: android/app/build/outputs/bundle/release/app-release.aab
           retention-days: 14

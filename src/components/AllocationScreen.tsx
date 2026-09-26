@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { xpCostForLevel, type AttributeKey } from '../engine/xp'
 import AnimatedNumber from './AnimatedNumber'
 import { haptics } from '../engine/haptics'
-import { watchRewardedAd, remainingToday } from '../engine/ads'
+import { watchRewardedAd, remainingToday, rewardedAdsAvailable } from '../engine/ads'
 
 // P49 — Joel: "I made 800 points... my shooting is 40, it requires 1200 to
 // get to 41, I can still allocate and there's a bar that increases, once you
@@ -113,7 +113,7 @@ export default function AllocationScreen({ title, subtitle, totalXp, attrs, valu
           {/* P64 — a small bonus for watching a rewarded ad, shown once per
               screen visit. Added straight to the remaining pool and spent
               through the normal tap loop below, not a separate mechanic. */}
-          {!adBoostUsed && remainingToday('xp') > 0 && (
+          {rewardedAdsAvailable() && !adBoostUsed && remainingToday('xp') > 0 && (
             <button
               onClick={async () => {
                 const reward = await watchRewardedAd('xp')

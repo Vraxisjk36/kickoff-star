@@ -1,6 +1,6 @@
 import type { Player } from '../../types/player'
 import type { CalendarState } from '../../types/calendar'
-import { watchRewardedAd, remainingToday } from '../../engine/ads'
+import { watchRewardedAd, remainingToday, rewardedAdsAvailable } from '../../engine/ads'
 import type { LeagueWorld, Division } from '../../engine/league'
 import { sortStandings } from '../../engine/league'
 import type { AcademyWorld } from '../../engine/academy'
@@ -23,7 +23,8 @@ import { useCareerStore } from '../../store/careerStore'
 import { monthForWeek,pathwayNextStep } from '../../engine/pathway'
 
 function ordinal(n: number): string {
-  return `${n}${n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'}`
+  const suffix = n % 100 >= 11 && n % 100 <= 13 ? 'th' : n % 10 === 1 ? 'st' : n % 10 === 2 ? 'nd' : n % 10 === 3 ? 'rd' : 'th'
+  return `${n}${suffix}`
 }
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
@@ -63,7 +64,8 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
     const division = (world.divisions as Record<number, Division>)[world.playerDivision]
     const sorted = sortStandings(division.standings)
     const pos = sorted.findIndex((s) => s.teamId === world.playerTeamId) + 1
-    leaguePos = player.grassrootsPath === 'sunday' && !sundayDeal ? '—' : pos > 0 ? ordinal(pos) : '—'
+    const playerHasPlayed = division.standings.some((standing) => standing.teamId === world.playerTeamId && standing.played > 0)
+    leaguePos = (player.grassrootsPath === 'sunday' && !sundayDeal) || !playerHasPlayed ? '—' : pos > 0 ? ordinal(pos) : '—'
   }
 
   const nextEvent = DAYS.map((day) => eventsByDay[day]).find((e) => e && !e.resolved) ?? calendar.currentWeek.events.find((e) => !e.resolved) ?? calendar.currentWeek.events[0]
@@ -253,11 +255,8 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
 
       <div className="home-section-label"><span>PLAYER MANAGEMENT</span><i/></div>
       {/* energy — now a real meter with an explainer, not a bare number */}
-      <button
-        onClick={onOpenEnergy}
-        className="rounded-lg border border-ks-border bg-[#0f0f0d] px-3 py-2.5 text-left active:scale-[0.995] transition-transform"
-      >
-        <div className="flex items-center justify-between mb-1.5">
+      <div className="rounded-lg border border-ks-border bg-[#0f0f0d] px-3 py-2.5 text-left">
+        <button onClick={onOpenEnergy} className="w-full flex items-center justify-between mb-1.5 text-left">
           <span className="text-[9px] text-ks-muted uppercase tracking-wider flex items-center gap-1">
             <Icon src={iconEnergy} />energy
           </span>
@@ -267,7 +266,7 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
             </span>
             <span className="text-[9px] text-ks-muted">what's this? →</span>
           </span>
-        </div>
+        </button>
         <EnergyMeter stamina={player.fitness.stamina} showLabel={false} />
         {/* P29: energy is deliberately tight, so the fix is always one tap
             away when you're carrying a drink — no hunting through menus. */}
@@ -287,7 +286,7 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
         {/* P64 — free alternative for players without a drink (or who'd
             rather not spend one) — same 20% restore, paid for by watching
             a real rewarded ad instead of in-game money. */}
-        {player.fitness.stamina < 100 && remainingToday('energy') > 0 && (
+        {rewardedAdsAvailable() && player.fitness.stamina < 100 && remainingToday('energy') > 0 && (
           <button
             onClick={async () => {
               const reward = await watchRewardedAd('energy')
@@ -298,7 +297,7 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
             watch ad for +20% energy · {remainingToday('energy')} left today
           </button>
         )}
-      </button>
+      </div>
 
       <div className="home-section-label"><span>SCHEDULE</span><i/></div>
       <Panel title={<span className="flex items-center gap-1"><Icon src={iconWeek} />week overview</span>}>

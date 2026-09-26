@@ -14,7 +14,7 @@ import iconEnergy from '../../assets/icons/energy.png'
 import iconBoots from '../../assets/icons/boots.png'
 import iconTraining from '../../assets/icons/training.png'
 import AnimatedNumber from '../../components/AnimatedNumber'
-import { watchRewardedAd, remainingToday } from '../../engine/ads'
+import { watchRewardedAd, remainingToday, rewardedAdsAvailable } from '../../engine/ads'
 import { getAgent, netWage } from '../../engine/agents'
 
 // P29/P34 — the money screen. Everything is earnable in-game: allowance, odd
@@ -337,7 +337,7 @@ export default function ShopTab({ player }: { player: Player }) {
           {/* P64 — a free alternative that costs no in-game energy, just
               real attention — deliberately paid less than the cheapest
               odd job since it doesn't compete with the actual economy. */}
-          {remainingToday('cash') > 0 && (
+          {rewardedAdsAvailable() && remainingToday('cash') > 0 && (
             <button
               onClick={async () => {
                 const reward = await watchRewardedAd('cash')

@@ -300,10 +300,10 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
   const clockLabel = displayMinute > 90 ? `90+${displayMinute - 90}'` : `${displayMinute}'`
 
   return (
-    <div className="relative h-[100dvh] w-full bg-ks-black flex flex-col overflow-hidden">
+    <div className="match-screen relative h-[100dvh] w-full bg-ks-black flex flex-col overflow-hidden">
       {captainMoment && caughtUp && (
         <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center px-5">
-          <div className="w-full max-w-md rounded-2xl border border-ks-gold/40 bg-[#0f0f0d] p-5 shadow-2xl">
+          <div className="w-full max-w-md max-h-[85dvh] overflow-y-auto rounded-2xl border border-ks-gold/40 bg-[#0f0f0d] p-5 shadow-2xl">
             <div className="text-[10px] uppercase tracking-[0.28em] text-ks-gold font-display mb-2">© Captain's Moment</div>
             <div className="text-ks-ink text-base font-display mb-5">{captainMoment.situation}</div>
             <div className="flex flex-col gap-2">
@@ -398,7 +398,7 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
         <LiveMatchPitch momentum={state.momentum} homeColor={state.homeTeam.primaryColor} awayColor={state.awayTeam.primaryColor} homeShort={state.homeTeam.short} awayShort={state.awayTeam.short} playerIsHome={playerIsHome} player={player} playerOnPitch={state.onPitch} minute={displayMinute} action={pitchAction} scoringSide={lastVisibleEvent?.scoringSide} focusPlayer={showMoment || executing !== null} />
       </div>
 
-      <div ref={feedRef} className="relative z-10 flex-1 min-h-0 overflow-y-auto px-5 max-w-md mx-auto w-full" style={{ maxHeight: '30vh' }}>
+      <div ref={feedRef} className="match-feed relative z-10 flex-1 min-h-0 overflow-y-auto px-5 max-w-md mx-auto w-full" style={{ maxHeight: '30dvh' }}>
         <div className="flex flex-col gap-2 pb-4">
           {visibleEvents.map((e, i) => {
             const isLast = i === visibleEvents.length - 1
@@ -422,7 +422,7 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
           className="fixed inset-0 z-[65] flex items-center justify-center p-5"
           style={{ background: 'radial-gradient(ellipse 70% 50% at 50% 40%, rgba(212,175,55,0.08), transparent 65%), #050504' }}
         >
-          <div className="max-w-md w-full max-h-[85vh] overflow-y-auto">
+          <div className="max-w-md w-full max-h-[85dvh] overflow-y-auto">
             {showMoment && executing && bundle && moment ? (
               <div className="flex flex-col gap-2.5">
                 <div className="rounded-xl border border-ks-gold/40 bg-ks-gold/5 px-4 py-3 mb-1">

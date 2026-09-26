@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "audit:v4": "node --import tsx scripts/auditV4Integration.ts && node --import tsx scripts/auditProgression.ts && node --import tsx scripts/auditSundayFootball.ts && node --import tsx scripts/auditOctoberLeague.ts",
+    "audit:v4": "node --import tsx scripts/auditV4Integration.ts && node --import tsx scripts/auditProgression.ts && node --import tsx scripts/auditSundayFootball.ts && node --import tsx scripts/auditOctoberLeague.ts && node --import tsx scripts/auditRegionalWorld.ts",
     "audit:season": "node --import tsx scripts/careerSim.ts 2 42 && FORCE_SUNDAY=1 node --import tsx scripts/careerSim.ts 2 42",
     "audit:sunday": "node --import tsx scripts/auditSundayFootball.ts",
     "audit:progression": "node --import tsx scripts/auditProgression.ts",

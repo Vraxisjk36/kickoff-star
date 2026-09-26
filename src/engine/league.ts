@@ -1,5 +1,6 @@
 import { rand } from './rng'
 import { generateTeam, generatePlayerTeam, type Team, type NotablePlayer, type NotablePosition } from './teams'
+import { getRegion, regionalSchoolNames, regionalClubNames } from './regions'
 import { generateRoundRobin } from './competitions'
 
 // ============================================================================
@@ -48,6 +49,7 @@ export interface LeagueWorld {
   /** School and Sunday football are separate pathways, even though they share
    * the same standings/fixture engine. Optional only for legacy saves. */
   kind?: 'school' | 'sunday'
+  regionId?: string
 }
 
 const SCHOOL_NAMES = [
@@ -90,51 +92,64 @@ function generateFixtures(teams: Team[], legs: 1 | 2 = 1): Fixture[] {
   }))
 }
 
-function initDivision(tier: DivisionTier, playerTeam?: Team, teamCount = 12, schoolNames: string[] | null = null): Division {
+function initDivision(tier: DivisionTier, playerTeam?: Team, teamCount = 12, names: string[] | null = null, regionId?: string): Division {
   const [lo, hi] = DIVISION_PRESTIGE_RANGE[tier]
   const teams: Team[] = []
   if (playerTeam) teams.push(playerTeam)
   while (teams.length < teamCount) {
     const generated = generateTeam(lo + Math.floor(rand() * (hi - lo + 1)))
-    if (schoolNames === null) teams.push(generated)
+    if (names === null) teams.push(generated)
     else {
-      const name = schoolNames[teams.length - (playerTeam ? 1 : 0)] ?? schoolName(teams.length)
-      teams.push({ ...generated, name, short: schoolShort(name) })
+      const name = names[teams.length - (playerTeam ? 1 : 0)] ?? schoolName(teams.length)
+      teams.push({ ...generated, name, short: schoolShort(name), regionId, countryId: getRegion(regionId)?.countryId })
     }
   }
   return { tier, teams, standings: teams.map(initStanding), fixtures: generateFixtures(teams, 2) }
 }
 
 // Player starts in Division 3 (lowest) per typical grassroots entry point.
-export function initLeagueWorld(playerTeamName: string): LeagueWorld {
-  const playerTeam = generatePlayerTeam(playerTeamName, 2)
-  const div3 = initDivision(3, playerTeam)
-  const div2 = initDivision(2)
-  const div1 = initDivision(1)
+export function initLeagueWorld(playerTeamName: string, regionId?: string): LeagueWorld {
+  const region = getRegion(regionId)
+  const names = region ? regionalClubNames(region.id).filter(name => name !== playerTeamName) : null
+  const playerTeam = { ...generatePlayerTeam(playerTeamName, 2), ...(region ? { regionId: region.id, countryId: region.countryId } : {}) }
+  const div3 = initDivision(3, playerTeam, 12, names?.slice(0, 11) ?? null, region?.id)
+  const div2 = initDivision(2, undefined, 12, names?.slice(11, 23) ?? null, region?.id)
+  const div1 = initDivision(1, undefined, 12, names?.slice(23, 35) ?? null, region?.id)
   return {
     divisions: { 1: div1, 2: div2, 3: div3 },
     playerDivision: 3,
     playerTeamId: playerTeam.id,
     kind: 'sunday',
+    regionId: region?.id,
   }
 }
 
 /** Ten-school local divisions. Only the player's local division is surfaced;
  * the other districts exist so regional cup draws still have real schools. */
-export function initSchoolLeagueWorld(playerSchoolName: string): LeagueWorld {
-  const playerTeam = generatePlayerTeam(playerSchoolName, 3)
-  const availableNames = SCHOOL_NAMES.filter((name) => name !== playerSchoolName)
-  const div1 = initDivision(1, playerTeam, 10, availableNames.slice(0, 9))
-  const div2 = initDivision(2, undefined, 10, availableNames.slice(9, 19))
-  const div3 = initDivision(3, undefined, 10, availableNames.slice(19, 29))
-  return { divisions: { 1: div1, 2: div2, 3: div3 }, playerDivision: 1, playerTeamId: playerTeam.id, kind: 'school' }
+export function initSchoolLeagueWorld(playerSchoolName: string, regionId?: string): LeagueWorld {
+  const region = getRegion(regionId)
+  const playerTeam = { ...generatePlayerTeam(playerSchoolName, 3), ...(region ? { regionId: region.id, countryId: region.countryId } : {}) }
+  const availableNames = (region ? regionalSchoolNames(region.id) : SCHOOL_NAMES).filter((name) => name !== playerSchoolName)
+  const div1 = initDivision(1, playerTeam, 10, availableNames.slice(0, 9), region?.id)
+  const div2 = initDivision(2, undefined, 10, availableNames.slice(9, 19), region?.id)
+  const div3 = initDivision(3, undefined, 10, availableNames.slice(19, 29), region?.id)
+  return { divisions: { 1: div1, 2: div2, 3: div3 }, playerDivision: 1, playerTeamId: playerTeam.id, kind: 'school', regionId: region?.id }
 }
 
 /** Convert an already-started mixed-path save without erasing results. IDs,
  * fixtures, ratings and standings stay intact; only competition identity and
  * school names are corrected. */
-export function migrateToSchoolLeagueWorld(world: LeagueWorld, playerSchoolName: string): LeagueWorld {
-  const availableNames = SCHOOL_NAMES.filter((name) => name !== playerSchoolName)
+export function migrateToSchoolLeagueWorld(world: LeagueWorld, playerSchoolName: string, regionId?: string): LeagueWorld {
+  if (world.kind === 'school') {
+    const current = world.divisions[world.playerDivision].teams.find(team => team.id === world.playerTeamId)
+    if (current?.name === playerSchoolName) return world // preserve saved regional identities and results
+    const division = world.divisions[world.playerDivision]
+    const teams = division.teams.map(team => team.id === world.playerTeamId ? { ...team, name: playerSchoolName, short: schoolShort(playerSchoolName) } : team)
+    const standings = division.standings.map(row => row.teamId === world.playerTeamId ? { ...row, teamName: playerSchoolName, teamShort: schoolShort(playerSchoolName) } : row)
+    return { ...world, divisions: { ...world.divisions, [world.playerDivision]: { ...division, teams, standings } } }
+  }
+  const region = getRegion(regionId)
+  const availableNames = (region ? regionalSchoolNames(region.id) : SCHOOL_NAMES).filter((name) => name !== playerSchoolName)
   let schoolIndex = 0
   const divisions = {} as Record<DivisionTier, Division>
   for (const tier of [1, 2, 3] as const) {
@@ -145,7 +160,7 @@ export function migrateToSchoolLeagueWorld(world: LeagueWorld, playerSchoolName:
       const name = isPlayerTeam ? playerSchoolName : availableNames[schoolIndex++] ?? `District School ${schoolIndex}`
       const short = isPlayerTeam ? team.short : schoolShort(name)
       names.set(team.id, { name, short })
-      return { ...team, name, short }
+      return { ...team, name, short, ...(region ? { regionId: region.id, countryId: region.countryId } : {}) }
     })
     const standings = division.standings.map((standing) => {
       const identity = names.get(standing.teamId)
@@ -153,7 +168,7 @@ export function migrateToSchoolLeagueWorld(world: LeagueWorld, playerSchoolName:
     })
     divisions[tier] = { ...division, teams, standings }
   }
-  return { ...world, divisions, kind: 'school' }
+  return { ...world, divisions, kind: 'school', regionId: region?.id }
 }
 
 /** Start a fresh season without moving schools between artificial pyramid

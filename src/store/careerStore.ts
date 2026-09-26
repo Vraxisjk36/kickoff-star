@@ -9,6 +9,7 @@ import { initCupById, batchSimCupStage, advanceCupStage, recordCupPlayerResult, 
 import { initInternationalWorld, formQualifiesForSelection, batchSimQualifyingRound, batchSimFinalsRound, advanceInternationalStage, recordNationResult, internationalTeamById, nationFixture, type InternationalWorld } from '../engine/international'
 import { getSchool } from '../engine/schools'
 import { getNation } from '../engine/nations'
+import { regionalClubNames } from '../engine/regions'
 import { archetypeConfidenceSwingMultiplier, archetypeTrustGainMultiplier } from '../engine/archetypes'
 import { initialCast, driftRelationships, adjustBond, addPerson, relationshipEffects, resolveInteraction, interactedThisWeek, pruneCast, INTERACTIONS } from '../engine/relationships'
 import { maybeStartArc, tickArcs, ARC_TEMPLATES, baselineOf, type ActiveArc, type ArcVerdict } from '../engine/storylines'
@@ -305,7 +306,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     let cups = save.cups ?? { ...EMPTY_CUPS }
     if (league && player.careerClock.phase !== 'academy' && player.grassrootsPath === 'school') {
       const schoolName = (player.schoolId ? getSchool(player.schoolId)?.name : null) ?? 'Your School'
-      league = migrateToSchoolLeagueWorld(league, schoolName)
+      league = migrateToSchoolLeagueWorld(league, schoolName, player.regionId)
       const teams = Object.values(league.divisions).flatMap((division) => division.teams)
       const playerTeam = teams.find((team) => team.id === league!.playerTeamId)
       cups = {
@@ -401,9 +402,10 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const school = player.schoolId ? getSchool(player.schoolId) : undefined
     const schoolName = school?.name ?? 'Your School'
     const isSchoolPath = player.grassrootsPath !== 'sunday'
-    const teamName = isSchoolPath ? schoolName : (player.communityTrialSessions !== undefined ? generateTeam(2).name : player.grassrootsClubName ?? generateTeam(2).name)
+    const localClub = player.regionId ? regionalClubNames(player.regionId)[4] : undefined
+    const teamName = isSchoolPath ? schoolName : (player.communityTrialSessions !== undefined ? localClub ?? generateTeam(2).name : player.grassrootsClubName ?? localClub ?? generateTeam(2).name)
     const squad = player.squad ?? generateSquad(2)
-    const world = isSchoolPath ? initSchoolLeagueWorld(teamName) : initLeagueWorld(teamName)
+    const world = isSchoolPath ? initSchoolLeagueWorld(teamName, player.regionId) : initLeagueWorld(teamName, player.regionId)
     const playerTeam = world.divisions[world.playerDivision].teams.find((t) => t.id === world.playerTeamId)!
     // P63 — real cross-division cup draws: every team across every
     // division in the league, not just fresh disconnected fake teams.

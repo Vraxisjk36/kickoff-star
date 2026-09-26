@@ -110,6 +110,7 @@ export interface Player {
 
   // Phase 27 — identity picked at onboarding
   nationality?: string // Nation.id (engine/nations.ts); drives the international layer
+  regionId?: string // Region.id (engine/regions.ts); anchors local schools and clubs
   avatarId?: number // 0-7, components/Avatar.tsx
   archetype?: string | null // Archetype.id (engine/archetypes.ts)
 

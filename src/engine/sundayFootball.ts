@@ -2,6 +2,7 @@ import type { Player } from '../types/player'
 import { initLeagueWorld, batchSimDivisionRound, type LeagueWorld } from './league'
 import { generateTeam } from './teams'
 import { generateSquad } from './squad'
+import { regionalClubNames } from './regions'
 
 export function sundayClub(world: LeagueWorld | undefined) {
   return world?.divisions[world.playerDivision].teams.find(team => team.id === world.playerTeamId)
@@ -20,7 +21,7 @@ export function simulateSundayThrough(world: LeagueWorld, week: number, includeP
 export function ensureSundayClub(player: Player, week: number): Player {
   if (player.grassrootsPath !== 'school' || player.careerClock.phase === 'academy' || player.sundayLeague) return player
   if (!['training-invite', 'squad-offer', 'registered'].includes(player.pathway?.sundayStatus ?? '')) return player
-  const name = generateTeam(2).name
-  const sundayLeague = simulateSundayThrough(initLeagueWorld(name), week - 1)
+  const name = (player.regionId ? regionalClubNames(player.regionId)[4] : undefined) ?? generateTeam(2).name
+  const sundayLeague = simulateSundayThrough(initLeagueWorld(name, player.regionId), week - 1)
   return { ...player, sundayLeague, sundaySquad: generateSquad(sundayClub(sundayLeague)?.prestige ?? 2) }
 }

@@ -28,6 +28,8 @@ export interface NotablePlayer {
 export interface Team {
   id: string
   name: string
+  countryId?: string
+  regionId?: string
   short: string // 3-letter code for scoreboards
   ratings: TeamRatings
   prestige: number // 1-10, drives which league tier and scout attention

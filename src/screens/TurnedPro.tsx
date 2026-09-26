@@ -1,4 +1,5 @@
 import type { Player } from '../types/player'
+import CareerRecord from '../components/CareerRecord'
 
 export default function TurnedPro({ player, onMenu }: { player: Player; onMenu: () => void }) {
   return (
@@ -13,6 +14,7 @@ export default function TurnedPro({ player, onMenu }: { player: Player; onMenu: 
         <p className="text-ks-muted text-sm leading-relaxed mb-10 px-2">
           At age {player.careerClock.ageYears}, the dream that started on a grassroots pitch is real. This is where your story as a footballer truly begins.
         </p>
+        <CareerRecord player={player} />
         <button onClick={onMenu} className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-3.5 text-sm shadow-[0_0_25px_rgba(212,175,55,0.3)]">
           back to menu
         </button>

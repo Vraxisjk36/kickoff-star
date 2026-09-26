@@ -4,7 +4,7 @@ import type { Player } from '../src/types/player'
 import type { CalendarState } from '../src/types/calendar'
 import { OUTFIELD_ATTRIBUTES } from '../src/types/attributes'
 import { initCompetitionCareer, recordCompetitionMatch, archiveCompetitionSeason } from '../src/engine/competitionCareer'
-import { academyRecruitmentReport, reviewAcademyShowcase, migrateAcademyRecruitment, canPlayYouthShowcase } from '../src/engine/academyRecruitment'
+import { academyRecruitmentReport, reviewAcademyShowcase, migrateAcademyRecruitment, canPlayYouthShowcase, academyOfferCleared } from '../src/engine/academyRecruitment'
 import { initYouthPathway, representativeSelection, selectionPassed } from '../src/engine/pathway'
 import { currentPerformance, updateSundayRecruitment, representativeEvidence } from '../src/engine/youthOpportunities'
 import { initScoutingState, maybeAddWatcher, checkForOffers, updateWatcherInterest } from '../src/engine/scouting'
@@ -182,5 +182,21 @@ check(useCareerStore.getState().player?.pathway?.academyTrialSessions === 3 && u
   'Three weekly assessments complete the academy trial before negotiations')
 check(useCareerStore.getState().player?.competitionCareer?.selections.filter(record => record.competitionId === 'academyTrials').length === 3,
   'All three trial cuts are recorded in the career')
+const trialGraduate = useCareerStore.getState().player!
+const academyOffers = trialGraduate.contractOffers.filter(offer => offer.kind === 'academy')
+check(academyOffers.length >= 3 && academyOffers.length <= 6 && new Set(academyOffers.map(offer => offer.countryId)).size === academyOffers.length,
+  'Passed trial produces three to six academy choices across distinct countries')
+check(academyOffers.every(offer => academyOfferCleared(trialGraduate, offer.id)), 'Every post-trial academy offer can enter talks')
+const alternative = academyOffers[1]
+useCareerStore.setState({ player: { ...trialGraduate, agentId: 'parent' } })
+useCareerStore.getState().beginNegotiation(alternative.id)
+check(useCareerStore.getState().player?.negotiation?.clubId === alternative.clubId,
+  'Player can choose a different academy from the original trial club')
+const negotiating = useCareerStore.getState().player!
+useCareerStore.setState({ player: { ...negotiating, negotiation: { ...negotiating.negotiation!, stage: 'complete' } } })
+useCareerStore.getState().completeAcademyMove(alternative.clubName, alternative.prestige)
+const signedAcademy = useCareerStore.getState()
+check(signedAcademy.player?.academyCountryId === alternative.countryId && signedAcademy.academyLeague?.divisions[2].teams.every(team => team.countryId === alternative.countryId),
+  'Signing an alternate academy creates its domestic league in the offered country')
 
 console.log(`\n${checks} progression checks passed`)

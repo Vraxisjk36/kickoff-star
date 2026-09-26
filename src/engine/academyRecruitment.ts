@@ -116,3 +116,9 @@ export function academyTrialAvailable(player: Player, offerId: string, calendar?
   const offer = (player.contractOffers ?? []).find(o => o.id === offerId && o.kind === 'academy')
   return academyEntryOpen(player, calendar) && !!offer && (player.totalWeeksElapsed ?? 0) - offer.weekOffered < offer.expiresInWeeks
 }
+
+export function academyOfferCleared(player: Player, offerId: string): boolean {
+  const offer = player.contractOffers.find(o => o.id === offerId && o.kind === 'academy')
+  return !!offer && player.pathway?.academyTrialStatus === 'passed' &&
+    (player.pathway.academyQualifiedOfferIds?.includes(offerId) || player.pathway.academyTrialClubId === offer.clubId)
+}

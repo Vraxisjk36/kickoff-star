@@ -9,6 +9,7 @@ export interface YouthPathwayState {
   regionalScore?:SelectionBreakdown; nationalScore?:SelectionBreakdown; sundayInterest:number; sundayStatus:'undiscovered'|'watched'|'training-invite'|'squad-offer'|'registered'; showcaseInvited:boolean
   academyTrialStatus:'none'|'invited'|'active'|'passed'|'failed'; academyTrialClubId?:string
   academyTrialSessions?:number; academyTrialPoints?:number; academyTrialBase?:number; academyTrialLastWeek?:number
+  academyQualifiedOfferIds?:string[]
   showcaseSeason?:number; recruitmentVersion?:number
 }
 export function ageGroupFor(age:number):YouthPathwayState['ageGroup'] { if(age<=14)return'U15'; if(age===15)return'U16'; if(age===16)return'U17'; return'U18' }

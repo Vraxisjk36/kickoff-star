@@ -2,6 +2,7 @@ import { NATIONS } from './nations'
 import { regionsFor } from './regions'
 import { generateTeam, type Team } from './teams'
 import { rand } from './rng'
+import type { Player } from '../types/player'
 
 // Fictional names point to recognisable football cities and rivalries without
 // borrowing real club marks. The rest of each country's 24-club pool uses its
@@ -32,4 +33,17 @@ export function academyClub(countryId: string, prestige: number, excluded: reado
   const names = academyClubNames(countryId).filter(name => !excluded.includes(name))
   const name = names[Math.floor(rand() * names.length)]
   return { ...generateTeam(prestige), name, short: name.slice(0, 3).toUpperCase(), countryId }
+}
+
+export function academyOfferBatch(original: Player['contractOffers'][number], homeCountryId: string, week: number): Player['contractOffers'] {
+  const total = 3 + Math.floor(rand() * 4)
+  const originalCountry = original.countryId ?? homeCountryId
+  const otherCountries = NATIONS.filter(n => n.id !== originalCountry).sort(() => rand() - 0.5).slice(0, total - 1)
+  const lead = { ...original, countryId: originalCountry, weekOffered: week, expiresInWeeks: 10 }
+  const others = otherCountries.map(nation => {
+    const club = academyClub(nation.id, Math.max(5, Math.min(8, original.prestige)))
+    return { id: crypto.randomUUID(), clubId: club.id, clubName: club.name, clubShort: club.short, countryId: nation.id,
+      ratings: club.ratings, prestige: club.prestige, kind: 'academy' as const, weekOffered: week, expiresInWeeks: 10 }
+  })
+  return [lead, ...others]
 }

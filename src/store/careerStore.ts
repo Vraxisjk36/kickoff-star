@@ -11,6 +11,7 @@ import { getSchool } from '../engine/schools'
 import { getNation } from '../engine/nations'
 import { regionalClubNames } from '../engine/regions'
 import { nationalRegionalField } from '../engine/regionalRepresentatives'
+import { academyOfferBatch } from '../engine/academyClubs'
 import { archetypeConfidenceSwingMultiplier, archetypeTrustGainMultiplier } from '../engine/archetypes'
 import { initialCast, driftRelationships, adjustBond, addPerson, relationshipEffects, resolveInteraction, interactedThisWeek, pruneCast, INTERACTIONS } from '../engine/relationships'
 import { maybeStartArc, tickArcs, ARC_TEMPLATES, baselineOf, type ActiveArc, type ArcVerdict } from '../engine/storylines'
@@ -43,7 +44,7 @@ import { evaluateCaptaincy, recordCaptainAppearance, clearCaptaincyStory } from 
 import { addQualification, archiveCompetitionSeason, initCompetitionCareer, recordCompetitionMatch, recordSelectionResult, scoutingPrestigeMultiplier, serveCompetitionSuspension } from '../engine/competitionCareer'
 import { defaultClubSupport, initYouthFinance, postTransaction, type FinanceCategory, type FinanceTransaction } from '../engine/youthFinances'
 import { addStoryMoment, createStoryMoment, type StoryMoment } from '../engine/presentation'
-import { academyEntryOpen, academyRecruitmentReport, academyTrialAvailable, academyTrialBase, migrateAcademyRecruitment, reviewAcademyShowcase } from '../engine/academyRecruitment'
+import { academyEntryOpen, academyRecruitmentReport, academyTrialAvailable, academyTrialBase, academyOfferCleared, migrateAcademyRecruitment, reviewAcademyShowcase } from '../engine/academyRecruitment'
 import { ageGroupFor, initYouthPathway, representativeSelection, selectionPassed } from '../engine/pathway'
 import { initOctoberLeague, recordOctoberResult, simulateOctoberWeek, octoberStandings } from '../engine/octoberLeague'
 
@@ -175,6 +176,8 @@ function withStory(player: Player, calendar: CalendarState | null, input: Omit<S
 function reviewAcademyOpportunities(player: Player, calendar: CalendarState): Player {
   if (player.careerClock.phase === 'academy') return player
   let updated = reviewAcademyShowcase(player, calendar)
+  if (updated.pathway?.academyTrialStatus === 'passed' && updated.contractOffers.some(o =>
+    o.kind === 'academy' && updated.pathway?.academyQualifiedOfferIds?.includes(o.id))) return updated
   const report = academyRecruitmentReport(updated, calendar)
   const state: ScoutingState = {
     reputation: updated.reputation,
@@ -755,7 +758,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     if (isLive(player.negotiation)) return
     const offer = (player.contractOffers ?? []).find((o) => o.id === offerId)
     if (!offer || (offer.kind !== 'academy' && offer.kind !== 'professional')) return
-    if (offer.kind === 'academy' && (!academyTrialAvailable(player, offerId, getState().calendar) || player.pathway?.academyTrialStatus !== 'passed' || player.pathway.academyTrialClubId !== offer.clubId)) return
+    if (offer.kind === 'academy' && (!academyTrialAvailable(player, offerId, getState().calendar) || !academyOfferCleared(player, offerId))) return
     const negotiation = startNegotiation(player, offer.clubId, offer.clubName, offer.prestige, offer.kind)
     setState({ player: { ...player, negotiation }, negotiationBeat: negotiation.log[0] })
     void getState().saveCurrent()
@@ -764,7 +767,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   makeNegotiationChoice: (choiceId) => {
     const { player } = getState()
     if (!player?.negotiation || !isLive(player.negotiation)) return
-    if (player.negotiation.kind === 'academy' && (!academyEntryOpen(player, getState().calendar) || player.pathway?.academyTrialStatus !== 'passed' || player.pathway.academyTrialClubId !== player.negotiation.clubId)) return
+    if (player.negotiation.kind === 'academy' && (!academyEntryOpen(player, getState().calendar) || !player.contractOffers.some(o => o.clubId === player.negotiation?.clubId && academyOfferCleared(player, o.id)))) return
     const outcome = resolveChoice(player.negotiation, choiceId, player)
     const next: Player = { ...player, negotiation: outcome.negotiation }
 
@@ -1985,17 +1988,20 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const score = Math.min(100, base + earned)
     const complete = count === 3
     const passed = complete && score >= 62
+    const offers = passed ? academyOfferBatch(offer, getNation(player.nationality).id, week) : []
     const pathway = { ...previous, academyTrialClubId: offer.clubId, academyTrialStatus: complete ? passed ? 'passed' as const : 'failed' as const : 'active' as const,
+      academyQualifiedOfferIds: passed ? offers.map(o => o.id) : undefined,
       academyTrialSessions: count, academyTrialPoints: earned, academyTrialBase: base, academyTrialLastWeek: week }
     let updated: Player = { ...player, pathway,
-      contractOffers: complete && !passed ? player.contractOffers.filter(o => o.id !== offerId) : player.contractOffers,
+      contractOffers: passed ? [...player.contractOffers.filter(o => o.kind !== 'academy'), ...offers]
+        : complete ? player.contractOffers.filter(o => o.id !== offerId) : player.contractOffers,
       competitionCareer: recordSelectionResult(player.competitionCareer, { competitionId: 'academyTrials', season: calendar?.currentWeek.seasonYear ?? 1,
         round: count, entrants: count === 1 ? 60 : count === 2 ? 35 : 20, survivors: count === 1 ? 35 : count === 2 ? 20 : 1,
         score, outcome: complete ? passed ? 'selected' : 'cut' : 'advanced' }),
     }
     updated = withStory(updated, calendar, { kind: complete ? passed ? 'selection' : 'elimination' : 'selection',
       eyebrow: `${offer.clubName} academy trial`, title: complete ? passed ? 'TRIAL PASSED' : 'TRIAL ENDS HERE' : `TRIAL SESSION ${count}/3`,
-      body: complete ? passed ? 'The academy have invited you into scholarship negotiations.' : 'The academy chose other players, but your current pathway remains open.'
+      body: complete ? passed ? `${offers.length} academies have offered scholarship talks. Choose a club and an agent before negotiations.` : 'The academy chose other players, but your current pathway remains open.'
         : `Assessment ${count} is complete. Return next week for the next stage of the trial.`,
       detail: `Trial score ${score}/100${complete ? ' · required 62.' : ' · one assessment per week.'}`,
       ceremony: 'selection', metrics: [{ label: 'Trial score', value: score, suffix: '/100', tone: complete && !passed ? 'bad' : 'good' },
@@ -2006,7 +2012,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
 
   completeAcademyMove: (clubName, prestige) => {
     const { player, calendar } = getState()
-    if (!player || !academyEntryOpen(player, calendar) || player.pathway?.academyTrialStatus !== 'passed' || player.negotiation?.kind !== 'academy' || player.negotiation.stage !== 'complete' || player.negotiation.clubName !== clubName || player.pathway.academyTrialClubId !== player.negotiation.clubId) return
+    if (!player || !academyEntryOpen(player, calendar) || player.negotiation?.kind !== 'academy' || player.negotiation.stage !== 'complete' || player.negotiation.clubName !== clubName || !player.contractOffers.some(o => o.clubId === player.negotiation?.clubId && academyOfferCleared(player, o.id))) return
     // Academy offer accepted: Grassroots → Academy transition. Reset scouting state
     // (a fresh academy career starts its own reputation/watchers) and initialize the
     // academy league world, discarding the Grassroots one.

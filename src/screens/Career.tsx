@@ -6,6 +6,7 @@ import { playerOctoberFixture } from '../engine/octoberLeague'
 import { nationFixture, internationalTeamById } from '../engine/international'
 import { generateTeam } from '../engine/teams'
 import { canPlayYouthShowcase } from '../engine/academyRecruitment'
+import { academyOfferCleared } from '../engine/academyRecruitment'
 import { hasSundayContract } from '../engine/sundayContracts'
 import { matchAvailability, playerForMatch } from '../engine/selection'
 import { representativeEvidence } from '../engine/youthOpportunities'
@@ -503,7 +504,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
   if (mode.kind === 'negotiation') {
     return <NegotiationScreen player={player} onClose={() => setMode({ kind: 'hub' })} />
   }
-  if(mode.kind==='academy-trial')return <AcademyTrialScreen player={player} clubName={mode.clubName} clubId={player.contractOffers.find(o=>o.id===mode.offerId)?.clubId??''} onComplete={(points)=>{if(points===null){setMode({kind:'hub'});return}resolveAcademyTrial(mode.offerId,points);const fresh=useCareerStore.getState().player;if(fresh?.pathway?.academyTrialStatus!=='passed'){setMode({kind:'hub'});return}if(!fresh.agentId){setMode({kind:'agent'});return}beginNegotiation(mode.offerId);setMode({kind:'negotiation'})}}/>
+  if(mode.kind==='academy-trial')return <AcademyTrialScreen player={player} clubName={mode.clubName} clubId={player.contractOffers.find(o=>o.id===mode.offerId)?.clubId??''} onComplete={(points)=>{if(points!==null)resolveAcademyTrial(mode.offerId,points);const fresh=useCareerStore.getState().player;setMode({kind:fresh?.pathway?.academyTrialStatus==='passed'?'offers':'hub'})}}/>
 
   if (mode.kind === 'offers') {
     return (
@@ -516,7 +517,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
           // representation first, then talks that run over several weeks.
           // P33: both academy AND professional deals go through the pipeline.
           if (offer?.kind === 'academy' || offer?.kind === 'professional') {
-            if(offer.kind==='academy'&&!(player.pathway?.academyTrialStatus==='passed'&&player.pathway.academyTrialClubId===offer.clubId)){setMode({kind:'academy-trial',offerId:offer.id,clubName:offer.clubName});return}
+            if(offer.kind==='academy'&&!academyOfferCleared(player,offer.id)){setMode({kind:'academy-trial',offerId:offer.id,clubName:offer.clubName});return}
             if (!player.agentId) { setMode({ kind: 'agent' }); return }
             beginNegotiation(id)
             setMode({ kind: 'negotiation' })

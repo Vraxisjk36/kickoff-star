@@ -1,4 +1,6 @@
 import type { Player } from '../types/player'
+import { academyOfferCleared } from '../engine/academyRecruitment'
+import { getNation } from '../engine/nations'
 
 interface ContractOffersProps {
   player: Player
@@ -14,9 +16,9 @@ export default function ContractOffers({ player, onRespond, onClose }: ContractO
       <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 60% 40% at 50% 15%, rgba(212,175,55,0.1), transparent 60%), linear-gradient(180deg,#0a0a09,#050504)' }} />
       <div className="relative z-10 max-w-md mx-auto w-full">
         <div className="font-display tracking-widest text-[11px] text-ks-gold uppercase mb-2">contract offers</div>
-        <h1 className="font-display text-ks-ink text-2xl tracking-wide mb-2">A club wants you.</h1>
+        <h1 className="font-display text-ks-ink text-2xl tracking-wide mb-2">{offers.filter(offer => offer.kind === 'academy' && academyOfferCleared(player, offer.id)).length > 1 ? 'Choose your academy.' : 'A club wants you.'}</h1>
         <p className="text-ks-muted text-xs mb-6 leading-relaxed">
-          Sunday contracts commit you for the season. Renewals and moves are decided in the one-week window after the season ends. Academy invitations lead to a trial; professional offers lead to contract talks.
+          Sunday contracts commit you for the season. Academy invitations lead to a trial; a passed trial opens scholarship talks with several clubs. Professional offers lead to contract talks.
         </p>
 
         {offers.length === 0 ? (
@@ -36,6 +38,7 @@ export default function ContractOffers({ player, onRespond, onClose }: ContractO
                   </span>
                 </div>
                 {offer.kind === 'club' && <p className="text-sm text-ks-gold my-2">£{offer.weeklyWage}/week · season {offer.contractSeason}<span className="block text-[10px] text-ks-muted mt-1">{offer.divisionTier === 1 ? 'Highest match intensity · 25% more match energy' : offer.divisionTier === 2 ? 'Higher match intensity · 12% more match energy' : 'Division 3 · standard match energy'}</span></p>}
+                {offer.kind === 'academy' && offer.countryId && <p className="text-sm text-ks-gold my-2">{getNation(offer.countryId).name}{academyOfferCleared(player, offer.id) ? ' · scholarship talks available' : ' · trial invitation'}</p>}
                 {(() => {
                   const remaining = Math.max(0, offer.expiresInWeeks - ((player.totalWeeksElapsed ?? 0) - offer.weekOffered))
                   return (
@@ -49,7 +52,7 @@ export default function ContractOffers({ player, onRespond, onClose }: ContractO
                     onClick={() => onRespond(offer.id, true)}
                     className="flex-1 bg-ks-gold text-ks-black font-display tracking-wide rounded-lg py-2.5 text-xs"
                   >
-                    {offer.kind === 'professional' ? 'open talks' : offer.kind === 'club' ? offer.renewal ? 'renew for the season' : 'sign season contract' : 'attend academy trial'}
+                    {offer.kind === 'professional' ? 'open talks' : offer.kind === 'club' ? offer.renewal ? 'renew for the season' : 'sign season contract' : academyOfferCleared(player, offer.id) ? 'open scholarship talks' : 'attend academy trial'}
                   </button>
                   <button
                     onClick={() => onRespond(offer.id, false)}

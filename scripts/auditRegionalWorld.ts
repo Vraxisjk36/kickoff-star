@@ -5,6 +5,9 @@ import { REGIONS, regionsFor, regionalSchoolNames, regionalClubNames } from '../
 import { schoolsForRegion, getSchool } from '../src/engine/schools'
 import { grassrootsClubsForRegion } from '../src/screens/GrassrootsSelection'
 import { initSchoolLeagueWorld, initLeagueWorld } from '../src/engine/league'
+import { nationalRegionalField } from '../src/engine/regionalRepresentatives'
+import { initCupById } from '../src/engine/cup'
+import { initInternationalWorld, advanceInternationalStage } from '../src/engine/international'
 import { useCareerStore } from '../src/store/careerStore'
 import { OUTFIELD_ATTRIBUTES } from '../src/types/attributes'
 import type { Player } from '../src/types/player'
@@ -76,4 +79,37 @@ const english = regionsFor('eng').find(region => region.name === 'London')!
 const englishWorld = initSchoolLeagueWorld(schoolsForRegion(english.id)[0].name, english.id)
 const localWorld = initLeagueWorld(grassrootsClubsForRegion(regionId)[0].name, regionId)
 check(englishWorld.regionId !== localWorld.regionId && !Object.values(englishWorld.divisions).flatMap(d => d.teams).some(team => teams.some(other => other.name === team.name)), 'England and South Africa do not share local opponents')
+
+for (const nation of NATIONS) {
+  const home = regionsFor(nation.id)[0]
+  const field = nationalRegionalField(initSchoolLeagueWorld(schoolsForRegion(home.id)[0].name, home.id).divisions[1].teams[0], home.id, 1)
+  const all = [field.playerTeam, ...field.opponents]
+  check(all.length === 8 && new Set(all.map(team => team.name)).size === 8, `${nation.name} fields eight distinct regional XIs`)
+  check(all.every(team => team.countryId === nation.id && team.regionId && regionsFor(nation.id).some(region => region.id === team.regionId)), `${nation.name} championship stays within its country`)
+  const cup = initCupById('nationalChampionship', field.playerTeam, field.opponents)
+  check(cup.teams.every(team => team.countryId === nation.id) && cup.teams.some(team => team.id === field.playerTeam.id), `${nation.name} national draw uses regional representatives`)
+}
+const northCapeSchool = initSchoolLeagueWorld(school.name, regionId).divisions[1].teams[0]
+const seasonOne = nationalRegionalField(northCapeSchool, regionId, 1)
+const seasonTwo = nationalRegionalField(northCapeSchool, regionId, 2)
+check(new Set([...seasonOne.opponents, ...seasonTwo.opponents].map(team => team.regionId)).size === 8, 'South African national draws rotate through all other provinces')
+const rsaInternational = initInternationalWorld('South Africa', 'rsa')
+check(rsaInternational.qualifyingGroup.teams.length === 5 && new Set(rsaInternational.qualifyingGroup.teams.map(team => team.countryId)).size === 5,
+  'International qualifying is five distinct named countries')
+const finishedQualifiers = { ...rsaInternational, qualifyingGroup: { ...rsaInternational.qualifyingGroup,
+  fixtures: rsaInternational.qualifyingGroup.fixtures.map(fixture => ({ ...fixture, played: true,
+    homeGoals: fixture.homeTeamId === rsaInternational.nationTeamId ? 4 : 1,
+    awayGoals: fixture.awayTeamId === rsaInternational.nationTeamId ? 4 : 0 })) } }
+const finals = advanceInternationalStage(finishedQualifiers)
+check(finals.stage === 'finals' && finals.finalsTeams.length === 8 && new Set(finals.finalsTeams.map(team => team.countryId)).size === 8,
+  'International finals have eight distinct named nations')
+check(JSON.parse(JSON.stringify(finals)).finalsTeams.every((team: { countryId?: string }) => !!team.countryId), 'Named international finalists survive serialization')
+const nationalCup = initCupById('nationalChampionship', seasonOne.playerTeam, seasonOne.opponents)
+const beforeCup = JSON.stringify(nationalCup), beforeInternational = JSON.stringify(finals)
+const live = useCareerStore.getState()
+useCareerStore.setState({ cups: { ...live.cups, nationalChampionship: nationalCup }, international: finals })
+await useCareerStore.getState().saveCurrent()
+await useCareerStore.getState().loadFromSlot(1)
+check(JSON.stringify(useCareerStore.getState().cups.nationalChampionship) === beforeCup && JSON.stringify(useCareerStore.getState().international) === beforeInternational,
+  'In-progress regional and international brackets survive save and reload')
 console.log(`${checks} regional identity checks passed`)

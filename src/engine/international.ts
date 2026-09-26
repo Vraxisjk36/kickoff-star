@@ -4,6 +4,7 @@ import { rand } from './rng'
 // Reuses competitions.ts's knockout generator for the finals bracket rather
 // than a fourth copy of bracket math.
 import { generateTeam, type Team } from './teams'
+import { NATIONS, type Nation } from './nations'
 import { generateRoundRobin, generateKnockoutRound, knockoutWinners, type GenericFixture } from './competitions'
 
 export type CallUpTier = 'none' | 'friendly' | 'qualifiers' | 'finals'
@@ -72,13 +73,19 @@ function standing(teams: Team[]) {
   return teams.map((t) => ({ teamId: t.id, points: 0, goalsFor: 0, goalsAgainst: 0 }))
 }
 
+function nationTeam(nation: Nation): Team {
+  return { ...generateTeam(nation.strength), name: nation.name, short: nation.short, countryId: nation.id }
+}
+
 // Qualifying group of 5 nations (player's nation + 4 others), single
 // round-robin (4 rounds) — small enough to fit the season budget alongside
 // everything else, big enough to feel like a real qualifying campaign.
-export function initInternationalWorld(playerNationName: string): InternationalWorld {
-  const others: Team[] = []
-  while (others.length < 4) others.push(generateTeam(4 + Math.floor(rand() * 5)))
-  const nation = { ...generateTeam(6), name: playerNationName, short: playerNationName.slice(0, 3).toUpperCase() }
+export function initInternationalWorld(playerNationName: string, playerNationId?: string): InternationalWorld {
+  const selected = NATIONS.find(n => n.id === playerNationId || n.name === playerNationName)
+  const others: Team[] = selected
+    ? [...NATIONS.filter(n => n.id !== selected.id)].sort(() => rand() - 0.5).slice(0, 4).map(nationTeam)
+    : Array.from({ length: 4 }, () => generateTeam(4 + Math.floor(rand() * 5)))
+  const nation = selected ? nationTeam(selected) : { ...generateTeam(6), name: playerNationName, short: playerNationName.slice(0, 3).toUpperCase() }
   const teams = [nation, ...others]
   const fixtures = generateRoundRobin(teams.map((t) => t.id), 1)
   return {
@@ -144,11 +151,13 @@ export function advanceInternationalStage(world: InternationalWorld): Internatio
     if (!top2.includes(world.nationTeamId)) {
       return { ...world, stage: 'not-qualified', qualified: false }
     }
-    // Finals: an 8-nation knockout bracket, seeded with the qualified nation
-    // plus 7 other generated finalists.
-    const others: Team[] = []
-    while (others.length < 7) others.push(generateTeam(5 + Math.floor(rand() * 5)))
     const nation = world.qualifyingGroup.teams.find((t) => t.id === world.nationTeamId)!
+    const otherQualifier = world.qualifyingGroup.teams.find(t => t.id === top2.find(id => id !== nation.id))
+    const used = new Set([nation.countryId, otherQualifier?.countryId])
+    const finalists = [...NATIONS.filter(n => !used.has(n.id))].sort(() => rand() - 0.5).slice(0, 7 - (otherQualifier ? 1 : 0))
+    const others: Team[] = nation.countryId
+      ? [...(otherQualifier ? [otherQualifier] : []), ...finalists.map(nationTeam)]
+      : Array.from({ length: 7 }, () => generateTeam(5 + Math.floor(rand() * 5)))
     const round1 = generateKnockoutRound([nation.id, ...others.map((t) => t.id)], 1)
     return { ...world, stage: 'finals', qualified: true, finalsRounds: [round1], currentFinalsRound: 1, finalsTeams: [nation, ...others] }
   }

@@ -187,7 +187,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
         return
       }
       if (pending.title === 'Sunday league fixture' || pending.title === 'Sunday community fixture') {
-        if (!sundayWorld || player.pathway?.sundayStatus !== 'registered') { resolveCurrentEvent(); return }
+        if (!sundayWorld || player.pathway?.sundayStatus !== 'registered' || !hasSundayContract(player, calendar.currentWeek.seasonYear, sundayWorld)) { setMode({ kind: 'training' }); return }
         const division = sundayWorld.divisions[sundayWorld.playerDivision]
         const fixture = division.fixtures.find(f => !f.played && f.week <= calendar.currentWeek.weekNumber && (f.homeTeamId === sundayWorld.playerTeamId || f.awayTeamId === sundayWorld.playerTeamId))
         if (!fixture) { resolveCurrentEvent(); return }
@@ -212,6 +212,11 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
 
       const comp = activeCompetitionForWeek(calendar.currentWeek.weekNumber, player.careerClock.phase, player.grassrootsPath, Boolean(cups.schoolDevelopment))
       if (!comp) { resolveCurrentEvent(); return }
+      if (!isInAcademy && player.grassrootsPath === 'sunday' && (comp.competitionId === 'sundayLeague' || comp.competitionId === 'sundayCup')
+        && (!hasSundayContract(player, calendar.currentWeek.seasonYear, league) || player.pathway?.sundayStatus !== 'registered')) {
+        setMode({ kind: 'training' })
+        return
+      }
 
       if (comp.competitionId === 'sundayLeague' || comp.competitionId === 'schoolLeague') {
         const schoolSquad=player.pathway?.schoolSquad

@@ -38,6 +38,8 @@ export interface Player {
   schoolId: string | null
   grassrootsClubId?: string | null
   grassrootsClubName?: string | null
+  /** Training sessions completed after an opening-trial cut, before a new club approach. */
+  communityTrialSessions?: number
   trialWeekCompleted: 0 | 1 | 2 | 3
   /** The active grassroots route. Selected players represent their school;
       Sunday football is the fallback route after release/elimination. */

@@ -19,6 +19,7 @@ import { initMatch, advanceToKeyMoment } from '../src/engine/match'
 import { initAcademyWorld } from '../src/engine/academy'
 import { initCupById } from '../src/engine/cup'
 import { defaultClubSupport } from '../src/engine/youthFinances'
+import type { TrainingOutcome } from '../src/engine/training'
 
 let checks = 0
 function check(value: unknown, message: string) { assert.ok(value, message); checks++; console.log('✓', message) }
@@ -220,4 +221,47 @@ check(state.cups.academyLeagueCup === null && state.player?.pathway?.academyTria
   'Release clears academy fixtures and restores grassroots recruitment and support')
 useCareerStore.getState().ensureLeagueWorld()
 check(!!useCareerStore.getState().league, 'Released player can enter a playable grassroots league')
+
+const trialTraining: TrainingOutcome = { grade: 'B', attributeGains: {}, objectivesMet: 1, newMomentum: 1,
+  confidenceDelta: 0, intensity: 'normal', energyGrowthMod: 1, intensityGrowthMod: 1, trustDelta: 0 }
+for (const route of ['school', 'grassroots'] as const) {
+  await useCareerStore.getState().startNewCareer({ ...player(), careerClock: { ageYears: 14, phase: 'grassroots-trials', grassrootsSeason: 1 }, trialWeekCompleted: 0, squadRole: null }, calendar(1), 2)
+  if (route === 'grassroots') useCareerStore.getState().setYouthRoute('grassroots', { id: 'grassroots-north', name: 'Northside Athletic' })
+  else useCareerStore.getState().setYouthRoute('school')
+  useCareerStore.getState().completeTrials('released', 0.1)
+  useCareerStore.getState().ensureLeagueWorld()
+  state = useCareerStore.getState()
+  const fallbackClub = state.league!.divisions[state.league!.playerDivision].teams.find(t => t.id === state.league!.playerTeamId)!
+  check(state.player?.grassrootsPath === 'sunday' && state.player.pathway?.schoolSquad === 'released' && state.player.pathway.sundayStatus === 'training-invite', `${route} cut leaves the original squad`)
+  check(state.player?.contractOffers.filter(o => o.kind === 'club').length === 0 && state.player.communityTrialSessions === 0, `${route} cut has no instant contract`)
+  if (route === 'grassroots') check(fallbackClub.name !== 'Northside Athletic', 'Cut grassroots player trials at another club')
+  for (let session = 1; session <= 3; session++) {
+    useCareerStore.setState({ calendar: calendar(3 + session) })
+    useCareerStore.getState().applyTrainingOutcome(trialTraining, 5)
+    if (session === 2) {
+      await useCareerStore.getState().saveCurrent()
+      await useCareerStore.getState().loadFromSlot(2)
+      check(useCareerStore.getState().player?.communityTrialSessions === 2 && useCareerStore.getState().league?.playerTeamId === fallbackClub.id, `${route} trial progress survives reload`)
+    }
+  }
+  state = useCareerStore.getState()
+  const fallbackOffer = state.player!.contractOffers.find(o => o.kind === 'club')!
+  check(state.player?.pathway?.sundayStatus === 'squad-offer' && fallbackOffer?.clubName === fallbackClub.name, `${route} cut earns a real club offer after three sessions`)
+  if (route === 'grassroots') {
+    useCareerStore.setState({ player: { ...state.player!, totalWeeksElapsed: fallbackOffer.weekOffered + fallbackOffer.expiresInWeeks }, calendar: calendar(6) })
+    useCareerStore.getState().advanceToNextWeek()
+  } else useCareerStore.getState().respondToOffer(fallbackOffer.id, false)
+  check(useCareerStore.getState().player?.pathway?.sundayStatus === 'training-invite' && useCareerStore.getState().player?.communityTrialSessions === 0,
+    `${route} can retry after ${route === 'school' ? 'declining' : 'expiry'}`)
+  for (let session = 1; session <= 3; session++) {
+    useCareerStore.setState({ calendar: calendar(6 + session) })
+    useCareerStore.getState().applyTrainingOutcome(trialTraining, 5)
+  }
+  const retry = useCareerStore.getState().player!.contractOffers.find(o => o.kind === 'club')!
+  check(!!retry && retry.id !== fallbackOffer.id, `${route} earns another approach after retraining`)
+  useCareerStore.getState().respondToOffer(retry.id, true)
+  state = useCareerStore.getState()
+  check(state.player?.communityTrialSessions === undefined && state.player.pathway?.sundayStatus === 'registered' && state.player.sundayContract?.clubName === fallbackClub.name,
+    `${route} joins Sunday football only after signing`)
+}
 console.log(`\n${checks} Sunday football checks passed`)

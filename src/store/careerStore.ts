@@ -401,7 +401,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const school = player.schoolId ? getSchool(player.schoolId) : undefined
     const schoolName = school?.name ?? 'Your School'
     const isSchoolPath = player.grassrootsPath !== 'sunday'
-    const teamName = isSchoolPath ? schoolName : (player.grassrootsClubName ?? generateTeam(2).name)
+    const teamName = isSchoolPath ? schoolName : (player.communityTrialSessions !== undefined ? generateTeam(2).name : player.grassrootsClubName ?? generateTeam(2).name)
     const squad = player.squad ?? generateSquad(2)
     const world = isSchoolPath ? initSchoolLeagueWorld(teamName) : initLeagueWorld(teamName)
     const playerTeam = world.divisions[world.playerDivision].teams.find((t) => t.id === world.playerTeamId)!
@@ -416,7 +416,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       nationalChampionship: cups.nationalChampionship ?? null,
       sundayCup: !isSchoolPath ? (cups.sundayCup ?? initCupById('sundayCup', playerTeam, allLeagueTeams)) : null,
     }
-    const readyPlayer = !isSchoolPath && calendar ? openSundayContractWindow({ ...player, squad }, world, calendar.currentWeek.seasonYear, true) : { ...player, squad }
+    const readyPlayer = !isSchoolPath && calendar && player.communityTrialSessions === undefined ? openSundayContractWindow({ ...player, squad }, world, calendar.currentWeek.seasonYear, true) : { ...player, squad }
     setState({ league: world, cups: newCups, player: readyPlayer })
     void getState().saveCurrent()
   },
@@ -1207,6 +1207,13 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
           : player.careerClock.grassrootsSeason,
       },
     }
+    if ((player.communityTrialSessions !== undefined || player.grassrootsPath === 'sunday')
+      && (player.contractOffers ?? []).some(o => o.kind === 'club')
+      && !hasSundayContract(player, calendar.currentWeek.seasonYear, league)
+      && !survivingOffers.some(o => o.kind === 'club')) {
+      updatedPlayer = { ...updatedPlayer, communityTrialSessions: 0, lastSundayOfferSeason: undefined,
+        pathway: { ...(player.pathway ?? initYouthPathway(player)), sundayStatus: 'training-invite' } }
+    }
     if (updatedPlayer.octoberLeague?.season === calendar.currentWeek.seasonYear && completedWeekNumber >= 36 && completedWeekNumber <= 39) {
       updatedPlayer = { ...updatedPlayer, octoberLeague: simulateOctoberWeek(updatedPlayer.octoberLeague, completedWeekNumber) }
     }
@@ -1270,7 +1277,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const weeksSinceSet = (updatedPlayer.totalWeeksElapsed ?? 0) - (updatedPlayer.squadRoleSetWeek ?? 0)
     const verdict = decideSelection(updatedPlayer, updatedPlayer.squad)
     if (!matchAvailability(updatedPlayer).canStart) lastSelectionNote = verdict.reason
-    if (verdict.changed && weeksSinceSet >= SETTLE_WEEKS && matchAvailability(updatedPlayer).canStart) {
+    if (verdict.changed && weeksSinceSet >= SETTLE_WEEKS && matchAvailability(updatedPlayer).canStart && !(updatedPlayer.grassrootsPath === 'sunday' && updatedPlayer.pathway?.sundayStatus !== 'registered')) {
       updatedPlayer = { ...updatedPlayer, squadRole:verdict.role, squadRoleSetWeek:updatedPlayer.totalWeeksElapsed??0, pathway:updatedPlayer.pathway?{...updatedPlayer.pathway,schoolSquad:verdict.role==='reserves'?'reserve':updatedPlayer.grassrootsPath==='sunday'?'released':'first'}:updatedPlayer.pathway }
       lastSelectionNote = verdict.reason
       updatedPlayer = withStory(updatedPlayer, result.calendar, {
@@ -1480,7 +1487,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const weeksSinceLastTraining = currentWeek - (player.lastTrainingWeek ?? currentWeek)
     const trainingStreak = weeksSinceLastTraining > 1 ? 1 : (player.trainingStreak ?? 0) + 1
 
-    const updatedPlayer: Player = {
+    let updatedPlayer: Player = {
       ...player,
       trainingStreak,
       lastTrainingWeek: currentWeek,
@@ -1500,6 +1507,22 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       recentInjuryCount: injury && injury.weeksOut > 0
         ? (player.recentInjuryCount ?? 0) + 1
         : (player.recentInjuryCount ?? 0),
+    }
+
+    if (player.communityTrialSessions !== undefined && player.pathway?.sundayStatus === 'training-invite') {
+      const sessions = player.communityTrialSessions + 1
+      updatedPlayer = { ...updatedPlayer, communityTrialSessions: sessions }
+      const world = getState().league
+      if (sessions >= 3 && world) {
+        updatedPlayer = openSundayContractWindow(updatedPlayer, world, calendar.currentWeek.seasonYear, true)
+        if (updatedPlayer.contractOffers.some(o => o.kind === 'club')) {
+          updatedPlayer = withStory({ ...updatedPlayer, pathway: { ...updatedPlayer.pathway!, sundayStatus: 'squad-offer' } }, calendar, {
+            kind: 'invitation', eyebrow: 'Community trial', title: 'A NEW CLUB WANTS YOU',
+            body: `${world.divisions[world.playerDivision].teams.find(t => t.id === world.playerTeamId)?.name ?? 'A community club'} have offered you a Sunday season contract after three training sessions.`,
+            detail: 'Review the offer and sign to play league and cup matches. The contract lasts for this season.',
+          })
+        }
+      }
     }
 
     const event = nextUnresolvedEvent(calendar)
@@ -1546,8 +1569,13 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       ...player,
       attributes: { ...player.attributes, values } as Player['attributes'],
       squadRole: role,
-      grassrootsPath: player.youthRoute === 'grassroots' ? 'sunday' : 'school',
-      pathway: player.youthRoute === 'grassroots' ? { ...(player.pathway??initYouthPathway(player)), sundayInterest:100, sundayStatus:role==='released'?'undiscovered':'registered' } : { ...(player.pathway??initYouthPathway(player)), schoolSquad:role==='released'?'released':role==='reserves'?(performance<.5?'development':'reserve'):'first', sundayInterest:0, sundayStatus:'undiscovered' },
+      grassrootsPath: role === 'released' || player.youthRoute === 'grassroots' ? 'sunday' : 'school',
+      communityTrialSessions: role === 'released' ? 0 : undefined,
+      pathway: role === 'released'
+        ? { ...(player.pathway??initYouthPathway(player)), schoolSquad: 'released', sundayInterest:45, sundayStatus: 'training-invite' }
+        : player.youthRoute === 'grassroots'
+          ? { ...(player.pathway??initYouthPathway(player)), sundayInterest:100, sundayStatus:'registered' }
+          : { ...(player.pathway??initYouthPathway(player)), schoolSquad:role==='reserves'?(performance<.5?'development':'reserve'):'first', sundayInterest:0, sundayStatus:'undiscovered' },
       squadRoleSetWeek: player.totalWeeksElapsed ?? 0,
       trialWeekCompleted: 3,
       careerClock: { ...player.careerClock, phase: 'grassroots-season' },
@@ -1562,10 +1590,10 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       title: role === 'released' ? 'YOU HAVE BEEN CUT' : role === 'starting-xi' ? 'STARTING XI' : role === 'bench' ? 'YOU MADE THE SQUAD' : 'DEVELOPMENT SQUAD',
       body: player.youthRoute === 'grassroots'
         ? role === 'released'
-          ? `${player.grassrootsClubName ?? 'The club'} did not offer you a squad place. Sunday football is still open, where strong performances can reopen the academy pathway.`
+          ? `${player.grassrootsClubName ?? 'The club'} did not offer you a squad place. Train with another community club three times to earn a fresh Sunday contract offer.`
           : `${player.grassrootsClubName ?? 'The club'} selected you for the ${role === 'starting-xi' ? 'starting eleven' : role}. Your next fixtures are in the Sunday League and Sunday Cup.`
         : role === 'released'
-          ? 'The school coaches made their decision. Your next route is Sunday football, where strong performances can reopen the academy pathway.'
+          ? 'The school coaches cut you. Train with a community club three times to earn a Sunday contract offer and keep your academy route alive.'
           : `The coaches selected you for the ${role === 'starting-xi' ? 'starting eleven' : role}. You will represent your school in the local league and Regional Schools Cup.`,
       detail: `Trial score: ${Math.round(performance * 100)}. The selection was earned from your performance, ability, fitness and coach trust.`,
     })
@@ -1839,7 +1867,12 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const remainingOffers = (player.contractOffers ?? []).filter((o) => o.id !== offerId)
 
     if (!accept) {
-      setState({ player: { ...player, contractOffers: remainingOffers } })
+      const retry = offer.kind === 'club' && player.grassrootsPath === 'sunday'
+        && !hasSundayContract(player, calendar.currentWeek.seasonYear, getState().league)
+        && !remainingOffers.some(o => o.kind === 'club')
+      setState({ player: { ...player, contractOffers: remainingOffers,
+        ...(retry ? { communityTrialSessions: 0, lastSundayOfferSeason: undefined,
+          pathway: { ...(player.pathway ?? initYouthPathway(player)), sundayStatus: 'training-invite' as const } } : {}) } })
       void getState().saveCurrent()
       return
     }
@@ -1868,6 +1901,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
         contractOffers: remainingOffers.filter((o) => o.kind !== 'club'),
         sundayContract: { clubId: target.id, clubName: target.name, division: offer.divisionTier as 1 | 2 | 3, season: calendar.currentWeek.seasonYear, weeklyWage: offer.weeklyWage },
         sundayContractsVersion: 1,
+        communityTrialSessions: undefined,
         pathway: { ...(player.pathway ?? initYouthPathway(player)), sundayStatus: 'registered' },
         squad: sideRegistration ? player.squad : stayingAtClub ? player.squad : generateSquad(target.prestige),
         sundayLeague: sideRegistration ? movedLeague : player.sundayLeague,

@@ -13,10 +13,14 @@ export function representativeEvidence(player: Player, level: 'regional' | 'nati
     ? ['schoolLeague', 'schoolReserveLeague', 'schoolCup'] : ['nationalChampionship'])
   const minimum = level === 'regional' ? 10 : 3
   const requiredRating = level === 'regional' ? 6.7 : 7
-  const eligible = record.appearances >= minimum && record.average >= requiredRating
+  const finalist = level === 'national' && player.competitionCareer?.qualifications.some(q =>
+    q.competitionId === 'nationalChampionship' && q.qualifiedFor === 'international' &&
+    q.season === player.competitionCareer?.current.nationalChampionship?.season)
+  const eligible = record.appearances >= minimum && (level === 'national' && player.regionId ? finalist : record.average >= requiredRating)
     && (level === 'regional' || player.pathway?.regionalSelection === 'selected')
   return { ...record, eligible, reason: eligible ? 'Sustained performances meet the selection standard.'
-    : `Requires ${minimum} ${level === 'regional' ? 'school league/cup' : 'National Schools Championship'} appearances averaging ${requiredRating.toFixed(1)}.` }
+    : level === 'national' && player.regionId ? 'Your regional XI must reach the national final, and you need three championship appearances.'
+      : `Requires ${minimum} ${level === 'regional' ? 'school league/cup' : 'National Schools Championship'} appearances averaging ${requiredRating.toFixed(1)}.` }
 }
 
 export function updateSundayRecruitment(player: Player, rating: number): Player {

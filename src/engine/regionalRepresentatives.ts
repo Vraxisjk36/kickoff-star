@@ -1,8 +1,8 @@
 import { generateTeam, type Team } from './teams'
 import { getRegion, regionsFor } from './regions'
 
-/** The current eight-team National Championship uses representatives from
- * the player's country. Countries with fewer than eight game regions field
+/** The sixteen-team National Championship uses representatives from
+ * the player's country. Countries with fewer than sixteen game regions field
  * additional district squads, each with its own identity and home region. */
 export function nationalRegionalField(schoolTeam: Team, regionId: string | null | undefined, season: number): { playerTeam: Team; opponents: Team[] } {
   const home = getRegion(regionId)
@@ -13,8 +13,8 @@ export function nationalRegionalField(schoolTeam: Team, regionId: string | null 
   const away = regionsFor(home.countryId).filter(region => region.id !== home.id)
   const offset = (season - 1) % away.length
   const ordered = [...away.slice(offset), ...away.slice(0, offset)]
-  const labels = ['XI', 'Schools XI', 'District XI', 'Development XI']
-  const opponents = Array.from({ length: 7 }, (_, i) => {
+  const labels = ['XI', 'Schools XI', 'District XI', 'Development XI', 'Youth XI', 'County XI', 'Academy XI', 'Community XI']
+  const opponents = Array.from({ length: 15 }, (_, i) => {
     const region = ordered[i % ordered.length]
     const label = labels[Math.floor(i / ordered.length)]
     const name = `${region.name} ${label}`

@@ -6,8 +6,10 @@ import { schoolsForRegion, getSchool } from '../src/engine/schools'
 import { grassrootsClubsForRegion } from '../src/screens/GrassrootsSelection'
 import { initSchoolLeagueWorld, initLeagueWorld } from '../src/engine/league'
 import { nationalRegionalField } from '../src/engine/regionalRepresentatives'
-import { initCupById } from '../src/engine/cup'
+import { initCupById, advanceCupStage, batchSimCupStage } from '../src/engine/cup'
 import { initInternationalWorld, advanceInternationalStage } from '../src/engine/international'
+import { addQualification, initCompetitionCareer } from '../src/engine/competitionCareer'
+import { representativeEvidence } from '../src/engine/youthOpportunities'
 import { useCareerStore } from '../src/store/careerStore'
 import { OUTFIELD_ATTRIBUTES } from '../src/types/attributes'
 import type { Player } from '../src/types/player'
@@ -84,10 +86,13 @@ for (const nation of NATIONS) {
   const home = regionsFor(nation.id)[0]
   const field = nationalRegionalField(initSchoolLeagueWorld(schoolsForRegion(home.id)[0].name, home.id).divisions[1].teams[0], home.id, 1)
   const all = [field.playerTeam, ...field.opponents]
-  check(all.length === 8 && new Set(all.map(team => team.name)).size === 8, `${nation.name} fields eight distinct regional XIs`)
+  check(all.length === 16 && new Set(all.map(team => team.name)).size === 16, `${nation.name} fields sixteen distinct regional XIs`)
   check(all.every(team => team.countryId === nation.id && team.regionId && regionsFor(nation.id).some(region => region.id === team.regionId)), `${nation.name} championship stays within its country`)
   const cup = initCupById('nationalChampionship', field.playerTeam, field.opponents)
-  check(cup.teams.every(team => team.countryId === nation.id) && cup.teams.some(team => team.id === field.playerTeam.id), `${nation.name} national draw uses regional representatives`)
+  check(cup.stage === 'knockout' && cup.knockoutRounds[0].length === 8 && cup.teams.every(team => team.countryId === nation.id) && cup.teams.some(team => team.id === field.playerTeam.id), `${nation.name} Round of 16 uses regional representatives`)
+  let finished = cup
+  for (let round = 1; round <= 4; round++) finished = advanceCupStage(batchSimCupStage(finished, round, true))
+  check(finished.stage === 'complete' && finished.knockoutRounds.map(fixtures => fixtures.length).join(',') === '8,4,2,1', `${nation.name} completes four knockout rounds`)
 }
 const northCapeSchool = initSchoolLeagueWorld(school.name, regionId).divisions[1].teams[0]
 const seasonOne = nationalRegionalField(northCapeSchool, regionId, 1)
@@ -105,6 +110,17 @@ check(finals.stage === 'finals' && finals.finalsTeams.length === 8 && new Set(fi
   'International finals have eight distinct named nations')
 check(JSON.parse(JSON.stringify(finals)).finalsTeams.every((team: { countryId?: string }) => !!team.countryId), 'Named international finalists survive serialization')
 const nationalCup = initCupById('nationalChampionship', seasonOne.playerTeam, seasonOne.opponents)
+const finalistRecord = { competitionId: 'nationalChampionship', season: 1, appearances: 3, starts: 3, minutes: 270,
+  goals: 0, assists: 0, cleanSheets: 0, ratingTotal: 18, averageRating: 6, yellowCards: 0, redCards: 0, playerOfMatchAwards: 0 }
+const finalist = { ...newPlayer(regionId), pathway: { regionalSelection: 'selected' },
+  competitionCareer: { ...initCompetitionCareer(), current: { nationalChampionship: finalistRecord } } } as Player
+check(!representativeEvidence(finalist, 'national').eligible, 'Non-finalist cannot reach international selection on appearances alone')
+for (const position of [1, 2]) {
+  const qualified = { ...finalist, competitionCareer: addQualification(finalist.competitionCareer, {
+    competitionId: 'nationalChampionship', qualifiedFor: 'international', season: 1, reason: 'cup-result', position,
+  }) }
+  check(representativeEvidence(qualified, 'national').eligible, `National finalist in place ${position} reaches selection`)
+}
 const beforeCup = JSON.stringify(nationalCup), beforeInternational = JSON.stringify(finals)
 const live = useCareerStore.getState()
 useCareerStore.setState({ cups: { ...live.cups, nationalChampionship: nationalCup }, international: finals })

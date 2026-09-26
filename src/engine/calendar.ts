@@ -46,7 +46,7 @@ export const COMPETITION_SPECS: CompetitionRoundSpec[] = [
   { id: 'schoolLeague', rounds: 18 },
   { id: 'schoolCup', rounds: 8 },
   { id: 'schoolDevelopment', rounds: 5 },
-  { id: 'nationalChampionship', rounds: 5 },
+  { id: 'nationalChampionship', rounds: 5 }, // fifth slot keeps in-progress legacy group draws playable
   { id: 'sundayCup', rounds: 4 }, // pure knockout, field 16 -> 4 rounds — grassroots only
   // Phase 21: Academy gets the same cup depth as grassroots, per the locked
   // product strategy ("same depth applied to academy competitions"). These
@@ -66,7 +66,7 @@ export const SCHOOL_SEASON_SCHEDULE: Record<string, number[]> = {
   schoolLeague: Array.from({ length: 18 }, (_, i) => i + 6), // W6-W23
   schoolCup: Array.from({ length: 8 }, (_, i) => i + 24),   // W24-W31
   schoolDevelopment: Array.from({ length: 5 }, (_, i) => i + 24), // W24-W28
-  nationalChampionship: Array.from({ length: 5 }, (_, i) => i + 32), // W32-W36
+  nationalChampionship: Array.from({ length: 5 }, (_, i) => i + 32), // new knockout W32-W35; W36 supports legacy draws
   youthShowcase: [37],
 }
 export const SUNDAY_SEASON_SCHEDULE: Record<string, number[]> = {

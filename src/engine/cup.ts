@@ -333,7 +333,7 @@ export function playerCupFixture(world: CupWorld): GenericFixture | null {
 export const CUP_CONFIGS: Record<string, Omit<CupConfig, 'competitionId' | 'label'> & { label: string }> = {
   schoolCup: { label: 'Regional Schools Cup', groupSize: 6, fieldSize: 24, prestigeRange: [2, 6], qualifiersPerGroup: 2 },
   schoolDevelopment: { label: 'School Development Competition', groupSize: 6, fieldSize: 6, prestigeRange: [2, 5], qualifiersPerGroup: 1 },
-  nationalChampionship: { label: 'National Schools Championship', groupSize: 4, fieldSize: 8, prestigeRange: [5, 8], qualifiersPerGroup: 2 },
+  nationalChampionship: { label: 'National Schools Championship', groupSize: 0, fieldSize: 16, prestigeRange: [5, 8] },
   sundayCup: { label: 'Sunday Cup', groupSize: 0, fieldSize: 16, prestigeRange: [2, 6] },
   academyLeagueCup: { label: 'U18 Premier Cup', groupSize: 4, fieldSize: 16, prestigeRange: [5, 8] },
   academyKnockoutCup: { label: 'Youth Cup', groupSize: 0, fieldSize: 16, prestigeRange: [5, 8] },

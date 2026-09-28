@@ -173,7 +173,7 @@ export default function TrialsScreen({ player, school, onComplete }: TrialsScree
         </div>
 
         <button onClick={startWeek} className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-3.5 text-sm shadow-[0_0_25px_rgba(212,175,55,0.25)]">
-          {weekCfg.isMatch ? 'walk out →' : `begin week ${weekCfg.week}`}
+          {weekCfg.isMatch ? 'walk out →' : `begin trial session ${weekCfg.week}`}
         </button>
       </Shell>
     )
@@ -229,7 +229,7 @@ export default function TrialsScreen({ player, school, onComplete }: TrialsScree
     const isLast = weekIdx >= TRIAL_WEEKS.length - 1
     return (
       <Shell>
-        <div className="font-display tracking-widest text-[11px] text-ks-muted uppercase mb-2">week {weekCfg.week} complete</div>
+        <div className="font-display tracking-widest text-[11px] text-ks-muted uppercase mb-2">trial session {weekCfg.week} complete</div>
         <h1 className={`font-display text-2xl tracking-wide mb-4 ${standing.ahead ? 'text-green-500' : 'text-orange-400'}`}>
           {standing.text}
         </h1>

@@ -6,6 +6,7 @@ import { playerOctoberFixture } from '../engine/octoberLeague'
 import { nationFixture, internationalTeamById } from '../engine/international'
 import { generateTeam } from '../engine/teams'
 import { friendlyOpponent } from '../engine/friendlies'
+import { competitionOpening } from '../engine/gazette'
 import { getRegion } from '../engine/regions'
 import { canPlayYouthShowcase } from '../engine/academyRecruitment'
 import { academyOfferCleared } from '../engine/academyRecruitment'
@@ -95,6 +96,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
   const ensureLeagueWorld = useCareerStore((s) => s.ensureLeagueWorld)
 
   const [mode, setMode] = useState<Mode>({ kind: 'hub' })
+  const [seenIntroductions, setSeenIntroductions] = useState<Record<string, boolean>>({})
 
   // Background music plays everywhere except actual match/training gameplay —
   // it would compete with the crowd/whistle sfx and the training pacing beats.
@@ -356,6 +358,22 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
     return <div className="min-h-screen bg-ks-black flex items-center justify-center px-5"><div className="max-w-sm w-full rounded-2xl border border-ks-border p-6 text-center"><h1 className="font-display text-ks-gold text-2xl">RESTED FOR THIS MATCH</h1><p className="text-ks-ink mt-3">Your energy is {Math.round(player.fitness.stamina)}%. Below 30%, you cannot play.</p><p className="text-ks-muted text-sm mt-2">Your team will play without you. Recover to at least 50% to be considered for a starting place.</p><button className="w-full bg-ks-gold text-ks-black rounded-xl py-3 mt-5" onClick={() => { resolveCurrentEvent(); setMode({ kind: 'hub' }) }}>sit out this match →</button></div></div>
   }
   if (mode.kind === 'matchday') {
+    const opening = competitionOpening(player, calendar.currentWeek.weekNumber, calendar.currentWeek.seasonYear,
+      !isInAcademy && league?.kind === 'school' ? league.divisions[league.playerDivision] : null)
+    const openingKey = `${player.id}:${calendar.currentWeek.seasonYear}:${mode.competitionId}`
+    if (opening && !seenIntroductions[openingKey] && !window.localStorage.getItem(`competition-seen:${openingKey}`) &&
+      (mode.competitionId === 'schoolFriendlies' || mode.competitionId === 'schoolLeague' || mode.competitionId === 'schoolCup' ||
+        mode.competitionId === 'nationalChampionship' || mode.competitionId === 'international' || isInAcademy && mode.competitionId === 'sundayLeague' || mode.competitionId === 'academyChampionsCup')) {
+      return <div className="min-h-screen bg-[#0b0a08] px-5 py-10 flex items-center justify-center"><article className="max-w-md w-full border-t-4 border-b border-ks-gold py-7">
+        <p className="font-display text-xs tracking-[.2em] text-ks-gold">THE GAZETTE · COMPETITION GUIDE</p>
+        <h1 className="font-display text-3xl leading-tight mt-4 text-white">{opening.headline}</h1>
+        {opening.detail?.split('\n\n').map((paragraph, index) => <p key={index} className="text-sm leading-6 text-[#d2c9b8] mt-5">{paragraph}</p>)}
+        <button className="w-full bg-ks-gold text-ks-black rounded-xl py-4 mt-8 font-display" onClick={() => {
+          window.localStorage.setItem(`competition-seen:${openingKey}`, '1')
+          setSeenIntroductions(previous => ({ ...previous, [openingKey]: true }))
+        }}>CONTINUE TO MATCHDAY →</button>
+      </article></div>
+    }
     return (
       <MatchDayScreen
         player={matchdayPlayer}

@@ -13,7 +13,7 @@
     "audit:progression": "node --import tsx scripts/auditProgression.ts",
     "audit:v4-ui": "node --import tsx scripts/auditV4Integration.ts",
     "preview": "vite preview",
-    "audit:academy-rhythm": "node --import tsx scripts/auditAcademyRhythm.ts && node --import tsx scripts/auditWorldSchools.ts && node --import tsx scripts/auditContinentalWorld.ts && node --import tsx scripts/auditGazetteWorld.ts"
+    "audit:academy-rhythm": "node --import tsx scripts/auditAcademyRhythm.ts && node --import tsx scripts/auditWorldSchools.ts && node --import tsx scripts/auditContinentalWorld.ts && node --import tsx scripts/auditGazetteWorld.ts && node --import tsx scripts/auditGazetteUpgrade.ts"
   },
   "dependencies": {
     "@capacitor-community/admob": "^8.0.0",

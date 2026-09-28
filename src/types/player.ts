@@ -186,6 +186,9 @@ export interface Player {
   // Current injury (null if fit). weeksRemaining counts down each week advance.
   injury: { severity: string; weeksRemaining: number; description: string } | null
   recentInjuryCount: number // rolling count feeding injury-risk history factor
+  /** Confirmed champions recorded from completed fixtures, used by future Gazette previews. */
+  gazetteHonours?: { season: number; competitionId: string; winner: string }[]
+  gazetteInterviewSeason?: number
   // Phase 22a: the player's own Tier-1 NPC squad — 15 named teammates who can
   // individually score/assist in match sim. Optional so old saves (and any
   // code path before a squad exists yet, e.g. mid-trials) keep working —

@@ -6,7 +6,7 @@ import { spendXp, positionCostMultiplier } from '../engine/xp'
 import type { CalendarState } from '../types/calendar'
 import type { DecisionResult } from '../types/decision'
 import { readSave, writeSave, EMPTY_CUPS, SAVE_SCHEMA_VERSION, type SaveSlotId, type CupWorlds } from '../engine/save'
-import { nextUnresolvedEvent, markResolved, advanceWeek, alignMatchDays, alignInternationalDuty, alignContinentalQualifier, alignSchoolPostseason, alignOctoberDevelopment, activeCompetitionForWeek, internationalRoundForWeek, scheduleFor, SEASON_WEEKS } from '../engine/calendar'
+import { nextUnresolvedEvent, markResolved, advanceWeek, generateWeek, alignMatchDays, alignInternationalDuty, alignContinentalQualifier, alignSchoolPostseason, alignOctoberDevelopment, activeCompetitionForWeek, internationalRoundForWeek, scheduleFor, SEASON_WEEKS } from '../engine/calendar'
 import { initContinentalQualifier, advanceQualifierWeek, recordQualifierPlayerResult, CONTINENTAL_QUALIFIER_WEEKS } from '../engine/continentalQualifier'
 import { initCupById, batchSimCupStage, advanceCupStage, recordCupPlayerResult, playerCupFixture, syncCupTeamIdentities, captureCupMatches } from '../engine/cup'
 import { initInternationalWorld, formQualifiesForSelection, batchSimQualifyingRound, batchSimFinalsRound, advanceInternationalStage, recordNationResult, internationalTeamById, nationFixture, captureInternationalMatches, type InternationalWorld } from '../engine/international'
@@ -95,6 +95,7 @@ interface CareerStore {
   chooseWeeklyFocus: (kind: 'recovery' | 'film' | 'shift') => void
   resolveCurrentEvent: () => void // for events with no decision (rest days)
   advanceToNextWeek: () => void
+  publishGazetteInterview: (answers: string[]) => void
   applyTrainingOutcome: (outcome: TrainingOutcome, energySpent: number, injury?: { severity: string; weeksOut: number; description: string } | null) => void
   applyRestChoice: (choice: RestChoice) => void
   noteLifeEvent: (key: string) => void
@@ -335,7 +336,9 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     if (!save) return
     let player = migrateAcademyRecruitment(migratePlayer(save.player), save.calendar)
     if (player.squadRoleSetAppearances === undefined) player = { ...player, squadRoleSetAppearances: player.career?.appearances ?? 0 }
-    const loadedCalendar = alignOctoberDevelopment(alignMatchDays(save.calendar, player.careerClock.phase, player.grassrootsPath ?? 'school', player.pathway?.sundayStatus === 'registered'), player.careerClock.ageYears, player.careerClock.phase, player.grassrootsPath ?? 'school', player.pathway?.showcaseInvited === true)
+    const originalCalendar = player.trialWeekCompleted >= 3 && save.calendar.currentWeek.seasonYear === 1 && save.calendar.currentWeek.weekNumber < 4
+      ? { ...save.calendar, currentWeek: generateWeek(4, 1, 'grassroots-season', false, 'school') } : save.calendar
+    const loadedCalendar = alignOctoberDevelopment(alignMatchDays(originalCalendar, player.careerClock.phase, player.grassrootsPath ?? 'school', player.pathway?.sundayStatus === 'registered'), player.careerClock.ageYears, player.careerClock.phase, player.grassrootsPath ?? 'school', player.pathway?.showcaseInvited === true)
     let league = save.league ?? null
     // Preserve legacy Sunday match and financial history, but move the live
     // career onto the school pathway. Never rewrite previously played results.
@@ -392,6 +395,11 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
         body: seasonObjectivesBrief(objectives), detail: 'The old short deadlines are gone. Missing one of these season goals never automatically benches you.',
       })
     }
+    // Older saves may have an empty world tracker even after league fixtures.
+    // Catch it up from the saved calendar without replaying completed rounds.
+    const homeCountryId = getNation(player.nationality).id
+    player = { ...player, worldLeagues: advanceWorldLeagues(player.worldLeagues, loadedCalendar.currentWeek.seasonYear,
+      Math.max(0, loadedCalendar.currentWeek.weekNumber - 1), homeCountryId, !!league && league.kind === 'school' && player.careerClock.phase !== 'academy') }
     setState({ player, calendar: alignContinentalQualifier(alignSchoolPostseason(alignMatchDays(
       alignInternationalDuty(loadedCalendar, internationalDutyForWeek(save.international ?? null, player, loadedCalendar.currentWeek.weekNumber)),
       player.careerClock.phase, 'school', false), player.careerClock.phase, 'school', Boolean(cups.schoolDevelopment)),
@@ -970,6 +978,26 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     void getState().saveCurrent()
   },
 
+  publishGazetteInterview: (answers) => {
+    const { player, calendar } = getState()
+    if (!player || !calendar || answers.length !== 6 || player.gazetteInterviewSeason === calendar.currentWeek.seasonYear) return
+    const eligible = player.seasonGoals >= 5 || player.seasonAssists >= 5 ||
+      (player.matchRatings ?? []).slice(-3).length === 3 && (player.matchRatings ?? []).slice(-3).every(rating => rating >= 7.5)
+    if (!eligible) return
+    const issues = [...(player.gazetteIssues ?? [])]
+    const latest = issues.at(-1)
+    if (!latest) return
+    const article: import('../engine/gazette').GazetteArticle = {
+      kind: 'spotlight', headline: `PLAYER TO WATCH: ${player.name.toUpperCase()}`,
+      byline: 'The Gazette · player interview', quote: answers[0],
+      body: `${player.name} has ${player.seasonGoals} goals and ${player.seasonAssists} assists this season. In a conversation with The Gazette, the ${player.position} spoke about their form, teammates, and what comes next.`,
+      detail: `${player.name} is one of the names attracting attention this season. Their recorded return stands at ${player.seasonGoals} goals and ${player.seasonAssists} assists. We asked six questions after training.\n\nOn the year so far: “${answers[0]}”\n\nOn the work behind the performances: “${answers[1]}”\n\nOn the team around them: “${answers[2]}”\n\nOn handling pressure: “${answers[3]}”\n\nOn the next competition: “${answers[4]}”\n\nOn their long-term ambition: “${answers[5]}”\n\nThe next matches will decide how far this run can go. The Gazette will keep following the recorded results.`,
+    }
+    issues[issues.length - 1] = { ...latest, articles: [article, ...latest.articles], masthead: article.headline }
+    setState({ player: { ...player, gazetteIssues: issues, gazetteInterviewSeason: calendar.currentWeek.seasonYear } })
+    void getState().saveCurrent()
+  },
+
   advanceToNextWeek: () => {
     const { player, calendar, league, academyLeague, cups, international } = getState()
     if (!player || !calendar) return
@@ -1140,6 +1168,27 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const completedWorldMatches = result.seasonEnded
       ? [...Object.values(updatedCups).flatMap(cup => cup?.matchRecords ?? []), ...(updatedInternational?.matchRecords ?? [])]
       : []
+    const seasonHonours: NonNullable<Player['gazetteHonours']> = []
+    if (result.seasonEnded) {
+      const division = isInAcademy ? updatedAcademyLeague?.divisions[updatedAcademyLeague.playerDivision]
+        : updatedLeague?.kind === 'school' ? updatedLeague.divisions[updatedLeague.playerDivision] : undefined
+      const winner = division && sortStandings(division.standings)[0]
+      if (winner && winner.played >= (isInAcademy ? 20 : 18)) seasonHonours.push({ season: calendar.currentWeek.seasonYear,
+        competitionId: isInAcademy ? 'academyLeague' : 'schoolLeague', winner: winner.teamName })
+      for (const cup of Object.values(updatedCups) as Array<import('../engine/cup').CupWorld | null>) {
+        if (!cup || cup.stage !== 'complete') continue
+        const final = cup.knockoutRounds.find(round => round.length === 1)?.[0]
+        const winningId = final?.played && (final.winnerTeamId ?? (final.homeGoals! > final.awayGoals! ? final.homeTeamId : final.awayTeamId))
+        const champion = cup.teams.find(team => team.id === winningId)
+        if (champion) seasonHonours.push({ season: calendar.currentWeek.seasonYear, competitionId: cup.competitionId, winner: champion.name })
+      }
+      if (updatedInternational?.stage === 'complete') {
+        const final = updatedInternational.finalsRounds.find(round => round.length === 1)?.[0]
+        const winnerId = final?.played && (final.winnerTeamId ?? (final.homeGoals! > final.awayGoals! ? final.homeTeamId : final.awayTeamId))
+        const winnerNation = updatedInternational.finalsTeams.find(team => team.id === winnerId)
+        if (winnerNation) seasonHonours.push({ season: calendar.currentWeek.seasonYear, competitionId: 'international', winner: winnerNation.name })
+      }
+    }
     if (result.seasonEnded) {
       const finishingDivision = isInAcademy
         ? updatedAcademyLeague?.divisions[updatedAcademyLeague.playerDivision]
@@ -1313,6 +1362,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       awards,
       worldResult && worldRow ? { match: worldResult, star: worldRow } : undefined,
       news.article,
+      worldLeagues,
     )
 
     // Phase 28 — the life layer's weekly tick.
@@ -1335,6 +1385,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       worldMatchHistory: result.seasonEnded ? [...(player.worldMatchHistory ?? []), ...completedWorldMatches] : player.worldMatchHistory,
       worldSchools,
       worldLeagues,
+      gazetteHonours: [...(player.gazetteHonours ?? []), ...seasonHonours].slice(-24),
       academyRankings: academyRanking ? [...(player.academyRankings ?? []), academyRanking] : player.academyRankings,
       gazetteIssues: [...(player.gazetteIssues ?? []), gazetteIssue],
       // season tallies reset at each season boundary (so "season goals" != career goals)
@@ -1887,7 +1938,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   },
 
   completeTrials: (role, performance) => {
-    const { player, calendar } = getState()
+    const { player, calendar, league } = getState()
     if (!player) return
     // Trial performance nudges starting attributes within a small band (potential untouched).
     // Strong trials (+) lift attrs slightly; poor trials (-) start lower. Never exceeds potential.
@@ -1930,7 +1981,18 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
         body: seasonObjectivesBrief(seasonObjectives), detail: 'Work toward these across the season. A missed goal never automatically costs your place.',
       })
     }
-    setState({ player: updatedPlayer })
+    // Trials are onboarding sessions, not three empty calendar weeks. The
+    // first newspaper arrives before the week-four friendly can be played.
+    const homeLeague = league ?? initSchoolLeagueWorld((updatedPlayer.schoolId ? getSchool(updatedPlayer.schoolId)?.name : null) ?? 'Your School', updatedPlayer.regionId)
+    if (calendar && !updatedPlayer.gazetteIssues?.length) {
+      const world = advanceWorldLeagues(updatedPlayer.worldLeagues, calendar.currentWeek.seasonYear,
+        calendar.currentWeek.weekNumber - 1, getNation(updatedPlayer.nationality).id, false)
+      updatedPlayer = { ...updatedPlayer, worldLeagues: world,
+        gazetteIssues: [generateGazetteIssue(calendar.currentWeek.weekNumber, calendar.currentWeek.seasonYear,
+          updatedPlayer, [], [], null, null, homeLeague.divisions[homeLeague.playerDivision], updatedPlayer.id, calendar.currentWeek.weekNumber - 1,
+          [], undefined, undefined, undefined, undefined, undefined, world)] }
+    }
+    setState({ player: updatedPlayer, league: homeLeague })
     void getState().saveCurrent()
   },
 

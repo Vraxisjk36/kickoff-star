@@ -1,4 +1,3 @@
-import { rand } from './rng'
 // Phase 25 — THE GAZETTE. A local-paper-style weekly digest that drops every
 // Monday, pulling together threads that otherwise live scattered across tabs
 // (or, in the case of squad departures, don't surface anywhere at all — see
@@ -14,6 +13,8 @@ import type { MatchRecord } from './matchLedger'
 import { competitionDefinition } from './competitionCareer'
 import type { SchoolsRanking, SchoolsAwards, SchoolsRankingRow } from './worldSchools'
 import type { SchoolMatch, SchoolStar } from './worldSchools'
+import { sortStandings } from './league'
+import type { WorldLeagues } from './worldLeagues'
 
 export type ArticleKind = 'transfer' | 'spotlight' | 'preview' | 'injury' | 'recap' | 'league' | 'filler' | 'world' | 'awards'
 
@@ -21,6 +22,9 @@ export interface GazetteArticle {
   kind: ArticleKind
   headline: string
   body: string
+  detail?: string
+  byline?: string
+  quote?: string
 }
 
 export interface GazetteIssue {
@@ -120,7 +124,7 @@ export interface LastResultInfo {
   playerRating: number
 }
 
-function recapArticle(result: LastResultInfo | null): GazetteArticle | null {
+function recapArticle(result: LastResultInfo | null, playerName: string): GazetteArticle | null {
   if (!result) return null
   const outcome = result.playerScore > result.opponentScore ? 'WIN' : result.playerScore < result.opponentScore ? 'DEFEAT' : 'DRAW'
   const contribution = result.playerGoals > 0 || result.playerAssists > 0
@@ -129,8 +133,65 @@ function recapArticle(result: LastResultInfo | null): GazetteArticle | null {
   return {
     kind: 'recap',
     headline: `${outcome} AGAINST ${result.opponentName.toUpperCase()}`,
-    body: `Final score ${result.playerScore}-${result.opponentScore}. A ${result.playerRating.toFixed(1)} rating on the day.${contribution}`,
+    body: `${playerName} and their side finished ${result.playerScore}-${result.opponentScore} against ${result.opponentName}. ${playerName} earned a ${result.playerRating.toFixed(1)} rating${contribution}`,
+    detail: `${playerName} featured in a ${result.playerScore}-${result.opponentScore} result against ${result.opponentName}. Their match rating was ${result.playerRating.toFixed(1)}. ${result.playerGoals} goal${result.playerGoals === 1 ? '' : 's'} and ${result.playerAssists} assist${result.playerAssists === 1 ? '' : 's'} were credited in the saved match report. The team result and individual performance now form part of the season record.`,
   }
+}
+
+export function competitionOpening(player: Player, week: number, season: number, division: Division | null): GazetteArticle | null {
+  if (!player.careerClock) return null // older audit fixtures and partial migrated saves
+  const academy = player.careerClock.phase === 'academy'
+  const first = academy ? !player.gazetteIssues?.some(issue => issue.seasonYear < season && issue.articles.some(article => article.headline.includes('ACADEMY SEASON OPENS'))) : season === 1
+  const specs: Partial<Record<number, string[]>> = academy
+    ? { 1: ['academyLeague', 'ACADEMY SEASON OPENS', 'The academy league is the weekly test. Domestic cups add knockout pressure, and qualifying clubs can enter continental competition. Your minutes, training, and match record all feed selection and scouting.'],
+        25: ['academyChampionsCup', 'THE CONTINENTAL ROAD', 'The Academy Champions Cup brings qualified European academy sides together. Qualification and the knockout draw are determined by actual results; your club must earn its place.'] }
+    : { 4: ['schoolFriendlies', 'A NEW SCHOOL FOOTBALL YEAR', 'Two friendlies in weeks four and five give coaches their first match evidence. The local league starts in week six, followed by the regional cup, national championship for qualifying sides, and the autumn development series.'],
+        6: ['schoolLeague', 'THE LOCAL CHAMPIONSHIP BEGINS', 'Ten schools play home and away across eighteen league rounds. Every point and goal is saved to the table. League position shapes the route into regional football; form and selection determine your own minutes.'],
+        24: ['schoolCup', 'THE REGIONAL CUP OPENS', 'The regional schools competition is knockout football: one result can end a run. Follow the draw, the scorers, and the road toward the national stage.'],
+        32: ['nationalChampionship', 'THE NATIONAL STAGE', 'Regional finalists meet in the National Schools Championship. The round of sixteen narrows through four rounds, with the national squad and the wider world watching.'],
+        36: ['octoberDevelopment', 'OCTOBER OFFERS ANOTHER STAGE', 'Four autumn fixtures give younger players another competitive record. Every result goes into the development table and can become part of the scouting conversation.'],
+        37: ['international', 'THE INTERNATIONAL WINDOW', 'Selected national school players begin with qualifying matches. The strongest sides reach the finals in weeks forty-two to forty-four. Selection, draws, and results determine who continues; the international fixture list carries the actual scores.'] }
+  const spec = specs[week]
+  if (!spec) return null
+  const [competitionId, headline, explanation] = spec
+  const winners = (player.gazetteHonours ?? []).filter(entry => entry.competitionId === competitionId && entry.season < season)
+    .sort((a, b) => b.season - a.season).slice(0, 2)
+  const history = winners.length ? `Previous champions: ${winners.map(entry => `Season ${entry.season} — ${entry.winner}`).join('; ')}.` : 'No confirmed champion is in the record yet.'
+  const contenders = division && week <= 6 ? [...division.teams].sort((a, b) => b.prestige - a.prestige).slice(0, 3)
+    .map(team => team.name).join(', ') : ''
+  return { kind: 'league', headline, byline: 'The Gazette · season guide',
+    body: `${first ? explanation : `The ${competitionDefinition(competitionId).name} returns this week. The fixture list and saved results will tell the story from here.`} ${history}`,
+    detail: `${explanation}\n\n${contenders ? `Teams to watch on pre-season strength: ${contenders}. Reputation makes them early favourites, but only played results decide the title.\n\n` : ''}${history} The upcoming fixtures and the standings are available in the competition centre.`,
+  }
+}
+
+function worldDispatch(world: WorldLeagues | undefined, season: number, week: number): GazetteArticle[] {
+  if (!world || week < 6) return []
+  const divisions = Object.entries(world.divisions)
+  const matches = divisions.flatMap(([country, division]) => (division.matchRecords ?? [])
+    .filter(match => match.season === season && match.week === week)
+    .map(match => ({ match, country, division })))
+  if (!matches.length) return []
+  const biggest = [...matches].sort((a, b) => b.match.homeGoals + b.match.awayGoals - a.match.homeGoals - a.match.awayGoals)[0]
+  const { match, country } = biggest
+  const star = [...match.lines].sort((a, b) => b.goals - a.goals || b.assists - a.assists)[0]
+  const previous = matches.filter(entry => entry.country === country).length
+  const starHistory = biggest.division.matchRecords?.filter(entry => entry.season === season && entry.week <= week)
+    .flatMap(entry => entry.lines).filter(line => line.playerId === star?.playerId) ?? []
+  const cumulative = starHistory.reduce((total, line) => total + line.goals, 0)
+  const score = `${match.homeTeamName} ${match.homeGoals}–${match.awayGoals} ${match.awayTeamName}`
+  const lead: GazetteArticle = { kind: 'world', headline: `${score.toUpperCase()} · ${country.toUpperCase()}`,
+    byline: 'World football desk', body: `${score}. ${star?.goals ? `${star.name} scored ${star.goals} and now has ${cumulative} in recorded league matches this season.` : 'The result is in the world league record.'}`,
+    detail: `${score}. This was one of ${previous} recorded fixtures in the ${country.toUpperCase()} featured division this week. ${star ? `${star.name} of ${biggest.division.teams.find(team => team.id === star.teamId)?.name ?? 'the featured division'} recorded ${star.goals} goal${star.goals === 1 ? '' : 's'} and ${star.assists} assist${star.assists === 1 ? '' : 's'} in this match. Across ${starHistory.length} recorded appearances this season, ${star.name} has ${cumulative} league goals. ` : ''}The league table and scorer list now reflect the played result.`,
+  }
+  const leading = divisions.map(([countryId, division]) => ({ countryId, standings: sortStandings(division.standings), division }))
+    .filter(entry => entry.standings[0]?.played > 0).sort((a, b) => b.standings[0].points - a.standings[0].points)[0]
+  if (!leading) return [lead]
+  const leader = leading.standings[0]
+  const second = leading.standings[1]
+  return [lead, { kind: 'league', headline: `${leader.teamName.toUpperCase()} SET THE PACE`, byline: 'League watch',
+    body: `${leader.teamName} lead the ${leading.countryId.toUpperCase()} featured division on ${leader.points} points from ${leader.played} games. ${second ? `${second.teamName} sit behind them on ${second.points}.` : ''}`,
+    detail: `The table after ${leader.played} matches shows ${leader.teamName} with ${leader.won} wins, ${leader.drawn} draws and ${leader.lost} defeats. Their goal record is ${leader.goalsFor} scored and ${leader.goalsAgainst} conceded. ${second ? `${second.teamName} follow on ${second.points} points. The gap is ${leader.points - second.points} points, with plenty of fixtures still to play.` : ''} These figures come from completed league fixtures, not a prediction.` }]
 }
 
 function schoolLeagueArticle(division: Division | null, season: number, week: number, playerId: string): GazetteArticle | null {
@@ -162,16 +223,10 @@ function cupArticle(records: MatchRecord[], season: number, week: number, player
     body: `${competition}: ${match.homeTeamName} and ${match.awayTeamName} finished ${match.homeGoals}–${match.awayGoals}. ${leader?.goals ? `${leader.name} scored ${leader.goals} of those goals.` : 'The result moves the tournament forward.'}` }
 }
 
-const FILLER_LINES = [
-  'The clubhouse tea urn remains, against all odds, still functional.',
-  'Local pitch conditions described as "character-building" by anyone who trained on them this week.',
-  'Groundskeeper reports the grass is, in fact, greener on this side.',
-  'Nobody has yet worked out who keeps moving the cones.',
-]
-
 function fillerArticle(): GazetteArticle {
-  const line = FILLER_LINES[Math.floor(rand() * FILLER_LINES.length)]
-  return { kind: 'filler', headline: 'AROUND THE CLUB', body: line }
+  return { kind: 'filler', headline: 'WHAT WE ARE FOLLOWING', byline: 'The Gazette sports desk',
+    body: 'The fixtures, tables, young players, and academy routes will shape the weeks ahead. This issue is the beginning of a season-long record.',
+    detail: 'Each issue follows completed matches and saved league tables. The world ranking is built from recorded performances; competition previews will name confirmed winners from past seasons when that history exists. Return to the issue archive to trace how a player or team changed over the year.' }
 }
 
 // --- assembly ----------------------------------------------------------------
@@ -193,8 +248,12 @@ export function generateGazetteIssue(
   awards?: SchoolsAwards,
   worldResult?: { match: SchoolMatch; star: SchoolStar },
   worldStory?: GazetteArticle,
+  world?: WorldLeagues,
 ): GazetteIssue {
   const articles: GazetteArticle[] = []
+
+  const opening = competitionOpening(player, weekNumber, seasonYear, schoolDivision)
+  if (opening) articles.push(opening)
 
   if (worldStory) articles.push(worldStory)
 
@@ -227,7 +286,7 @@ export function generateGazetteIssue(
   articles.push(...transferArticles(departures, arrivals))
   const injury = injuryArticle(player)
   if (injury) articles.push(injury)
-  const recap = recapArticle(lastResult)
+  const recap = recapArticle(lastResult, player.name)
   if (recap) articles.push(recap)
   const preview = previewArticle(upcomingFixture)
   if (preview) articles.push(preview)
@@ -237,6 +296,7 @@ export function generateGazetteIssue(
   if (league) articles.push(league)
   const cup = cupArticle(cupRecords, seasonYear, completedWeek, playerId)
   if (cup) articles.push(cup)
+  articles.push(...worldDispatch(world, seasonYear, completedWeek))
 
   // Always at least 2 articles so an early-career issue (nothing has
   // happened yet) doesn't read as a broken/empty page.

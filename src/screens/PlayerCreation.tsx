@@ -4,6 +4,7 @@ import type { Player } from '../types/player'
 import type { Position } from '../types/attributes'
 import { OUTFIELD_ATTRIBUTES, GOALKEEPER_ATTRIBUTES, isGoalkeeperPosition } from '../types/attributes'
 import type { CalendarState } from '../types/calendar'
+import { generateWeek } from '../engine/calendar'
 import { useCareerStore } from '../store/careerStore'
 import { NATIONS } from '../engine/nations'
 import { regionsFor } from '../engine/regions'
@@ -70,8 +71,8 @@ function buildNewPlayer(name: string, position: Position, foot: 'left' | 'right'
 function buildInitialCalendar(): CalendarState {
   return {
     currentWeek: {
-      weekNumber: 1, seasonYear: 1,
-      events: [{ id: crypto.randomUUID(), day: 'mon', type: 'school', title: 'first day of your youth career', resolved: false }],
+      weekNumber: 4, seasonYear: 1,
+      events: generateWeek(4, 1, 'grassroots-season', false, 'school').events,
     },
     history: [],
   }

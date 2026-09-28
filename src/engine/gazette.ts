@@ -69,13 +69,13 @@ function spotlightArticle(player: Player): GazetteArticle | null {
   const surname = surnameOf(player.name)
 
   if (recent.length >= 3 && recent.slice(-3).every((r) => r >= 7.5)) {
-    return { kind: 'spotlight', headline: `${surname.toUpperCase()} IN RED-HOT FORM`, body: `Three straight performances above 7.5 — the kind of run that gets noticed. Keep it going.` }
+    return { kind: 'spotlight', headline: `${surname.toUpperCase()} IN RED-HOT FORM`, body: `${player.name} has delivered three straight performances above 7.5. The run is now part of the season record.`, detail: `${player.name} has ratings of ${recent.slice(-3).map(rating => rating.toFixed(1)).join(', ')} across the last three matches. Those numbers are the reason the Gazette is watching this run. The next fixture will show whether the form continues.` }
   }
   if (recent.length >= 3 && recent.slice(-3).every((r) => r < 5.5)) {
-    return { kind: 'spotlight', headline: `QUIET SPELL FOR ${surname.toUpperCase()}`, body: `A tougher few weeks on the pitch. Every career has them — the response is what counts.` }
+    return { kind: 'spotlight', headline: `QUIET SPELL FOR ${surname.toUpperCase()}`, body: `${player.name} has had three matches below 5.5. Selection and form are under pressure as the season moves on.`, detail: `${player.name}'s last three recorded ratings were ${recent.slice(-3).map(rating => rating.toFixed(1)).join(', ')}. The coach has real match evidence to consider; training can help, but the next appearance is the chance to change the story.` }
   }
   if (last >= 8.5) {
-    return { kind: 'spotlight', headline: `${surname.toUpperCase()} STEALS THE HEADLINES`, body: `A rating of ${last.toFixed(1)} in the last outing. Performances like that don't go unnoticed.` }
+    return { kind: 'spotlight', headline: `${surname.toUpperCase()} STEALS THE HEADLINES`, body: `${player.name} earned a ${last.toFixed(1)} rating in the last outing. The performance adds to their recorded season form.`, detail: `${player.name}'s most recent match rating was ${last.toFixed(1)}. A single game does not decide a season, but the performance gives the coach and scouts something concrete to review. The Gazette will follow the next result rather than assuming the run continues.` }
   }
   return null
 }
@@ -111,7 +111,7 @@ function injuryArticle(player: Player): GazetteArticle | null {
   return {
     kind: 'injury',
     headline: `INJURY UPDATE: ${surname.toUpperCase()}`,
-    body: `${player.injury.description} Expected return in around ${player.injury.weeksRemaining} week${player.injury.weeksRemaining === 1 ? '' : 's'}.`,
+    body: `${player.name}: ${player.injury.description} Expected return in around ${player.injury.weeksRemaining} week${player.injury.weeksRemaining === 1 ? '' : 's'}.`,
   }
 }
 
@@ -161,7 +161,8 @@ export function competitionOpening(player: Player, week: number, season: number,
     .map(team => team.name).join(', ') : ''
   return { kind: 'league', headline, byline: 'The Gazette · season guide',
     body: `${first ? explanation : `The ${competitionDefinition(competitionId).name} returns this week. The fixture list and saved results will tell the story from here.`} ${history}`,
-    detail: `${explanation}\n\n${contenders ? `Teams to watch on pre-season strength: ${contenders}. Reputation makes them early favourites, but only played results decide the title.\n\n` : ''}${history} The upcoming fixtures and the standings are available in the competition centre.`,
+    detail: first ? `${explanation}\n\n${contenders ? `Teams to watch on pre-season strength: ${contenders}. Reputation makes them early favourites, but only played results decide the title.\n\n` : ''}${history} The upcoming fixtures and the standings are available in the competition centre.`
+      : `The ${competitionDefinition(competitionId).name} returns this week. ${history} Follow the live draw, fixtures, and standings in the competition centre.`,
   }
 }
 
@@ -213,7 +214,7 @@ function seasonGuideArticles(player: Player, week: number, division: Division | 
       body: `${player.name} and the squad have friendlies in weeks four and five. The eighteen-round local league begins in week six. The friendlies count as match performances, but they do not add league points.`,
       detail: `The first two dates are pre-season friendlies. They give ${player.name}, a ${player.position}, a chance to show the coach what training alone cannot: decisions and execution in a match. Goals, assists, ratings, and availability are part of the player's record. League points start in week six, when the ten-school home-and-away championship opens. A reserve player can earn a stronger place through actual appearances and form.` },
     { kind: 'world', headline: 'THE WORLD BEYOND YOUR SCHOOL', byline: 'World football desk',
-      body: `The Gazette is tracking ${Object.keys(world?.divisions ?? {}).length} featured school divisions across the world. Their results and named scorers will begin appearing with the league fixtures.`,
+      body: `The Gazette is tracking ${Object.keys(world?.divisions ?? {}).length + (division && !world?.divisions[division.teams[0]?.countryId ?? ''] ? 1 : 0)} featured school divisions across the world. Their results and named scorers will begin appearing with the league fixtures.`,
       detail: `Every featured division has its own saved fixture list, standings, match reports, and named player lines. A player mentioned here can be found again in the recorded scoring list. The monthly World Schools Five will draw from those matches and the player's own record. The list is a season-long race: a strong month helps, but the previous months still count. The published ranking later closes ahead of the awards, leaving the final result for the ceremony.` },
     { kind: 'league', headline: 'THE ROAD AFTER THE LOCAL LEAGUE', byline: 'Competition guide',
       body: 'Regional knockout football follows the local campaign. The national championship, October development fixtures, and international selection each have their own qualification rules.',
@@ -283,7 +284,15 @@ export function generateGazetteIssue(
   if (opening) articles.push(opening)
   articles.push(...seasonGuideArticles(player, weekNumber, schoolDivision, world))
 
-  if (worldStory) articles.push(worldStory)
+  if (worldStory) {
+    const arc = world?.stories?.find(story => story.season === seasonYear && story.issuedWeeks?.includes(completedWeek))
+    const division = arc && world?.divisions[arc.countryId]
+    const recent = division?.matchRecords?.filter(match => match.season === seasonYear &&
+      (match.homeTeamId === arc?.teamId || match.awayTeamId === arc?.teamId) && match.week <= completedWeek)
+      .sort((a, b) => b.week - a.week).slice(0, 2) ?? []
+    articles.push({ ...worldStory, byline: 'World football desk',
+      detail: `${worldStory.body}\n\n${arc ? `This is chapter ${(arc.issuedWeeks?.length ?? 1)} of the ${arc.teamName} story. The school's standing and future match results remain visible in the ${arc.countryId.toUpperCase()} world league tracker.` : 'The world league tracker keeps the played results.'}${recent.length ? `\n\nRecent recorded results: ${recent.map(match => `${match.homeTeamName} ${match.homeGoals}–${match.awayGoals} ${match.awayTeamName} (week ${match.week})`).join('; ')}.` : ''}` })
+  }
 
   if (awards) articles.push({ kind: 'awards', headline: `${awards.season} ${awards.scope === 'academy' ? 'ACADEMY' : 'WORLD SCHOOLS'} AWARDS`,
     body: `${awards.winners[0]?.winnerName ?? 'The winner'} takes ${awards.winners[0]?.name ?? 'the top award'}. See the recorded winners and Team of the Year in this issue.` })
@@ -335,7 +344,7 @@ export function generateGazetteIssue(
 
   // Masthead priority: injury > transfer > preview (big game) > recap > spotlight
   const priority: ArticleKind[] = ['awards', 'world', 'league', 'injury', 'transfer', 'preview', 'recap', 'spotlight', 'filler']
-  const masthead = priority.map((k) => articles.find((a) => a.kind === k)).find(Boolean)?.headline ?? articles[0].headline
+  const masthead = opening?.headline ?? priority.map((k) => articles.find((a) => a.kind === k)).find(Boolean)?.headline ?? articles[0].headline
 
   return { id: id(), weekNumber, seasonYear, masthead, articles, ranking, scorers, awards }
 }

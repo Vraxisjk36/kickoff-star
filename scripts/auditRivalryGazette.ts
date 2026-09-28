@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { advanceWorldLeagues, publishSchoolPowerRanking } from '../src/engine/worldLeagues'
+import { advanceWorldLeagues, publishSchoolPowerRanking, simulateSchoolRivalries } from '../src/engine/worldLeagues'
 import { schoolRival } from '../src/engine/friendlies'
 import { generateGazetteIssue } from '../src/engine/gazette'
 import { SCHOOL_SEASON_SCHEDULE } from '../src/engine/calendar'
@@ -32,5 +32,9 @@ world = advanceWorldLeagues(world, 1, 29, 'rsa', true)
 assert.equal(world.rivalryRecords?.length, Object.values(world.divisions).length * 5)
 const replay = advanceWorldLeagues(world, 1, 29, 'rsa', true)
 assert.equal(replay.rivalryRecords?.length, world.rivalryRecords?.length)
+const local = Object.values(world.divisions)[0]
+const localDerbies = simulateSchoolRivalries([], local, 1, local.teams[0].id)
+assert.equal(localDerbies.length, 4)
+assert(localDerbies.every(record => record.homeTeamId !== local.teams[0].id && record.awayTeamId !== local.teams[0].id))
 assert.deepEqual(SCHOOL_SEASON_SCHEDULE.schoolFriendlies, [4, 5, 29])
 console.log('Rival pairs, monthly movement, four-paragraph recorded match report, and one annual derby per world school passed.')

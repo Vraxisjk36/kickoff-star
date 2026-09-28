@@ -44,7 +44,7 @@ import { generateSquad } from '../engine/squad'
 import { growSquadForSeason, rollSquadDepartures } from '../engine/squadLifecycle'
 import { generateGazetteIssue } from '../engine/gazette'
 import { advanceWorldSchools, publishSchoolsRanking, schoolsAwards, schoolsLeaders, academyLeaders, academySeasonAwards } from '../engine/worldSchools'
-import { advanceWorldLeagues, worldLeagueLeaders, worldLeagueChampions, publishSchoolPowerRanking } from '../engine/worldLeagues'
+import { advanceWorldLeagues, worldLeagueLeaders, worldLeagueChampions, publishSchoolPowerRanking, simulateSchoolRivalries } from '../engine/worldLeagues'
 import { schoolRival } from '../engine/friendlies'
 import { advanceWorldNews } from '../engine/worldNews'
 import { initAcademyWorld, recordAcademyMatchResult, batchSimAcademyRound, applyAcademyPromotion, academyDivisionLabel, type AcademyWorld } from '../engine/academy'
@@ -1337,6 +1337,8 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const homeCountryId = player.regionId?.split('-')[0] ?? getNation(player.nationality).id
     const homeDivision = !isInAcademy && league?.kind === 'school' ? league.divisions[league.playerDivision] : null
     let worldLeagues = advanceWorldLeagues(player.worldLeagues, calendar.currentWeek.seasonYear, completedWeekNumber, homeCountryId, !!homeDivision)
+    if (completedWeekNumber >= 29 && homeDivision) worldLeagues = { ...worldLeagues, rivalryRecords: simulateSchoolRivalries(
+      worldLeagues.rivalryRecords ?? [], homeDivision, calendar.currentWeek.seasonYear, league?.playerTeamId) }
     if (!isInAcademy) worldLeagues = publishSchoolPowerRanking(worldLeagues, completedWeekNumber, homeDivision)
     if (result.seasonEnded) worldLeagues = worldLeagueChampions(worldLeagues)
     const news = advanceWorldNews(worldLeagues, completedWeekNumber)

@@ -56,9 +56,17 @@ export function advanceWorldLeagues(state: WorldLeagues | undefined, season: num
     divisions[nation.id] = division
   }
   let rivalryRecords = state?.rivalryRecords ?? []
-  if (completedWeek >= 29) for (const division of Object.values(divisions)) for (const team of division.teams) {
+  if (completedWeek >= 29) for (const division of Object.values(divisions))
+    rivalryRecords = simulateSchoolRivalries(rivalryRecords, division, season)
+  return { season, divisions, champions, stories: state?.stories ?? [], leagueNames: state?.leagueNames ?? {}, schoolRankings: state?.schoolRankings ?? [], rivalryRecords }
+}
+
+/** Separate exhibition ledger: these scores never change the league table. */
+export function simulateSchoolRivalries(existing: MatchRecord[], division: Division, season: number, excludedTeamId?: string): MatchRecord[] {
+  let rivalryRecords = existing
+  for (const team of division.teams) {
     const rival = schoolRival(division, team.id)
-    if (!rival || team.id.localeCompare(rival.id) > 0) continue
+    if (!rival || team.id.localeCompare(rival.id) > 0 || team.id === excludedTeamId || rival.id === excludedTeamId) continue
     const id = `school-rivalry-${season}-${team.id}-${rival.id}`
     if (rivalryRecords.some(record => record.id === id)) continue
     const score = (side: typeof team) => {
@@ -69,7 +77,7 @@ export function advanceWorldLeagues(state: WorldLeagues | undefined, season: num
     rivalryRecords = capturePlayedFixtures(rivalryRecords, [{ id, round: 1, homeTeamId: team.id, awayTeamId: rival.id,
       played: true, homeGoals: score(team), awayGoals: score(rival) }], division.teams, 'schoolFriendlies', season, 29)
   }
-  return { season, divisions, champions, stories: state?.stories ?? [], leagueNames: state?.leagueNames ?? {}, schoolRankings: state?.schoolRankings ?? [], rivalryRecords }
+  return rivalryRecords
 }
 
 export function worldLeagueRecords(world: WorldLeagues, home?: Division | null): MatchRecord[] {

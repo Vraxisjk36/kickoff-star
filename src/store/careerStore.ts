@@ -402,10 +402,15 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       Math.max(0, loadedCalendar.currentWeek.weekNumber - 1), homeCountryId, !!league && league.kind === 'school' && player.careerClock.phase !== 'academy') }
     if (player.careerClock.phase !== 'academy' && league?.kind === 'school') {
       const oldIssues = player.gazetteIssues ?? []
-      const firstIndex = oldIssues.findIndex(issue => issue.seasonYear === 1 && issue.weekNumber === 4 && issue.articles.length < 5)
+      const firstIndex = oldIssues.findIndex(issue => issue.seasonYear === 1 && issue.weekNumber === 4 &&
+        (issue.articles.length < 5 || issue.masthead !== 'A NEW SCHOOL FOOTBALL YEAR'))
       if (firstIndex >= 0) {
-        const refreshed = generateGazetteIssue(4, 1, player, [], [], null, null, league.divisions[league.playerDivision], player.id,
-          3, [], undefined, undefined, undefined, undefined, undefined, player.worldLeagues)
+        const existing = oldIssues[firstIndex]
+        const refreshed = existing.articles.length >= 5 ? { ...existing, masthead: 'A NEW SCHOOL FOOTBALL YEAR',
+          articles: existing.articles.map(article => article.headline === 'THE WORLD BEYOND YOUR SCHOOL'
+            ? { ...article, body: article.body.replace('tracking 23 featured', 'tracking 24 featured') } : article) }
+          : generateGazetteIssue(4, 1, player, [], [], null, null, league.divisions[league.playerDivision], player.id,
+            3, [], undefined, undefined, undefined, undefined, undefined, player.worldLeagues)
         player = { ...player, gazetteIssues: oldIssues.map((issue, index) => index === firstIndex ? { ...refreshed, id: issue.id } : issue) }
       }
     }

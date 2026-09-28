@@ -3,7 +3,18 @@
 
 import { isMuted } from './audio'
 
-const TRACK_URL = './audio/under-the-lights.mp3'
+const TRACKS = ['under-the-lights', 'first-whistle', 'touchline-dreams', 'rising-stands', 'last-light'] as const
+const TRACK_KEY = 'kickoff-star-track-index'
+function trackIndex(): number {
+  try { return Math.max(0, Math.min(TRACKS.length - 1, Number(localStorage.getItem(TRACK_KEY)) || 0)) } catch { return 0 }
+}
+export function currentTrack(): string { return TRACKS[trackIndex()].replaceAll('-', ' ') }
+export function skipTrack(): string {
+  const next = (trackIndex() + 1) % TRACKS.length
+  try { localStorage.setItem(TRACK_KEY, String(next)) } catch { /* storage unavailable */ }
+  if (el) { el.src = `./audio/${TRACKS[next]}.mp3`; el.load(); if (wantsToPlay && musicEnabled()) void el.play().catch(() => {}) }
+  return currentTrack()
+}
 const VOLUME = 0.24
 const MUSIC_KEY = 'kickoff-star-music-enabled'
 
@@ -22,8 +33,9 @@ let wantsToPlay = false
 function ensureEl(): HTMLAudioElement | null {
   if (typeof window === 'undefined') return null
   if (!el) {
-    el = new Audio(TRACK_URL)
-    el.loop = true
+    el = new Audio(`./audio/${TRACKS[trackIndex()]}.mp3`)
+    el.loop = false
+    el.addEventListener('ended', () => { skipTrack() })
     el.volume = isMuted() || !musicEnabled() ? 0 : VOLUME
     el.preload = 'auto'
   }

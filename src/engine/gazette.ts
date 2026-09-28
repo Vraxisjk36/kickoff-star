@@ -14,7 +14,8 @@ import { competitionDefinition } from './competitionCareer'
 import type { SchoolsRanking, SchoolsAwards, SchoolsRankingRow } from './worldSchools'
 import type { SchoolMatch, SchoolStar } from './worldSchools'
 import { sortStandings } from './league'
-import type { WorldLeagues } from './worldLeagues'
+import type { WorldLeagues, SchoolPowerRanking } from './worldLeagues'
+import { schoolRival } from './friendlies'
 
 export type ArticleKind = 'transfer' | 'spotlight' | 'preview' | 'injury' | 'recap' | 'league' | 'filler' | 'world' | 'awards'
 
@@ -36,6 +37,7 @@ export interface GazetteIssue {
   ranking?: SchoolsRanking
   scorers?: SchoolsRankingRow[]
   awards?: SchoolsAwards
+  schoolRanking?: SchoolPowerRanking
 }
 
 function id() { return crypto.randomUUID() }
@@ -195,6 +197,63 @@ function worldDispatch(world: WorldLeagues | undefined, season: number, week: nu
     detail: `The table after ${leader.played} matches shows ${leader.teamName} with ${leader.won} wins, ${leader.drawn} draws and ${leader.lost} defeats. Their goal record is ${leader.goalsFor} scored and ${leader.goalsAgainst} conceded. ${second ? `${second.teamName} follow on ${second.points} points. The gap is ${leader.points - second.points} points, with plenty of fixtures still to play.` : ''} These figures come from completed league fixtures, not a prediction.` }]
 }
 
+function schoolPowerStories(world: WorldLeagues | undefined, home: Division | null, season: number, week: number): GazetteArticle[] {
+  if (!world) return []
+  const rankings = world.schoolRankings ?? []
+  const published = rankings.find(entry => entry.season === season && entry.week === week)
+  const latest = rankings.filter(entry => entry.season === season && entry.week <= week).at(-1)
+  const articles: GazetteArticle[] = []
+  if (published?.rows.length) {
+    const [leader, second] = published.rows
+    const mover = published.rows.slice(0, 5).find((row, index) => row.previousRank && row.previousRank > index + 1)
+    articles.push({ kind: 'world', headline: `${leader.name.toUpperCase()} TOP THE WORLD SCHOOL TABLE`, byline: 'Global schools desk',
+      body: `${leader.name} lead on ${leader.score} ranking points after ${leader.played} league games. ${second ? `${second.name} trail by ${(leader.score - second.score).toFixed(1)}.` : ''}${mover ? ` ${mover.name} climb from ${mover.previousRank} to ${published.rows.indexOf(mover) + 1}.` : ''}`,
+      detail: `A school cannot rise on reputation alone here. The table draws from completed league wins, points and goal difference, with a visibility adjustment for each country's competition. ${leader.name} stand first with ${leader.points} league points and a goal difference of ${leader.goalDifference} after ${leader.played} matches.\n\n${second ? `${second.name} are second on ${second.score} ranking points, ${(leader.score - second.score).toFixed(1)} behind the leaders. ` : ''}${mover ? `${mover.name} have moved up from ${mover.previousRank} to ${published.rows.indexOf(mover) + 1}; the climb is visible in the archive, not a reset each month.` : 'The order will change when the next round of results is recorded.'}\n\nThe five at the top now: ${published.rows.slice(0, 5).map((row, index) => `${index + 1}. ${row.name} (${row.countryId.toUpperCase()}, ${row.score})`).join('; ')}. Those scores are cumulative for this season.\n\nNext month's edition will compare the same schools against new match results. The full list, including teams outside the five, remains available in the world league tracker.` })
+  }
+  if (!latest) return articles
+  const top = new Set(latest.rows.slice(0, 5).map(row => row.teamId))
+  const divisions = [...Object.values(world.divisions), ...(home ? [home] : [])]
+  const next = divisions.flatMap(division => division.fixtures.filter(fixture => !fixture.played && fixture.week === week - 4 && fixture.homeTeamId && fixture.awayTeamId)
+    .map(fixture => ({ fixture, division }))).find(({ fixture }) => top.has(fixture.homeTeamId) && top.has(fixture.awayTeamId))
+  if (next) {
+    const a = latest.rows.find(row => row.teamId === next.fixture.homeTeamId)!
+    const b = latest.rows.find(row => row.teamId === next.fixture.awayTeamId)!
+    const meetings = next.division.matchRecords?.filter(record => [a.teamId, b.teamId].includes(record.homeTeamId) && [a.teamId, b.teamId].includes(record.awayTeamId)) ?? []
+    articles.push({ kind: 'preview', headline: `TOP-FIVE COLLISION: ${a.name.toUpperCase()} v ${b.name.toUpperCase()}`, byline: 'Global schools desk',
+      body: `Two schools in the world five meet in league play. ${a.name} bring ${a.score} ranking points; ${b.name} have ${b.score}. This one changes more than a local table.`,
+      detail: `${a.name} and ${b.name} have made the world five by collecting results all season. They now share a league fixture, with ${a.points} and ${b.points} domestic points respectively.\n\nThe gap in the global race is ${Math.abs(a.score - b.score).toFixed(1)} ranking points. A win changes league points and goal difference for both sides, so next month's ranking can tell a different story.\n\n${meetings.length ? `Their recorded meeting earlier this season finished ${meetings.at(-1)!.homeTeamName} ${meetings.at(-1)!.homeGoals}–${meetings.at(-1)!.awayGoals} ${meetings.at(-1)!.awayTeamName}.` : 'There is no recorded meeting between these sides this season yet.'} This edition will not award the result in advance.\n\nThe match is on the fixture list. Come back after it is played for the score, named scorers and what it did to the race.` })
+  }
+  return articles
+}
+
+function gameOfWeek(world: WorldLeagues | undefined, home: Division | null, season: number, week: number): GazetteArticle | null {
+  const divisions = [...Object.values(world?.divisions ?? {}), ...(home ? [home] : [])]
+  const candidates = divisions.flatMap(division => [...(division.matchRecords ?? []), ...(world?.rivalryRecords ?? []).filter(record => division.teams.some(team => team.id === record.homeTeamId))].filter(record => record.season === season && record.week === week)
+    .map(match => ({ match, division })))
+  if (!candidates.length) return null
+  const ranking = world?.schoolRankings?.filter(entry => entry.season === season && entry.week <= week).at(-1)
+  const rank = (id: string) => ranking?.rows.findIndex(row => row.teamId === id) ?? -1
+  const chosen = candidates.sort((a, b) => {
+    const value = ({ match, division }: typeof candidates[number]) => match.homeGoals + match.awayGoals +
+      (schoolRival(division, match.homeTeamId)?.id === match.awayTeamId ? 5 : 0) +
+      (rank(match.homeTeamId) >= 0 && rank(match.homeTeamId) < 5 ? 3 : 0) + (rank(match.awayTeamId) >= 0 && rank(match.awayTeamId) < 5 ? 3 : 0)
+    return value(b) - value(a) || a.match.id.localeCompare(b.match.id)
+  })[0]
+  const { match, division } = chosen
+  const homeGoals = match.lines.filter(line => line.teamId === match.homeTeamId && line.goals > 0)
+  const awayGoals = match.lines.filter(line => line.teamId === match.awayTeamId && line.goals > 0)
+  const scorers = (lines: typeof homeGoals) => lines.length ? lines.map(line => `${line.name} (${line.goals})`).join(', ') : 'no named scorer was credited in the saved report'
+  const derby = schoolRival(division, match.homeTeamId)?.id === match.awayTeamId
+  const table = sortStandings(division.standings)
+  const place = (id: string) => table.findIndex(row => row.teamId === id) + 1
+  const past = division.matchRecords?.filter(record => record.season === season && record.week < week &&
+    [match.homeTeamId, match.awayTeamId].includes(record.homeTeamId) && [match.homeTeamId, match.awayTeamId].includes(record.awayTeamId)).at(-1)
+  const winner = match.homeGoals === match.awayGoals ? 'Neither school could claim the win' : `${match.homeGoals > match.awayGoals ? match.homeTeamName : match.awayTeamName} took the win`
+  return { kind: 'recap', headline: `GAME OF THE WEEK: ${match.homeTeamName.toUpperCase()} ${match.homeGoals}–${match.awayGoals} ${match.awayTeamName.toUpperCase()}`,
+    byline: 'The Gazette match desk', body: `${winner} in a ${match.homeGoals + match.awayGoals}-goal ${derby ? 'school rivalry' : 'school fixture'}. Read the scorers, the season context and what comes next.`,
+    detail: `${derby ? 'The schools know one another as rivals, and this result belongs to a season-long argument over local bragging rights.' : 'This was the fixture our match desk picked from the completed school results.'} ${match.homeTeamName} hosted ${match.awayTeamName} in week ${week}. ${past ? `The earlier recorded meeting ended ${past.homeTeamName} ${past.homeGoals}–${past.awayGoals} ${past.awayTeamName}; this was their chance to answer it.` : 'There was no earlier recorded meeting between them this season.'}\n\nThe final score was ${match.homeTeamName} ${match.homeGoals}–${match.awayGoals} ${match.awayTeamName}. For the home side, the saved match report credits ${scorers(homeGoals)}. For the visitors, it credits ${scorers(awayGoals)}. ${winner}; the numbers are in the played fixture, not a forecast.\n\n${match.homeGoals === match.awayGoals ? 'Neither attack could turn its work into a winning margin.' : `The margin was ${Math.abs(match.homeGoals - match.awayGoals)} goal${Math.abs(match.homeGoals - match.awayGoals) === 1 ? '' : 's'}, enough to settle this meeting.`} ${derby ? 'A derby leaves an extra mark even when it counts for the same league points as any other match.' : 'The scorers now carry those goals into the season race.'} ${past ? `Compared with their previous ${past.homeGoals}–${past.awayGoals} meeting, this score gives the rivalry another chapter.` : 'The next meeting, if one is scheduled, already has a result to answer.'}\n\n${match.homeTeamName} sit ${place(match.homeTeamId)}${place(match.homeTeamId) === 1 ? 'st' : 'th'} in this division with ${table.find(row => row.teamId === match.homeTeamId)?.points ?? 0} points; ${match.awayTeamName} are ${place(match.awayTeamId)}${place(match.awayTeamId) === 1 ? 'st' : 'th'} on ${table.find(row => row.teamId === match.awayTeamId)?.points ?? 0}. Follow both schools in the league tracker for the fixtures and recorded scorers behind this story.` }
+}
+
 function seasonGuideArticles(player: Player, week: number, division: Division | null, world?: WorldLeagues): GazetteArticle[] {
   if (player.careerClock?.phase === 'academy' && week === 1) return [
     { kind: 'preview', headline: 'THE ACADEMY CALENDAR, EXPLAINED', byline: 'Academy football desk',
@@ -282,7 +341,18 @@ export function generateGazetteIssue(
 
   const opening = competitionOpening(player, weekNumber, seasonYear, schoolDivision)
   if (opening) articles.push(opening)
+  const featuredMatch = gameOfWeek(world, schoolDivision, seasonYear, completedWeek)
+  if (featuredMatch) articles.push(featuredMatch)
+  const derbyRecord = completedWeek === 29 ? player.matchLedger?.find(record => record.season === seasonYear && record.week === 29 && record.competitionId === 'schoolFriendlies') : undefined
+  if (derbyRecord) {
+    const names = `${derbyRecord.homeTeamName} ${derbyRecord.homeGoals}–${derbyRecord.awayGoals} ${derbyRecord.awayTeamName}`
+    const goalLines = derbyRecord.lines.filter(line => line.goals > 0)
+    articles.push({ kind: 'recap', headline: `ANNUAL SCHOOL RIVALRY: ${names.toUpperCase()}`, byline: 'Local football desk',
+      body: `${names}. The annual derby has a result, and both schools will remember which side took the bragging rights.`,
+      detail: `Week 29 brought ${derbyRecord.homeTeamName} and ${derbyRecord.awayTeamName} together for their annual school rivalry match. This fixture has its own place in the calendar; league points were already settled.\n\nThe saved match finished ${names}. ${goalLines.length ? `The report credits ${goalLines.map(line => `${line.name} of ${line.teamId === derbyRecord.homeTeamId ? derbyRecord.homeTeamName : derbyRecord.awayTeamName} with ${line.goals}`).join('; ')}.` : 'No named scorer was credited in the saved report.'} That score, not school reputation, is this year's answer.\n\n${derbyRecord.homeGoals === derbyRecord.awayGoals ? 'Neither side won the argument on the pitch this year.' : `${derbyRecord.homeGoals > derbyRecord.awayGoals ? derbyRecord.homeTeamName : derbyRecord.awayTeamName} can carry the win into next season.`} The earlier league meetings may have told a different story; the derby gives the rivalry another chapter.\n\nThe result stays in the match archive. When these schools meet again, the Gazette can return to this score instead of treating the rivalry like a first encounter.` })
+  }
   articles.push(...seasonGuideArticles(player, weekNumber, schoolDivision, world))
+  articles.push(...schoolPowerStories(world, schoolDivision, seasonYear, completedWeek))
 
   if (worldStory) {
     const arc = world?.stories?.find(story => story.season === seasonYear && story.issuedWeeks?.includes(completedWeek))
@@ -346,5 +416,6 @@ export function generateGazetteIssue(
   const priority: ArticleKind[] = ['awards', 'world', 'league', 'injury', 'transfer', 'preview', 'recap', 'spotlight', 'filler']
   const masthead = opening?.headline ?? priority.map((k) => articles.find((a) => a.kind === k)).find(Boolean)?.headline ?? articles[0].headline
 
-  return { id: id(), weekNumber, seasonYear, masthead, articles, ranking, scorers, awards }
+  return { id: id(), weekNumber, seasonYear, masthead, articles, ranking, scorers, awards,
+    schoolRanking: world?.schoolRankings?.find(entry => entry.season === seasonYear && entry.week === completedWeek) }
 }

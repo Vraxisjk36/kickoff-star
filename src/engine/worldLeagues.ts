@@ -4,12 +4,30 @@ import { schoolsForRegion } from './schools'
 import { initSchoolLeagueWorld, batchSimDivisionRound, resetTeamScorers, sortStandings, type Division } from './league'
 import { generateRoundRobin } from './competitions'
 import { countryLeagueVisibility } from './competitionCareer'
-import type { MatchRecord } from './matchLedger'
+import { capturePlayedFixtures, type MatchRecord } from './matchLedger'
+import { schoolRival } from './friendlies'
 import type { SchoolsRankingRow } from './worldSchools'
 
 export interface WorldStory { id: string; season: number; kind: 'donation' | 'eligibility' | 'sponsor'; countryId: string; teamId: string; teamName: string; pointsAtStart: number; sponsor?: string; issuedWeeks?: number[] }
 export interface WorldLeagues { season: number; divisions: Record<string, Division>; champions: { season: number; countryId: string; school: string }[];
-  stories?: WorldStory[]; leagueNames?: Record<string, string> }
+  stories?: WorldStory[]; leagueNames?: Record<string, string>; schoolRankings?: SchoolPowerRanking[]; rivalryRecords?: MatchRecord[] }
+
+export interface SchoolPowerRow { teamId: string; name: string; countryId: string; played: number; points: number; goalDifference: number; score: number; previousRank?: number }
+export interface SchoolPowerRanking { season: number; week: number; rows: SchoolPowerRow[] }
+
+/** World list uses completed league results, weighted by the competition's visibility. */
+export function publishSchoolPowerRanking(world: WorldLeagues, week: number, home?: Division | null): WorldLeagues {
+  if (week < 8 || week > 24 || week % 4 !== 0 || world.schoolRankings?.some(entry => entry.season === world.season && entry.week === week)) return world
+  const previous = world.schoolRankings?.filter(entry => entry.season === world.season).at(-1)
+  const rows = [...Object.entries(world.divisions).map(([countryId, division]) => ({ countryId, division })), ...(home ? [{ countryId: home.teams[0]?.countryId ?? 'eng', division: home }] : [])]
+    .flatMap(({ countryId, division }) => division.standings.map(row => ({
+      teamId: row.teamId, name: row.teamName, countryId, played: row.played, points: row.points,
+      goalDifference: row.goalsFor - row.goalsAgainst,
+      score: Math.round((row.points * 3 + (row.goalsFor - row.goalsAgainst) * .7 + row.won) * countryLeagueVisibility(countryId) * 10) / 10,
+      previousRank: (() => { const rank = previous?.rows.findIndex(entry => entry.teamId === row.teamId) ?? -1; return rank < 0 ? undefined : rank + 1 })(),
+    }))).filter(row => row.played > 0).sort((a, b) => b.score - a.score || b.points - a.points || a.teamId.localeCompare(b.teamId))
+  return { ...world, schoolRankings: [...(world.schoolRankings ?? []), { season: world.season, week, rows }] }
+}
 
 function newDivision(countryId: string): Division {
   const region = regionsFor(countryId)[0]
@@ -37,7 +55,21 @@ export function advanceWorldLeagues(state: WorldLeagues | undefined, season: num
         division = batchSimDivisionRound(division, round, '', true, 'schoolLeague', season, round + 5)
     divisions[nation.id] = division
   }
-  return { season, divisions, champions, stories: state?.stories ?? [], leagueNames: state?.leagueNames ?? {} }
+  let rivalryRecords = state?.rivalryRecords ?? []
+  if (completedWeek >= 29) for (const division of Object.values(divisions)) for (const team of division.teams) {
+    const rival = schoolRival(division, team.id)
+    if (!rival || team.id.localeCompare(rival.id) > 0) continue
+    const id = `school-rivalry-${season}-${team.id}-${rival.id}`
+    if (rivalryRecords.some(record => record.id === id)) continue
+    const score = (side: typeof team) => {
+      const seed = [...`${season}:${side.id}:${rival!.id}`].reduce((sum, char) => (sum * 31 + char.charCodeAt(0)) >>> 0, 7)
+      const opponent = side.id === team.id ? rival! : team
+      return Math.min(5, Math.max(0, Math.floor((side.ratings.attack + side.ratings.midfield - opponent.ratings.defense) / 48) + seed % 3))
+    }
+    rivalryRecords = capturePlayedFixtures(rivalryRecords, [{ id, round: 1, homeTeamId: team.id, awayTeamId: rival.id,
+      played: true, homeGoals: score(team), awayGoals: score(rival) }], division.teams, 'schoolFriendlies', season, 29)
+  }
+  return { season, divisions, champions, stories: state?.stories ?? [], leagueNames: state?.leagueNames ?? {}, schoolRankings: state?.schoolRankings ?? [], rivalryRecords }
 }
 
 export function worldLeagueRecords(world: WorldLeagues, home?: Division | null): MatchRecord[] {

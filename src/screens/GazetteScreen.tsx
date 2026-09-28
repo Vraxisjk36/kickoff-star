@@ -85,6 +85,13 @@ export default function GazetteScreen({ issue, issues = [issue], onClose }: { is
             <p className="mt-3 text-sm leading-6 text-[#bfb6a5] line-clamp-3">{feature.body}</p>
             <span className="block mt-4 text-xs font-display text-ks-gold tracking-widest">READ THE FULL STORY →</span>
           </button>}
+          {selected.schoolRanking && <section className="rounded-xl border border-ks-gold/50 bg-[#171407] p-3">
+            <h2 className="font-display text-ks-gold tracking-wider text-sm">WORLD SCHOOL POWER TABLE · WEEK {selected.schoolRanking.week}</h2>
+            <p className="text-[10px] text-ks-muted mt-1">Completed league results · season cumulative</p>
+            {selected.schoolRanking.rows.slice(0, 5).map((row, i) => <div key={row.teamId} className="flex items-center gap-2 border-t border-ks-border/50 py-2 text-xs">
+              <b className="text-ks-gold w-5">{i + 1}</b><span className="flex-1 text-ks-ink">{row.name}<small className="block text-ks-muted">{row.countryId.toUpperCase()} · {row.points} league pts · {row.played} played · {row.previousRank ? `was #${row.previousRank}` : 'new'}</small></span><b className="text-ks-gold">{row.score}</b>
+            </div>)}
+          </section>}
           {selected.ranking && <section className="rounded-xl border border-ks-gold/50 bg-[#171407] p-3">
             <h2 className="font-display text-ks-gold tracking-wider text-sm">{selected.ranking.scope === 'academy' ? 'ACADEMY LEAGUE FIVE' : 'WORLD SCHOOLS FIVE'} · WEEK {selected.ranking.week}</h2>
             <p className="text-[10px] text-ks-muted mt-1">Season points · ranking closes after week 32</p>

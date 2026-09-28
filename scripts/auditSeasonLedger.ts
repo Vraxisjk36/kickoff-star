@@ -13,7 +13,7 @@ import type { Player } from '../src/types/player'
 const region = regionsFor('rsa')[0]
 const school = schoolsForRegion(region.id)[0]
 let world = initSchoolLeagueWorld(school.name, region.id)
-assert.equal(SCHOOL_SEASON_SCHEDULE.schoolFriendlies.length, 2)
+assert.deepEqual(SCHOOL_SEASON_SCHEDULE.schoolFriendlies, [4, 5, 29])
 assert.equal(SCHOOL_SEASON_SCHEDULE.schoolLeague.length, 18)
 assert.equal(new Set(SCHOOL_SEASON_SCHEDULE.schoolLeague).size, 18)
 assert.equal(SCHOOL_SEASON_SCHEDULE.schoolCup.length, 4)
@@ -21,7 +21,8 @@ assert.equal(SCHOOL_SEASON_SCHEDULE.schoolDevelopment.length, 5)
 assert.equal(SCHOOL_SEASON_SCHEDULE.nationalChampionship.length, 4)
 assert.equal(INTERNATIONAL_QUALIFIER_WEEKS.length, 5)
 assert.equal(INTERNATIONAL_FINALS_WEEKS.length, 3)
-for (const week of [1, 2, 3, 29, 30, 31, 36]) assert.equal(competitionForWeek(week, 'grassroots-season'), null)
+for (const week of [1, 2, 3, 30, 31, 36]) assert.equal(competitionForWeek(week, 'grassroots-season'), null)
+assert.equal(competitionForWeek(29, 'grassroots-season')?.competitionId, 'schoolFriendlies')
 const week28 = { currentWeek: generateWeek(28, 1, 'grassroots-season', false, 'school'), history: [] }
 assert.equal(week28.currentWeek.events.filter(e => e.type === 'match').length, 0)
 assert.equal(alignSchoolPostseason(week28, 'grassroots-season', 'school', true).currentWeek.events.filter(e => e.type === 'match' && e.day === 'thu').length, 1)

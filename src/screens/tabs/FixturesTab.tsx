@@ -100,7 +100,7 @@ export default function FixturesTab({ division, playerTeamId, cups, route }: { d
 
   return (
     <div className="fixtures-centre flex flex-col gap-2.5">
-      <section className="fixtures-hero"><small>SEASON CENTRE</small><h2>{phase === 'academy' ? 'Academy League' : path === 'school' ? `${regionName ?? 'Local'} Schools League` : 'Sunday League'}</h2><p>Fixtures & results · {phase === 'academy' ? 'Saturdays' : path === 'school' ? 'school matchdays' : 'Sundays'}</p>{next?<div className="next-fixture"><div><span>NEXT MATCH</span><b>{`WEEK ${next.week}`}</b></div><div className="next-opponent">{next.opponent&&<TeamCrest primary={next.opponent.primaryColor} secondary={next.opponent.secondaryColor} short={next.opponent.short}/>}<strong>{next.name}</strong><i>{next.friendly ? 'FRIENDLY' : next.isHome ? 'HOME' : 'AWAY'}</i></div></div>:<p>Season schedule complete.</p>}</section>
+      <section className="fixtures-hero"><small>SEASON CENTRE</small><h2>{phase === 'academy' ? 'Academy League' : path === 'school' ? `${regionName ?? 'Local'} Schools League` : 'Sunday League'}</h2><p>Fixtures & results · {phase === 'academy' ? 'Saturdays' : path === 'school' ? 'school matchdays' : 'Sundays'}</p>{next?<div className="next-fixture"><div><span>NEXT MATCH</span><b>{`WEEK ${next.week}`}</b></div><div className="next-opponent">{next.opponent&&<TeamCrest primary={next.opponent.primaryColor} secondary={next.opponent.secondaryColor} short={next.opponent.short}/>}<strong>{next.name}</strong><i>{next.week === 29 && next.friendly ? 'RIVALRY' : next.friendly ? 'FRIENDLY' : next.isHome ? 'HOME' : 'AWAY'}</i></div></div>:<p>Season schedule complete.</p>}</section>
       <div className="home-section-label"><span>RECENT FORM</span><i/></div>
       <Panel title="📈 form">
         {form.length === 0 ? (
@@ -161,7 +161,7 @@ export default function FixturesTab({ division, playerTeamId, cups, route }: { d
                   <TeamCrest primary={r.opponent.primaryColor} secondary={r.opponent.secondaryColor} short={r.opponent.short} size="sm" />
                 )}
                 <span className="text-[11px] text-ks-ink flex-1 truncate">{r.name}</span>
-                <span className="text-[9px] text-ks-muted uppercase tracking-wider">{r.friendly ? 'friendly' : r.isHome ? 'home' : 'away'}</span>
+                <span className="text-[9px] text-ks-muted uppercase tracking-wider">{r.week === 29 && r.friendly ? 'annual rivalry' : r.friendly ? 'friendly' : r.isHome ? 'home' : 'away'}</span>
               </div>
             ))}
           </div>
@@ -182,7 +182,7 @@ export default function FixturesTab({ division, playerTeamId, cups, route }: { d
                   <TeamCrest primary={r.opponent.primaryColor} secondary={r.opponent.secondaryColor} short={r.opponent.short} size="sm" />
                 )}
                 <span className="text-[11px] text-ks-ink flex-1 truncate">{r.name}</span>
-                <span className="text-[11px] text-ks-ink font-display">{r.scoreLine}</span>{r.friendly && <span className="text-[8px] text-ks-gold">FR</span>}
+                <span className="text-[11px] text-ks-ink font-display">{r.scoreLine}</span>{r.friendly && <span className="text-[8px] text-ks-gold">{r.week === 29 ? 'DERBY' : 'FR'}</span>}
                 <div className={`w-5 h-5 rounded border flex items-center justify-center font-display text-[9px] ${RESULT_STYLE[r.result!]}`}>
                   {r.result}
                 </div>

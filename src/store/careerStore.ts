@@ -44,7 +44,8 @@ import { generateSquad } from '../engine/squad'
 import { growSquadForSeason, rollSquadDepartures } from '../engine/squadLifecycle'
 import { generateGazetteIssue } from '../engine/gazette'
 import { advanceWorldSchools, publishSchoolsRanking, schoolsAwards, schoolsLeaders, academyLeaders, academySeasonAwards } from '../engine/worldSchools'
-import { advanceWorldLeagues, worldLeagueLeaders, worldLeagueChampions } from '../engine/worldLeagues'
+import { advanceWorldLeagues, worldLeagueLeaders, worldLeagueChampions, publishSchoolPowerRanking } from '../engine/worldLeagues'
+import { schoolRival } from '../engine/friendlies'
 import { advanceWorldNews } from '../engine/worldNews'
 import { initAcademyWorld, recordAcademyMatchResult, batchSimAcademyRound, applyAcademyPromotion, academyDivisionLabel, type AcademyWorld } from '../engine/academy'
 import { evaluateCaptaincy, recordCaptainAppearance, clearCaptaincyStory } from '../engine/captaincy'
@@ -1322,14 +1323,21 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
             opponentPrestige: opponent.prestige,
             ownPrestige: ownTeam.prestige,
             competitionLabel: isInAcademy ? 'the league' : updatedLeague?.kind === 'school' ? 'the Local School League' : 'the Sunday League',
-            isRivalOrCup: false,
+            isRivalOrCup: !isInAcademy && schoolRival(division, activeWorld.playerTeamId)?.id === opponent.id,
           }
         }
+      }
+      if (!isInAcademy && result.calendar.currentWeek.weekNumber === 29 && !upcomingFixtureInfo) {
+        const rival = schoolRival(division, activeWorld.playerTeamId)
+        const own = division.teams.find(team => team.id === activeWorld.playerTeamId)
+        if (rival && own) upcomingFixtureInfo = { opponentName: rival.name, opponentPrestige: rival.prestige,
+          ownPrestige: own.prestige, competitionLabel: 'the annual school rivalry', isRivalOrCup: true }
       }
     }
     const homeCountryId = player.regionId?.split('-')[0] ?? getNation(player.nationality).id
     const homeDivision = !isInAcademy && league?.kind === 'school' ? league.divisions[league.playerDivision] : null
     let worldLeagues = advanceWorldLeagues(player.worldLeagues, calendar.currentWeek.seasonYear, completedWeekNumber, homeCountryId, !!homeDivision)
+    if (!isInAcademy) worldLeagues = publishSchoolPowerRanking(worldLeagues, completedWeekNumber, homeDivision)
     if (result.seasonEnded) worldLeagues = worldLeagueChampions(worldLeagues)
     const news = advanceWorldNews(worldLeagues, completedWeekNumber)
     worldLeagues = news.world

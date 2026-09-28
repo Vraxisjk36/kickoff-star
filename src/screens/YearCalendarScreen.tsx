@@ -14,7 +14,7 @@ function weekItems(week: number, current: number, player: Player, cups: CupWorld
   const items: CalendarItem[] = []
   const fixture = activeCompetitionForWeek(week, player.careerClock.phase, player.grassrootsPath, Boolean(cups.schoolDevelopment), player.academyCountryId)
   const names: Record<string, string> = {
-    schoolFriendlies: 'School friendly', schoolLeague: 'Local School League',
+    schoolFriendlies: week === 29 ? 'Annual school rivalry' : 'School friendly', schoolLeague: 'Local School League',
     schoolCup: 'Regional Schools Cup', schoolDevelopment: 'School Development Competition',
     nationalChampionship: 'National Schools Championship', sundayLeague: academy ? 'Academy League' : 'Sunday League',
     sundayCup: 'Sunday Cup', academyLeagueCup: 'U18 Premier Cup',

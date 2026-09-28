@@ -622,7 +622,7 @@ async function main() {
     }
   }
   if (!forceAcademy && !academyReached) {
-    assert((tallies['schoolFriendlies'] ?? 0) === 2 * schoolSeasons, `route friendlies should be ${2 * schoolSeasons}, got ${tallies['schoolFriendlies'] ?? 0}`)
+    assert((tallies['schoolFriendlies'] ?? 0) === 3 * schoolSeasons, `two preseason matches and one annual rivalry match per school season, got ${tallies['schoolFriendlies'] ?? 0}`)
     const cupMatches = (tallies['schoolCup'] ?? 0) + (tallies['schoolDevelopment'] ?? 0) + (tallies['sundayCup'] ?? 0)
     assert(cupMatches > 0, `the route's cup or development competition should remain reachable, got ${cupMatches}`)
     const records = [...(player.competitionCareer?.history ?? []), ...Object.values(player.competitionCareer?.current ?? {})]

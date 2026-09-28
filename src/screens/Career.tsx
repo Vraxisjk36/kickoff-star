@@ -261,7 +261,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
       if (comp.competitionId === 'schoolFriendlies') {
         const opponent = friendlyOpponent(playerDivision, activeWorld.playerTeamId, calendar.currentWeek.weekNumber, calendar.currentWeek.seasonYear)
         if (!opponent) { resolveCurrentEvent(); return }
-        setMode({ kind: 'matchday', opponent, isHome: calendar.currentWeek.weekNumber % 2 === 0, competitionId: 'schoolFriendlies', competitionLabel: 'Preseason Friendly', isKnockout: false })
+        setMode({ kind: 'matchday', opponent, isHome: calendar.currentWeek.weekNumber % 2 === 0, competitionId: 'schoolFriendlies', competitionLabel: calendar.currentWeek.weekNumber === 29 ? 'Annual School Rivalry' : 'Preseason Friendly', isKnockout: false })
         return
       }
       if(comp.competitionId==='youthShowcase'){if(!canPlayYouthShowcase(player,calendar)){setMode({kind:'training'});return}const opponent=generateTeam(Math.max(5,Math.min(9,playerTeam.prestige+3)));setMode({kind:'matchday',opponent,isHome:true,competitionId:'youthShowcase',competitionLabel:'National Youth Showcase',isKnockout:false});return}

@@ -43,7 +43,7 @@ export function markResolved(state: CalendarState, eventId: string): CalendarSta
 // from the old hardcoded set (9 rounds spread across 34 weeks) — this is
 // the plumbing for later phases, not a rules change on its own.
 export const COMPETITION_SPECS: CompetitionRoundSpec[] = [
-  { id: 'schoolFriendlies', rounds: 2 },
+  { id: 'schoolFriendlies', rounds: 3 },
   { id: 'schoolLeague', rounds: 18 },
   { id: 'schoolCup', rounds: 4 }, // round of 16, quarters, semis, final
   { id: 'schoolDevelopment', rounds: 5 },
@@ -64,7 +64,7 @@ export const COMPETITION_SPECS: CompetitionRoundSpec[] = [
 // friendlies. The existing V4 league/cup engines remain authoritative; this
 // registry only decides WHEN their rounds are played.
 export const SCHOOL_SEASON_SCHEDULE: Record<string, number[]> = {
-  schoolFriendlies: [4, 5],
+  schoolFriendlies: [4, 5, 29],
   schoolLeague: Array.from({ length: 18 }, (_, i) => i + 6), // W6-W23
   schoolCup: [24, 25, 26, 27],
   schoolDevelopment: Array.from({ length: 5 }, (_, i) => i + 24), // W24-W28

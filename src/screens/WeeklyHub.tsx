@@ -4,6 +4,7 @@ import type { LeagueWorld, Division } from '../engine/league'
 import type { AcademyWorld } from '../engine/academy'
 import type { Team } from '../engine/teams'
 import BottomNav from '../components/BottomNav'
+import BroadcastHeader from '../components/BroadcastHeader'
 import { NAV_ITEMS, type HubTab } from '../components/navItems'
 import HomeTab from './tabs/HomeTab'
 import PlayerTab from './tabs/PlayerTab'
@@ -74,7 +75,7 @@ export default function WeeklyHub({
   }
 
   return (
-    <div className="min-h-screen bg-ks-black flex flex-col">
+    <div className={`hub-shell hub-shell--${tab} min-h-screen bg-ks-black flex flex-col`}>
       {/* tab header — gives every destination a sense of place */}
       <div className="sticky top-0 z-20 bg-ks-black/95 backdrop-blur border-b border-ks-border/50">
         <div className="max-w-md mx-auto w-full px-3 py-2">
@@ -87,7 +88,8 @@ export default function WeeklyHub({
         </div>
       </div>
 
-      <div className="flex-1 px-3 pt-3 pb-40 flex flex-col gap-2.5 max-w-md mx-auto w-full">
+      <div key={tab} className="hub-content flex-1 px-3 pt-3 pb-40 flex flex-col gap-2.5 max-w-md mx-auto w-full">
+        <BroadcastHeader tab={tab} player={player} team={playerTeam} division={playerDivision} week={calendar.currentWeek.weekNumber} />
         {tab === 'home' && (
           <HomeTab
             player={player}

@@ -40,7 +40,7 @@ export default function GazetteScreen({ issue, issues = [issue], onClose }: { is
     (player.seasonGoals >= 5 || player.seasonAssists >= 5 || player.matchRatings.slice(-3).length === 3 && player.matchRatings.slice(-3).every(rating => rating >= 7.5))
   const feature = displayed.articles[0]
   return (
-    <div className="fixed inset-0 z-40 bg-[#0b0a08] overflow-y-auto text-[#f3eddb]">
+    <div className="gazette-stage fixed inset-0 z-40 bg-[#0b0a08] overflow-y-auto text-[#f3eddb]">
       <div className="max-w-xl mx-auto min-h-full flex flex-col pb-8">
         <div className="px-5 pt-7 pb-5 border-b-4 border-double border-ks-gold/80 bg-[radial-gradient(circle_at_top,rgba(212,175,55,.13),transparent_70%)]">
           <div className="flex items-center justify-between">

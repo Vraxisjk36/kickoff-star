@@ -48,8 +48,8 @@ export default function MatchDayScreen({ player, playerTeam, opponent, isHome, o
   const venue = matchVenue(isHome ? playerTeam : opponent, competitionId, player.careerClock.phase === 'academy')
 
   return (
-    <div className="relative min-h-screen w-full bg-ks-black flex flex-col justify-start px-5 py-8 overflow-y-auto">
-      <div className="matchday-lights absolute inset-0"/><div className="matchday-crowd absolute inset-x-0 bottom-0 h-[34%]"/><div className="absolute inset-0" style={{
+    <div className="matchday-stage relative min-h-screen w-full bg-ks-black flex flex-col justify-start px-5 py-8 overflow-y-auto">
+      <div className="matchday-lights absolute inset-0"/><div className="matchday-pitch-lines" aria-hidden="true"><i/><i/><i/></div><div className="matchday-crowd absolute inset-x-0 bottom-0 h-[34%]"/><div className="absolute inset-0" style={{
         background: 'radial-gradient(ellipse 70% 45% at 50% 30%, rgba(212,175,55,0.10), transparent 62%), linear-gradient(180deg,#0a0a09,#050504)',
       }} />
 

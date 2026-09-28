@@ -107,7 +107,7 @@ export default function MatchSummary({ rating, goals, assists, won, drew, injury
       ]
 
   return (
-    <div className="relative min-h-screen w-full bg-ks-black flex flex-col px-5 py-8 overflow-y-auto">
+    <div className="match-result-stage relative min-h-screen w-full bg-ks-black flex flex-col px-5 py-8 overflow-y-auto">
       <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 60% 40% at 50% 25%, rgba(212,175,55,0.08), transparent 60%), linear-gradient(180deg,#0a0a09,#050504)' }} />
       <div className="relative z-10 max-w-md mx-auto w-full">
         <div className="text-center mb-6">

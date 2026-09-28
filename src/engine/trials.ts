@@ -26,19 +26,19 @@ export interface TrialWeekConfig {
 
 export const TRIAL_WEEKS: TrialWeekConfig[] = [
   {
-    week: 1, title: 'Week 1 — First Impressions',
+    week: 1, title: 'Session 1 — First Impressions',
     focus: 'Fitness tests, first touch, passing. The coaches are watching everyone.',
     drillTheme: 'fitness', drills: 2, showcase: true,
     coachTip: 'Every drill has a safe option and a risky one. Risk pays more — when it comes off.',
   },
   {
-    week: 2, title: 'Week 2 — Small-Sided Games',
+    week: 2, title: 'Session 2 — Small-Sided Games',
     focus: 'Tactical work and small-sided matches. Now you\'re up against the others.',
     drillTheme: 'tactical', drills: 2, showcase: true,
     coachTip: 'Timing matters as much as the decision. Strike it clean and the odds move your way.',
   },
   {
-    week: 3, title: 'Week 3 — The Trial Match',
+    week: 3, title: 'Session 3 — The Trial Match',
     focus: 'Eleven-a-side, coaches on the touchline, squad list decided at full time.',
     drillTheme: 'finishing', drills: 1, showcase: true, isMatch: true,
     coachTip: 'This is the one that counts. Everything you\'ve shown gets weighed up tonight.',

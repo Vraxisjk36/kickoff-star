@@ -194,6 +194,33 @@ function worldDispatch(world: WorldLeagues | undefined, season: number, week: nu
     detail: `The table after ${leader.played} matches shows ${leader.teamName} with ${leader.won} wins, ${leader.drawn} draws and ${leader.lost} defeats. Their goal record is ${leader.goalsFor} scored and ${leader.goalsAgainst} conceded. ${second ? `${second.teamName} follow on ${second.points} points. The gap is ${leader.points - second.points} points, with plenty of fixtures still to play.` : ''} These figures come from completed league fixtures, not a prediction.` }]
 }
 
+function seasonGuideArticles(player: Player, week: number, division: Division | null, world?: WorldLeagues): GazetteArticle[] {
+  if (player.careerClock?.phase === 'academy' && week === 1) return [
+    { kind: 'preview', headline: 'THE ACADEMY CALENDAR, EXPLAINED', byline: 'Academy football desk',
+      body: 'League fixtures establish the weekly rhythm. Cup ties test the squad in a different format, and continental football is reserved for clubs that qualify.',
+      detail: 'An academy place is the next stage of the career, not a professional contract. The coaching staff evaluate training, availability, and match performances. League games provide regular evidence; domestic cup fixtures can bring group and knockout pressure. If the club earns a continental place, its qualifying route and later bracket are recorded separately. Selection for each match still matters: your place has to be earned.' },
+    { kind: 'spotlight', headline: `${player.name.toUpperCase()} BEGINS THE NEXT CHAPTER`, byline: 'The Gazette profile desk',
+      body: `${player.name} enters academy football as a ${player.position}. The first appearances will show how the school record translates to a stronger level.`,
+      detail: `${player.name} has reached the academy stage. The club, squad, and competition schedule now shape the route toward a professional offer. Training can improve attributes, but performances against academy opponents and the coaches’ selection decisions provide the match evidence. This opening issue records the start of that chapter; later editions will follow what actually happens on the pitch.` },
+  ]
+  if (week !== 4 || player.careerClock?.phase === 'academy') return []
+  const favourites = division ? [...division.teams].sort((a, b) => b.prestige - a.prestige).slice(0, 3) : []
+  return [
+    { kind: 'league', headline: 'THE SCHOOLS TO BEAT', byline: 'Local league desk',
+      body: favourites.length ? `${favourites.map(team => team.name).join(', ')} begin among the strongest sides on paper. The table is still blank; these are pre-season favourites, not predicted champions.` : 'The local field will reveal itself when the league opens.',
+      detail: favourites.length ? `${favourites.map((team, index) => `${index + 1}. ${team.name}: pre-season strength ${team.prestige}, with attack ${team.ratings.attack}, midfield ${team.ratings.midfield}, and defence ${team.ratings.defense}.`).join('\n\n')}\n\nThese are starting strengths. Results, goals, and the league table are decided only by fixtures played from week six.` : 'The local league starts in week six. Each completed fixture will update the standings and the scoring list.' },
+    { kind: 'preview', headline: 'TWO FRIENDLIES, THEN THE REAL POINTS', byline: 'The Gazette match guide',
+      body: `${player.name} and the squad have friendlies in weeks four and five. The eighteen-round local league begins in week six. The friendlies count as match performances, but they do not add league points.`,
+      detail: `The first two dates are pre-season friendlies. They give ${player.name}, a ${player.position}, a chance to show the coach what training alone cannot: decisions and execution in a match. Goals, assists, ratings, and availability are part of the player's record. League points start in week six, when the ten-school home-and-away championship opens. A reserve player can earn a stronger place through actual appearances and form.` },
+    { kind: 'world', headline: 'THE WORLD BEYOND YOUR SCHOOL', byline: 'World football desk',
+      body: `The Gazette is tracking ${Object.keys(world?.divisions ?? {}).length} featured school divisions across the world. Their results and named scorers will begin appearing with the league fixtures.`,
+      detail: `Every featured division has its own saved fixture list, standings, match reports, and named player lines. A player mentioned here can be found again in the recorded scoring list. The monthly World Schools Five will draw from those matches and the player's own record. The list is a season-long race: a strong month helps, but the previous months still count. The published ranking later closes ahead of the awards, leaving the final result for the ceremony.` },
+    { kind: 'league', headline: 'THE ROAD AFTER THE LOCAL LEAGUE', byline: 'Competition guide',
+      body: 'Regional knockout football follows the local campaign. The national championship, October development fixtures, and international selection each have their own qualification rules.',
+      detail: 'The local season runs through week twenty-three. Regional cup football begins after the league; the cup is knockout rather than a second league table. Qualifying regional sides move toward the national championship. Younger players may have four development fixtures in October, while selected national school players can enter the international window. Your position, form, eligibility, and actual results determine which of these stages you play. The competition centre will show the draw and saved scores as each event arrives.' },
+  ]
+}
+
 function schoolLeagueArticle(division: Division | null, season: number, week: number, playerId: string): GazetteArticle | null {
   const records = division?.matchRecords?.filter(record => record.season === season && record.competitionId === 'schoolLeague') ?? []
   if (!records.length || records.length !== division?.fixtures.filter(fixture => fixture.played).length) return null
@@ -254,6 +281,7 @@ export function generateGazetteIssue(
 
   const opening = competitionOpening(player, weekNumber, seasonYear, schoolDivision)
   if (opening) articles.push(opening)
+  articles.push(...seasonGuideArticles(player, weekNumber, schoolDivision, world))
 
   if (worldStory) articles.push(worldStory)
 

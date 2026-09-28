@@ -400,6 +400,15 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const homeCountryId = getNation(player.nationality).id
     player = { ...player, worldLeagues: advanceWorldLeagues(player.worldLeagues, loadedCalendar.currentWeek.seasonYear,
       Math.max(0, loadedCalendar.currentWeek.weekNumber - 1), homeCountryId, !!league && league.kind === 'school' && player.careerClock.phase !== 'academy') }
+    if (player.careerClock.phase !== 'academy' && league?.kind === 'school') {
+      const oldIssues = player.gazetteIssues ?? []
+      const firstIndex = oldIssues.findIndex(issue => issue.seasonYear === 1 && issue.weekNumber === 4 && issue.articles.length < 5)
+      if (firstIndex >= 0) {
+        const refreshed = generateGazetteIssue(4, 1, player, [], [], null, null, league.divisions[league.playerDivision], player.id,
+          3, [], undefined, undefined, undefined, undefined, undefined, player.worldLeagues)
+        player = { ...player, gazetteIssues: oldIssues.map((issue, index) => index === firstIndex ? { ...refreshed, id: issue.id } : issue) }
+      }
+    }
     setState({ player, calendar: alignContinentalQualifier(alignSchoolPostseason(alignMatchDays(
       alignInternationalDuty(loadedCalendar, internationalDutyForWeek(save.international ?? null, player, loadedCalendar.currentWeek.weekNumber)),
       player.careerClock.phase, 'school', false), player.careerClock.phase, 'school', Boolean(cups.schoolDevelopment)),

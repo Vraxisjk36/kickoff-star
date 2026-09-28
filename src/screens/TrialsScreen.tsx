@@ -237,10 +237,10 @@ export default function TrialsScreen({ player, school, onComplete }: TrialsScree
         <p className="text-ks-muted text-sm mb-8 leading-relaxed">
           {isLast
             ? 'That\'s the trial done. The coaches are naming the squad tonight.'
-            : 'The coaches have seen enough for this week. There\'s still time to change their minds.'}
+            : 'The coaches have seen enough for this session. There\'s still time to change their minds.'}
         </p>
         <button onClick={advanceWeek} className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-3.5 text-sm">
-          {isLast ? 'the verdict →' : 'next week →'}
+          {isLast ? 'the verdict →' : 'next session →'}
         </button>
       </Shell>
     )

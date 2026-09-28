@@ -22,4 +22,8 @@ const issue = generateGazetteIssue(9, 1, player, [], [], null, null, null, playe
   [], undefined, undefined, undefined, undefined, undefined, world)
 assert.ok(issue.articles.some(article => article.detail?.includes('recorded appearances this season')),
   'world stories cite saved goals and have a full article view')
+const openingIssue = generateGazetteIssue(4, 1, player, [], [], null, null, world.divisions.eng, player.id, 3,
+  [], undefined, undefined, undefined, undefined, undefined, world)
+assert.ok(openingIssue.articles.length >= 5, 'opening issue has a full season guide')
+assert.ok(openingIssue.articles.some(article => article.body.includes('Joe Kazadi')), 'the player is named in the story')
 console.log('Gazette upgrade: world catch-up, named goals, idempotence, honest champion history, and recorded long stories passed.')

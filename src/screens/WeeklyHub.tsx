@@ -16,6 +16,7 @@ import AchievementCeremony from '../components/AchievementCeremony'
 import SeasonReviewCard from '../components/SeasonReviewCard'
 import HeadlineToast from '../components/HeadlineToast'
 import GazetteScreen from './GazetteScreen'
+import { presentGazetteIssue } from '../engine/gazette'
 import CaptaincyStoryCard from '../components/CaptaincyStoryCard'
 import InboxScreen from './InboxScreen'
 import StoryRevealCard from '../components/StoryRevealCard'
@@ -58,6 +59,7 @@ export default function WeeklyHub({
   const offerCount = (player?.contractOffers ?? []).length
   const activeLabel = NAV_ITEMS.find((n) => n.tab === tab)?.label ?? ''
   const latestGazette = player?.gazetteIssues?.at(-1) ?? null
+  const latestHeadline = latestGazette && player ? presentGazetteIssue(latestGazette, player, league?.kind === 'school' ? league.divisions[league.playerDivision] : null).masthead : null
   const unreadStory = (player?.inbox ?? []).find((item) => !item.read) ?? null
   useEffect(() => {
     if (!latestGazette || window.localStorage.getItem(`gazette-seen:${latestGazette.id}`)) return
@@ -77,6 +79,11 @@ export default function WeeklyHub({
       <div className="sticky top-0 z-20 bg-ks-black/95 backdrop-blur border-b border-ks-border/50">
         <div className="max-w-md mx-auto w-full px-3 py-2">
           <div className="flex items-center justify-between gap-3"><span className="font-display tracking-widest text-[10px] text-ks-gold uppercase">{activeLabel}</span><button type="button" onClick={onExitToMenu} className="career-menu-button" aria-label="Return to Kickoff Star main menu">☰ <span>MENU</span></button></div>
+          <button type="button" onClick={() => setEnergyOpen(true)} className="mt-2 flex w-full items-center gap-2 text-left" aria-label={`Energy ${Math.round(player.fitness.stamina)} percent. Open recovery details`}>
+            <span className="font-display text-[10px] tracking-wider text-ks-muted">ENERGY</span>
+            <span className="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden"><span className={`block h-full rounded-full transition-all ${player.fitness.stamina < 30 ? 'bg-red-500' : player.fitness.stamina < 50 ? 'bg-orange-400' : 'bg-ks-gold'}`} style={{ width: `${Math.max(0, Math.min(100, player.fitness.stamina))}%` }} /></span>
+            <strong className="text-xs tabular-nums text-ks-ink">{Math.round(player.fitness.stamina)}%</strong>
+          </button>
         </div>
       </div>
 
@@ -91,7 +98,7 @@ export default function WeeklyHub({
             onOpenOffers={onOpenOffers}
             onGoTo={onTabChange}
             onOpenEnergy={() => setEnergyOpen(true)}
-            latestGazetteMasthead={latestGazette?.masthead ?? null}
+            latestGazetteMasthead={latestHeadline}
             onOpenGazette={() => setGazetteOpen(true)}
             onOpenInbox={() => setInboxOpen(true)}
             onOpenYearCalendar={() => setYearCalendarOpen(true)}
@@ -123,7 +130,7 @@ export default function WeeklyHub({
       {yearCalendarOpen && <YearCalendarScreen player={player} calendar={calendar} cups={cups} onClose={() => setYearCalendarOpen(false)} />}
       {latestGazette && gazettePeekId === latestGazette.id && !gazetteOpen && !pendingSeasonReview && !unreadStory && <div className="fixed z-30 bottom-20 left-3 right-3 max-w-md mx-auto rounded-xl border border-ks-gold/60 bg-[#171407] shadow-2xl p-4" role="status">
         <div className="flex justify-between items-center"><span className="text-ks-gold font-display text-[10px] tracking-widest">THE GAZETTE · WEEK {latestGazette.weekNumber}</span><button onClick={dismissGazettePeek} className="text-ks-muted text-xs" aria-label="Dismiss Gazette headline">✕</button></div>
-        <h2 className="text-ks-ink font-display text-base mt-2">{latestGazette.masthead}</h2>
+        <h2 className="text-ks-ink font-display text-base mt-2">{latestHeadline}</h2>
         <button className="text-ks-gold text-xs mt-3" onClick={() => { dismissGazettePeek(); setGazetteOpen(true) }}>Read full issue →</button>
       </div>}
 

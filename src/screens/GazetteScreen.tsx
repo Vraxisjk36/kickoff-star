@@ -1,6 +1,7 @@
 import type { GazetteIssue } from '../engine/gazette'
 import { useEffect, useState } from 'react'
 import { useCareerStore } from '../store/careerStore'
+import { presentGazetteIssue } from '../engine/gazette'
 
 const INTERVIEW_QUESTIONS = [
   { prompt: 'How would you describe your season so far?', options: ['I am proud of the progress, but there is more to do.', 'The results speak, and I want to keep this run going.', 'I am learning something from every match.'] },
@@ -31,11 +32,13 @@ export default function GazetteScreen({ issue, issues = [issue], onClose }: { is
   const [openStory, setOpenStory] = useState<number | null>(null)
   const [interviewAnswers, setInterviewAnswers] = useState<string[] | null>(null)
   const player = useCareerStore(state => state.player)
+  const league = useCareerStore(state => state.league)
+  const displayed = player ? presentGazetteIssue(selected, player, league?.kind === 'school' ? league.divisions[league.playerDivision] : null) : selected
   const publishInterview = useCareerStore(state => state.publishGazetteInterview)
   useEffect(() => { if (selected.id === issue.id && selected.articles.length !== issue.articles.length) setSelected(issue) }, [issue, selected])
   const eligible = player && selected.id === issue.id && player.gazetteInterviewSeason !== issue.seasonYear &&
     (player.seasonGoals >= 5 || player.seasonAssists >= 5 || player.matchRatings.slice(-3).length === 3 && player.matchRatings.slice(-3).every(rating => rating >= 7.5))
-  const feature = selected.articles[0]
+  const feature = displayed.articles[0]
   return (
     <div className="fixed inset-0 z-40 bg-[#0b0a08] overflow-y-auto text-[#f3eddb]">
       <div className="max-w-xl mx-auto min-h-full flex flex-col pb-8">
@@ -45,14 +48,14 @@ export default function GazetteScreen({ issue, issues = [issue], onClose }: { is
             <button onClick={openStory === null ? onClose : () => setOpenStory(null)} className="rounded-full border border-ks-border px-3 py-1 text-xs text-ks-ink">{openStory === null ? 'close ✕' : '← issue'}</button>
           </div>
           <h1 className="font-display text-4xl tracking-wide text-ks-gold mt-5 leading-none">THE GAZETTE</h1>
-          <div className="mt-3 flex items-center justify-between border-y border-ks-gold/40 py-2 text-[10px] tracking-[.18em] uppercase text-ks-muted"><span>Season {selected.seasonYear} · Week {selected.weekNumber}</span><span>{selected.articles.length} stories</span></div>
-          <p className="font-display text-lg text-white mt-4 leading-tight">{selected.masthead}</p>
+          <div className="mt-3 flex items-center justify-between border-y border-ks-gold/40 py-2 text-[10px] tracking-[.18em] uppercase text-ks-muted"><span>Season {selected.seasonYear} · Week {selected.weekNumber}</span><span>{displayed.articles.length} stories</span></div>
+          <p className="font-display text-lg text-white mt-4 leading-tight">{displayed.masthead}</p>
         </div>
 
         <div className="px-5 pt-4"><label className="text-[10px] uppercase text-ks-gold tracking-widest" htmlFor="gazette-archive">Browse the archive</label>
           <select id="gazette-archive" className="w-full mt-2 bg-[#181713] border border-ks-border text-ks-ink rounded-lg p-3 text-xs" value={selected.id}
             onChange={event => { setSelected(issues.find(entry => entry.id === event.target.value) ?? issue); setOpenStory(null) }}>
-            {[...issues].reverse().map(entry => <option key={entry.id} value={entry.id}>Season {entry.seasonYear} · week {entry.weekNumber} · {entry.masthead}</option>)}
+            {[...issues].reverse().map(entry => <option key={entry.id} value={entry.id}>Season {entry.seasonYear} · week {entry.weekNumber} · {player ? presentGazetteIssue(entry, player, league?.kind === 'school' ? league.divisions[league.playerDivision] : null).masthead : entry.masthead}</option>)}
           </select></div>
 
         <div className="flex-1 px-5 py-5 space-y-5">
@@ -71,12 +74,12 @@ export default function GazetteScreen({ issue, issues = [issue], onClose }: { is
                   }}>{answer}</button>)}</div></>}
           </section>}
           {openStory !== null ? <article className="border-t-2 border-ks-gold pt-5">
-            <span className="text-[10px] font-display tracking-[.2em] text-ks-gold">{KIND_LABEL[selected.articles[openStory]?.kind] ?? 'THE GAZETTE'}</span>
-            <h2 className="mt-3 font-display text-3xl leading-tight">{selected.articles[openStory]?.headline}</h2>
-            <p className="mt-3 text-xs text-ks-gold/80">{selected.articles[openStory]?.byline ?? 'The Gazette sports desk'} · Season {selected.seasonYear}, week {selected.weekNumber}</p>
-            {(selected.articles[openStory]?.detail ?? selected.articles[openStory]?.body ?? '').split('\n\n').map((paragraph, index) =>
+            <span className="text-[10px] font-display tracking-[.2em] text-ks-gold">{KIND_LABEL[displayed.articles[openStory]?.kind] ?? 'THE GAZETTE'}</span>
+            <h2 className="mt-3 font-display text-3xl leading-tight">{displayed.articles[openStory]?.headline}</h2>
+            <p className="mt-3 text-xs text-ks-gold/80">{displayed.articles[openStory]?.byline ?? 'The Gazette sports desk'} · Season {selected.seasonYear}, week {selected.weekNumber}</p>
+            {(displayed.articles[openStory]?.detail ?? displayed.articles[openStory]?.body ?? '').split('\n\n').map((paragraph, index) =>
               <p key={index} className="mt-5 text-[15px] leading-7 text-[#ded6c6]">{paragraph}</p>)}
-            {selected.articles[openStory]?.quote && <blockquote className="my-6 border-l-2 border-ks-gold pl-4 italic text-ks-gold">“{selected.articles[openStory]?.quote}”</blockquote>}
+            {displayed.articles[openStory]?.quote && <blockquote className="my-6 border-l-2 border-ks-gold pl-4 italic text-ks-gold">“{displayed.articles[openStory]?.quote}”</blockquote>}
             <button className="mt-8 border-t border-ks-border w-full py-4 text-left text-sm text-ks-gold" onClick={() => setOpenStory(null)}>← Back to all stories</button>
           </article> : <>
           {feature && <button onClick={() => setOpenStory(0)} className="w-full text-left border-y-2 border-ks-gold/65 py-6">
@@ -109,7 +112,7 @@ export default function GazetteScreen({ issue, issues = [issue], onClose }: { is
             <h3 className="font-display text-ks-gold text-xs mt-3">LOCAL AWARDS</h3>{selected.awards.local.map(entry => <p className="text-xs text-ks-muted" key={entry.name}>{entry.name}: {entry.winnerName}</p>)}
           </section>}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-1">
-          {selected.articles.slice(1).map((article, i) => (
+          {displayed.articles.slice(1).map((article, i) => (
             <button key={i} onClick={() => setOpenStory(i + 1)} className="text-left border-b border-ks-border/60 py-5 last:border-0">
               <span className="font-display tracking-widest text-[9px] text-ks-gold/80 uppercase">{KIND_LABEL[article.kind] ?? article.kind}</span>
               <h2 className="font-display text-lg tracking-wide text-white mt-2 leading-tight">{article.headline}</h2>

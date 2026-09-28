@@ -20,8 +20,8 @@ const second = competitionOpening(player, 6, 2, null)
 assert.ok(second?.detail?.includes('Season 1 — Pretoria High'), 'subsequent year names the recorded champion')
 const issue = generateGazetteIssue(9, 1, player, [], [], null, null, null, player.id, 8,
   [], undefined, undefined, undefined, undefined, undefined, world)
-assert.ok(issue.articles.some(article => article.detail?.includes('recorded appearances this season')),
-  'world stories cite saved goals and have a full article view')
+assert.ok(issue.articles.some(article => article.headline.startsWith('GAME OF THE WEEK:') && article.detail?.split('\n\n').length === 4),
+  'world fixtures produce a four-paragraph match report')
 const openingIssue = generateGazetteIssue(4, 1, player, [], [], null, null, world.divisions.eng, player.id, 3,
   [], undefined, undefined, undefined, undefined, undefined, world)
 assert.ok(openingIssue.articles.length >= 5, 'opening issue has a full season guide')

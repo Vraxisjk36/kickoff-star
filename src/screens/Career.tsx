@@ -18,6 +18,8 @@ import { rand } from '../engine/rng'
 import { sfx } from '../engine/audio'
 import { playMusic, pauseMusic } from '../engine/music'
 import { pickLifeEvent, buildLifeContext } from '../engine/lifeEvents'
+import { weeklyStoryDecision } from '../engine/weeklyStories'
+import { academyDivisionLabel } from '../engine/academy'
 import { pickRelationshipEvent } from '../engine/relationshipEvents'
 import { rand as randRoll } from '../engine/rng'
 import type { Decision, DecisionResult } from '../types/decision'
@@ -176,6 +178,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
     if (pending.type === 'training') { setMode({ kind: 'training' }); return }
     if (pending.type === 'rest') { setMode({ kind: 'rest' }); return }
     if (pending.type === 'match') {
+      if (!isInAcademy && player.careerClock.ageYears >= 18 && player.schoolGraduationDeadline) { resolveCurrentEvent(); return }
       // P25 fix: the matchday belongs to a specific competition — resolve THAT
       // competition's fixture instead of blindly burning the next league game
       // (which crammed all 22 league fixtures into the first half-season and
@@ -216,7 +219,19 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
         return
       }
 
-      const comp = activeCompetitionForWeek(calendar.currentWeek.weekNumber, player.careerClock.phase, player.grassrootsPath, Boolean(cups.schoolDevelopment))
+      if (pending.title === 'continental qualifier') {
+        const cup = cups.academyChampionsCup
+        const fixture = cup && playerCupFixture(cup)
+        if (!cup || !fixture) { resolveCurrentEvent(); return }
+        const isHome = fixture.homeTeamId === cup.playerTeamId
+        const opponent = cup.teams.find(team => team.id === (isHome ? fixture.awayTeamId : fixture.homeTeamId))
+        if (!opponent) { resolveCurrentEvent(); return }
+        setMode({ kind: 'matchday', opponent, isHome, competitionId: 'academyChampionsCup',
+          competitionLabel: cup.continentalRoute === 'senior' ? 'Academy Champions Cup · League Phase' : 'Academy Champions Cup · Qualifying', isKnockout: false })
+        return
+      }
+
+      const comp = activeCompetitionForWeek(calendar.currentWeek.weekNumber, player.careerClock.phase, player.grassrootsPath, Boolean(cups.schoolDevelopment), player.academyCountryId)
       if (!comp) { resolveCurrentEvent(); return }
       if (!isInAcademy && player.grassrootsPath === 'sunday' && (comp.competitionId === 'sundayLeague' || comp.competitionId === 'sundayCup')
         && (!hasSundayContract(player, calendar.currentWeek.seasonYear, league) || player.pathway?.sundayStatus !== 'registered')) {
@@ -236,7 +251,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
         const isHome = fixture.homeTeamId === activeWorld.playerTeamId
         const opponent = playerDivision.teams.find((t) => t.id === (isHome ? fixture.awayTeamId : fixture.homeTeamId))
         if (!opponent) { resolveCurrentEvent(); return }
-        const competitionLabel = isInAcademy ? 'Academy League' : comp.competitionId === 'schoolLeague' ? `${getRegion(player.regionId)?.name ?? 'Local'} Schools League` : 'Sunday League'
+        const competitionLabel = isInAcademy ? academyDivisionLabel(academyLeague?.playerDivision ?? 2, player.academyCountryId) : comp.competitionId === 'schoolLeague' ? `${getRegion(player.regionId)?.name ?? 'Local'} Schools League` : 'Sunday League'
         setMode({ kind: 'matchday', opponent, isHome, competitionId: comp.competitionId, competitionLabel, isKnockout: false })
         return
       }
@@ -274,6 +289,8 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
     }
 
     if (pending.type === 'school') {
+      const story = weeklyStoryDecision(player, calendar.currentWeek.seasonYear, calendar.currentWeek.weekNumber)
+      if (story) { setMode({ kind: 'decision', decision: story }); return }
       // Phase 28: ~55% of life slots now draw from the RELATIONSHIP pool —
       // events built around a specific named person in your cast, whose bond
       // gates them and moves with the outcome. The rest come from the general
@@ -547,7 +564,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
         playerTeam={playerTeam}
         playerDivision={playerDivision}
       />
-      <div className="fixed left-0 right-0 px-3 max-w-md mx-auto z-20" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 4.5rem)' }}>
+      <div className="career-continue fixed left-0 right-0 px-3 max-w-md mx-auto z-20" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 4.5rem)' }}>
         <button
           onClick={handleContinue}
           className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-3.5 text-sm shadow-[0_0_25px_rgba(212,175,55,0.3)] active:scale-[0.99] transition-transform"

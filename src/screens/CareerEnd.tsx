@@ -9,7 +9,7 @@ export default function CareerEnd({ player, onMenu }: { player: Player; onMenu: 
         <div className="font-display tracking-widest text-[11px] text-ks-muted uppercase mb-3">career over</div>
         <h1 className="font-display text-ks-ink text-3xl tracking-wide mb-3">The Dream Fades</h1>
         <p className="text-ks-muted text-sm leading-relaxed mb-8 px-2">
-          You reached 20 without signing a professional contract. The window has closed on this journey — but every footballer's story is different. Time to start again and write a new one.
+          Your pathway ended without a professional contract. Your school and academy appearances, performances and honours are recorded below.
         </p>
 
         <CareerRecord player={player} />

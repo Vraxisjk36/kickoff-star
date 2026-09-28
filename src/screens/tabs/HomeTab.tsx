@@ -44,14 +44,12 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
   onOpenYearCalendar: () => void
 }) {
   const consumeItem = useCareerStore((s) => s.consumeItem)
+  const chooseWeeklyFocus = useCareerStore((s) => s.chooseWeeklyFocus)
   const restoreEnergyFromAd = useCareerStore((s) => s.restoreEnergyFromAd)
   const economyNote = useCareerStore((s) => s.economyNote)
   const negotiationBeat = useCareerStore((s) => s.negotiationBeat)
   const clearNegotiationBeat = useCareerStore((s) => s.clearNegotiationBeat)
   const selectionNote = useCareerStore((s) => s.selectionNote)
-  const sundayOffer = player.contractOffers.find(o => o.kind === 'club' && o.weeklyWage !== undefined)
-  const sundayDeal = player.sundayContract?.season === calendar.currentWeek.seasonYear ? player.sundayContract : undefined
-  const acceptSundayRegistration=useCareerStore(s=>s.acceptSundayRegistration)
   const eventsByDay = Object.fromEntries(calendar.currentWeek.events.map((e) => [e.day, e]))
   const ovr = toOvr(computeCurrentAbility(player))
   const isAcademy = player.careerClock.phase === 'academy'
@@ -65,11 +63,10 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
     const sorted = sortStandings(division.standings)
     const pos = sorted.findIndex((s) => s.teamId === world.playerTeamId) + 1
     const playerHasPlayed = division.standings.some((standing) => standing.teamId === world.playerTeamId && standing.played > 0)
-    leaguePos = (player.grassrootsPath === 'sunday' && !sundayDeal) || !playerHasPlayed ? '—' : pos > 0 ? ordinal(pos) : '—'
+    leaguePos = !playerHasPlayed ? '—' : pos > 0 ? ordinal(pos) : '—'
   }
 
   const nextEvent = DAYS.map((day) => eventsByDay[day]).find((e) => e && !e.resolved) ?? calendar.currentWeek.events.find((e) => !e.resolved) ?? calendar.currentWeek.events[0]
-  const unsignedSundayMatch = nextEvent?.type === 'match' && nextEvent.title === 'matchday' && player.grassrootsPath === 'sunday' && !sundayDeal
   return (
     <div className="career-home flex flex-col gap-2.5 stagger-children">
       <section className="career-hero">
@@ -84,23 +81,30 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
           <div><span>ENERGY</span><b>{Math.round(player.fitness.stamina)}%</b></div>
           <div><span>FORM</span><b>{player.matchRatings?.length ? (player.matchRatings.slice(-6).reduce((a,b)=>a+b,0)/player.matchRatings.slice(-6).length).toFixed(1) : '—'}</b></div>
           <div><span>LEAGUE</span><b>{leaguePos ?? '—'}</b></div>
-          <div><span>NEXT</span><b>{nextEvent?.type?.replace(/-/g,' ') ?? 'OPEN'}</b></div>
         </div>
       </section>
       {nextEvent && !nextEvent.resolved && (
         <section className={`week-headliner ${nextEvent.type === 'match' ? 'match' : ''}`}>
-          <div><span>NEXT UP · {nextEvent.day.toUpperCase()}</span><h3>{unsignedSundayMatch ? 'community trial training' : nextEvent.title}</h3><p>{unsignedSundayMatch ? 'TRAIN TO EARN A CLUB OFFER' : nextEvent.type === 'match' ? 'MATCHDAY · Your next competitive test' : nextEvent.type.replace(/-/g,' ').toUpperCase()}</p></div>
+          <div><span>NEXT UP · {nextEvent.day.toUpperCase()}</span><h3>{nextEvent.title}</h3><p>{nextEvent.type === 'match' ? 'MATCHDAY · Your next competitive test' : nextEvent.type.replace(/-/g,' ').toUpperCase()}</p></div>
           <div className="week-headliner-arrow">→</div>
         </section>
       )}
 
+      {!calendar.currentWeek.events.some(e => e.type === 'match' && e.resolved) && <section className="rounded-xl border border-ks-border bg-[#10100e] px-3 py-3">
+        <div className="font-display text-[10px] tracking-widest uppercase text-ks-gold mb-1">Optional weekly focus</div>
+        <p className="text-[10px] text-ks-muted mb-2">Choose once before matchday. It takes no extra calendar day.</p>
+        {player.weeklyFocus?.week === (player.totalWeeksElapsed ?? 0) ?
+          <p className="text-[11px] text-ks-ink capitalize">This week: {player.weeklyFocus.kind === 'shift' ? 'community shift' : player.weeklyFocus.kind === 'film' ? 'film study' : 'recovery'}</p> :
+          <div className="grid grid-cols-3 gap-1.5">
+            <button onClick={() => chooseWeeklyFocus('recovery')} className="rounded-lg border border-ks-border px-2 py-2 text-left text-[10px] text-ks-ink">Recover<br/><span className="text-ks-muted">+5 energy</span></button>
+            <button onClick={() => chooseWeeklyFocus('film')} className="rounded-lg border border-ks-border px-2 py-2 text-left text-[10px] text-ks-ink">Film study<br/><span className="text-ks-muted">position skill</span></button>
+            <button onClick={() => chooseWeeklyFocus('shift')} className="rounded-lg border border-ks-border px-2 py-2 text-left text-[10px] text-ks-ink">Short shift<br/><span className="text-ks-muted">+£8 · -4 energy</span></button>
+          </div>}
+      </section>}
 
-      {player.careerClock.phase!=='academy'&&<button onClick={()=>onGoTo('fixtures')} className="pathway-headliner text-left"><div><span>{player.pathway?.ageGroup??'YOUTH'} PATHWAY</span><h3>{pathwayNextStep(player)}</h3><p>{player.grassrootsPath === 'school' ? 'School → Regional XI → National schools → International' : 'Community club → Sunday League → Academy scouting'}</p></div><b>→</b></button>}
 
-      {player.communityTrialSessions !== undefined && player.pathway?.sundayStatus === 'training-invite' && <div className="rounded-lg border border-ks-gold/40 bg-ks-gold/10 px-3 py-3"><span className="font-display text-[10px] tracking-widest text-ks-gold">COMMUNITY TRIAL</span><p className="text-xs text-ks-ink mt-1">Train with a new club: {Math.min(3, player.communityTrialSessions)} of 3 sessions complete. A season offer follows the third session.</p></div>}
+      {player.careerClock.phase!=='academy'&&<button onClick={()=>onGoTo('fixtures')} className="pathway-headliner text-left"><div><span>{player.pathway?.ageGroup??'YOUTH'} PATHWAY</span><h3>{pathwayNextStep(player)}</h3><p>School → Regional XI → National schools → Academy</p></div><b>→</b></button>}
 
-      {player.pathway?.sundayStatus==='squad-offer'&&sundayOffer&&<div className="sunday-offer-card"><div><span>COMMUNITY CLUB OFFER</span><b>{sundayOffer.clubName} · Division {sundayOffer.divisionTier}</b><p>£{sundayOffer.weeklyWage}/week for the season. {player.grassrootsPath === 'school' ? 'School matches on Thursdays; club league matches on Sundays.' : 'League and cup matches are on Sundays after signing.'}</p></div><button onClick={acceptSundayRegistration}>accept place</button></div>}
-      {sundayDeal && <button className="text-left text-xs text-ks-gold px-3 py-2 border border-ks-border rounded-lg" onClick={() => onGoTo('table')}>{sundayDeal.clubName} · Division {sundayDeal.division} · £{sundayDeal.weeklyWage}/week · season contract →</button>}
       <button onClick={onOpenInbox} className={`rounded-lg border px-3 py-2.5 flex items-center gap-3 text-left ${unreadInbox > 0 ? 'border-ks-gold/60 bg-ks-gold/10' : 'border-ks-border bg-[#0f0f0d]'}`}>
         <div className={`w-8 h-8 rounded-full border flex items-center justify-center text-sm ${unreadInbox > 0 ? 'border-ks-gold text-ks-gold' : 'border-ks-border text-ks-muted'}`}>✉</div>
         <div className="flex-1 min-w-0">
@@ -155,7 +159,7 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
       {/* P31 — where you stand in the coach's thinking, and how to move up.
           Answers the question "how do I get in the starting eleven?", which
           previously had no visible answer anywhere in the game. */}
-      {(player.grassrootsPath === 'school' || !!sundayDeal) && (() => {
+      {(player.grassrootsPath === 'school') && (() => {
         // P63 — real, confirmed bug: this used to show `decideSelection`'s
         // live, ungated verdict directly — what the coach WOULD decide
         // right now — completely bypassing the sticky-selection lock that
@@ -220,8 +224,9 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
         <p className="text-[11px] text-ks-ink mt-1">{completedSeasonObjectives(player.seasonObjectives, player)} of 4 reached · view progress →</p>
       </button>}
 
-      <button onClick={() => onGoTo('player')} className="home-player-link"><span>PLAYER PROFILE</span><b>View development, form & career record →</b></button>
-
+      <details className="home-more">
+        <summary><span>Calendar, news & energy</span><b>Explore this week</b></summary>
+        <div className="home-more-content">
       <div className="home-section-label"><span>THIS WEEK</span><i/></div>
       <button onClick={onOpenYearCalendar} className="w-full rounded-lg border border-ks-gold/40 bg-[#161308] px-3 py-3 flex items-center gap-3 text-left">
         <Icon src={iconWeek} /><div className="flex-1"><b className="block font-display text-xs text-ks-gold">YEAR CALENDAR</b><span className="text-[10px] text-ks-muted">January–December · fixtures, cups & selection windows</span></div><span className="text-ks-gold">→</span>
@@ -311,6 +316,9 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
           })}
         </div>
       </Panel>
+
+        </div>
+      </details>
 
     </div>
   )

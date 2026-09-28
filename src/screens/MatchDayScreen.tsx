@@ -78,6 +78,8 @@ export default function MatchDayScreen({ player, playerTeam, opponent, isHome, o
           {venue} · {isHome ? 'home' : 'away'}
         </div>
         <p className="text-center text-ks-muted text-[12px] mb-7">{billing}</p>
+        {player.weeklyFocus?.week === (player.totalWeeksElapsed ?? 0) &&
+          <p className="text-center text-[10px] text-ks-gold mb-3">YOUR WEEK: {player.weeklyFocus.kind === 'film' ? 'FILM STUDY' : player.weeklyFocus.kind === 'shift' ? 'COMMUNITY SHIFT' : 'RECOVERY'}</p>}
 
         <section className="rounded-xl border border-ks-border bg-[#0f0f0d] px-3 py-3 mb-3" aria-label="Pre-match team sheet">
           <div className="flex items-center justify-between mb-2"><h2 className="font-display tracking-widest text-[10px] text-ks-gold uppercase">team sheet</h2><span className="text-[9px] text-ks-muted">{playerTeam.short} · starting XI</span></div>

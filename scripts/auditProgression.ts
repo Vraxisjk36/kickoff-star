@@ -17,6 +17,7 @@ import { useCareerStore } from '../src/store/careerStore'
 import { EMPTY_CUPS, writeSave, SAVE_SCHEMA_VERSION } from '../src/engine/save'
 import { reseed } from '../src/engine/rng'
 import { initSchoolLeagueWorld } from '../src/engine/league'
+import { initAcademyWorld } from '../src/engine/academy'
 import { generateSquad } from '../src/engine/squad'
 import { matchTeamSheet, matchVenue, PITCH_POSITION_SLOT, pitchShirtNumbers, representativeSquad } from '../src/engine/matchPresentation'
 
@@ -72,7 +73,7 @@ check(canPlayYouthShowcase(invited, calendar(3, 37)) && !canPlayYouthShowcase(in
 check(activeCompetitionForWeek(38, 'grassroots-season', 'sunday')?.competitionId === 'youthShowcase', 'Sunday pathway has an October showcase without displacing its cup final')
 
 const club = generateTeam(3)
-let scouting = { ...initScoutingState(), watchers: [{ club, tier: 'local' as const, interest: 100, watchedMatches: 0 }] }
+let scouting = { ...initScoutingState(), reputation: 12, watchers: [{ club, tier: 'local' as const, interest: 100, watchedMatches: 0 }] }
 check(checkForOffers(scouting, 123, false, 16, academyRecruitmentReport(proven, calendar(3, 36))).offers.length === 0, 'Interest alone cannot skip repeated scouting visits')
 let watched = updateWatcherInterest(scouting, 8, 90)
 watched = updateWatcherInterest(watched, 8, 90)
@@ -189,7 +190,7 @@ const academyOffers = trialGraduate.contractOffers.filter(offer => offer.kind ==
 check(academyOffers.length >= 3 && academyOffers.length <= 6 && new Set(academyOffers.map(offer => offer.countryId)).size === academyOffers.length,
   'Passed trial produces three to six academy choices across distinct countries')
 check(academyOffers.every(offer => academyOfferCleared(trialGraduate, offer.id)), 'Every post-trial academy offer can enter talks')
-const alternative = academyOffers[1]
+const alternative = academyOffers.find(offer => offer.countryId === 'eng' && offer.id !== academyOffer.id) ?? academyOffers[0]
 useCareerStore.setState({ player: { ...trialGraduate, agentId: 'parent' } })
 useCareerStore.getState().beginNegotiation(alternative.id)
 check(useCareerStore.getState().player?.negotiation?.clubId === alternative.clubId,
@@ -205,14 +206,25 @@ const academyWorld = signedAcademy.academyLeague!
 useCareerStore.setState({ player: academyPlayer, academyLeague: academyWorld, calendar: calendar(3, 23) })
 useCareerStore.getState().advanceToNextWeek()
 check(useCareerStore.getState().cups.academyChampionsCup === null, 'Lower-tier academy does not receive a continental cup place')
-const topTeam = academyWorld.divisions[1].teams[0]
-useCareerStore.setState({ player: academyPlayer, academyLeague: { ...academyWorld, playerDivision: 1, playerTeamId: topTeam.id },
-  calendar: calendar(3, 23), cups: { ...EMPTY_CUPS } })
+const spanishWorld = initAcademyWorld('Madrid Youth', 7, 'esp')
+const topTeam = spanishWorld.divisions[1].teams[0]
+const topStandings = spanishWorld.divisions[1].standings.map(row => row.teamId === topTeam.id ? { ...row, points: 100 } : row)
+useCareerStore.setState({ player: { ...academyPlayer, academyCountryId: 'esp' }, academyLeague: { ...spanishWorld,
+  divisions: { ...spanishWorld.divisions, 1: { ...spanishWorld.divisions[1], standings: topStandings } },
+  playerDivision: 1, playerTeamId: topTeam.id },
+  calendar: calendar(3, 34), cups: { ...EMPTY_CUPS } })
 useCareerStore.getState().advanceToNextWeek()
 const continental = useCareerStore.getState().cups.academyChampionsCup
-check(continental?.teams.length === 8 && new Set(continental.teams.map(team => team.countryId)).size === 8 &&
+check(continental === null &&
   useCareerStore.getState().player?.competitionCareer?.qualifications.some(q => q.qualifiedFor === 'academyChampionsCup'),
-  'Top-four academy qualifies and receives an eight-country continental bracket')
+  'Spanish Juvenil group champion earns a saved place for the following season')
+useCareerStore.setState({ calendar: calendar(3, 44) })
+useCareerStore.getState().advanceToNextWeek()
+const nextSeasonContinental = useCareerStore.getState().cups.academyChampionsCup
+check(nextSeasonContinental?.stage === 'qualifying' && nextSeasonContinental.teams.length === 116 &&
+  nextSeasonContinental.qualifier?.rounds[0]?.length === 40 &&
+  nextSeasonContinental.teams.every(team => ['eng', 'esp', 'fra', 'ger', 'ita', 'por', 'ned', 'bel', 'sco', 'aut', 'sui', 'tur'].includes(team.countryId ?? '')),
+  'Next-season continental entry opens with playable European qualification')
 const lineupPlayer = { ...player(), squad: generateSquad(5), squadRole: 'starting-xi' as const }
 const startingSheet = matchTeamSheet(lineupPlayer)
 check(startingSheet.starters.length === 11 && startingSheet.bench.length === 5 &&

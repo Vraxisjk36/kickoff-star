@@ -13,6 +13,17 @@ export function recordLeagueGoals(player: Player, competitionId: string, divisio
 }
 
 export function divisionTopScorers(division: Division, player: Player, playerTeamId: string, competitionId: string) {
+  const ledger = division.matchRecords?.filter(record => record.competitionId === competitionId)
+  if (ledger?.length && ledger.length === division.fixtures.filter(fixture => fixture.played).length) {
+    const byId = new Map<string, { id: string; name: string; teamShort: string; goals: number; isUser: boolean }>()
+    for (const record of ledger) for (const line of record.lines) {
+      const team = division.teams.find(t => t.id === line.teamId)
+      const previous = byId.get(line.playerId)
+      byId.set(line.playerId, { id: line.playerId, name: line.name, teamShort: team?.short ?? '—',
+        goals: (previous?.goals ?? 0) + line.goals, isUser: line.playerId === player.id })
+    }
+    return [...byId.values()].filter(row => row.goals > 0).sort((a, b) => b.goals - a.goals || a.name.localeCompare(b.name))
+  }
   const candidates = division.teams.flatMap(team => team.notablePlayers.map(p => ({
     id: `${team.id}-${p.name}`, name: p.name, teamShort: team.short, goals: p.seasonGoals, isUser: false,
   })))

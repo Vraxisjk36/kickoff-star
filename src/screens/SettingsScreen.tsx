@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { musicEnabled, setMusicEnabled } from '../engine/music'
 
 interface Props { onBack: () => void }
 
@@ -8,6 +9,7 @@ const LOW_POWER_KEY = 'kickoff-star-low-power'
 export default function SettingsScreen({ onBack }: Props) {
   const [reducedMotion, setReducedMotion] = useState(() => localStorage.getItem(REDUCED_MOTION_KEY) === '1')
   const [lowPower, setLowPower] = useState(() => localStorage.getItem(LOW_POWER_KEY) === '1')
+  const [musicOn, setMusicOn] = useState(musicEnabled)
 
   useEffect(() => {
     document.documentElement.classList.toggle('reduce-motion', reducedMotion)
@@ -38,7 +40,16 @@ export default function SettingsScreen({ onBack }: Props) {
         </div>
 
         <section className="rounded-2xl border border-ks-border bg-white/[0.025] p-5">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 pb-5 border-b border-ks-border">
+            <div>
+              <h2 className="font-bold">Menu music</h2>
+              <p className="text-sm text-ks-muted mt-1">Under the Lights, an original Kickoff Star track. Match sounds have their own mute control.</p>
+            </div>
+            <button type="button" role="switch" aria-checked={musicOn} onClick={() => { const next = !musicOn; setMusicOn(next); setMusicEnabled(next) }} className={`min-w-16 min-h-11 rounded-full border px-2 font-bold ${musicOn ? 'bg-ks-gold text-ks-black border-ks-gold' : 'border-ks-border text-ks-muted'}`}>
+              {musicOn ? 'ON' : 'OFF'}
+            </button>
+          </div>
+          <div className="flex items-center justify-between gap-4 pt-5">
             <div>
               <h2 className="font-bold">Reduced motion</h2>
               <p className="text-sm text-ks-muted mt-1">Minimises menu and match animations. Useful on slower phones or if motion is distracting.</p>

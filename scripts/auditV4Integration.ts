@@ -5,7 +5,7 @@ import { addStoryMoment, createStoryMoment } from '../src/engine/presentation'
 import { initYouthFinance, postTransaction } from '../src/engine/youthFinances'
 import { emptyMatchStats } from '../src/engine/matchStats'
 import { calculatePlayerRating } from '../src/engine/ratingSystemV32'
-import { activeCompetitionForWeek, alignOctoberDevelopment, generateWeek, OCTOBER_DEVELOPMENT_TITLE, SEASON_SCHEDULE, SUNDAY_SEASON_SCHEDULE, ACADEMY_SEASON_SCHEDULE } from '../src/engine/calendar'
+import { activeCompetitionForWeek, alignOctoberDevelopment, generateWeek, OCTOBER_DEVELOPMENT_TITLE, SEASON_SCHEDULE, ACADEMY_SEASON_SCHEDULE } from '../src/engine/calendar'
 import { initLeagueWorld, initSchoolLeagueWorld, migrateToSchoolLeagueWorld, resetSchoolLeagueSeason } from '../src/engine/league'
 import { initCupById, playerCupFixture } from '../src/engine/cup'
 
@@ -53,7 +53,7 @@ for (const kind of ['selection', 'squad', 'qualification', 'elimination', 'champ
   check(store.includes(`kind: '${kind}'`), `${kind} reveal is driven by career state`)
 }
 
-console.log('\n[E] school football and Sunday football are separate career paths')
+console.log('\n[E] school football is the playable youth route')
 const schoolWorld = initSchoolLeagueWorld('Greenwood High')
 const schoolDivision = schoolWorld.divisions[schoolWorld.playerDivision]
 const schoolTeam = schoolDivision.teams.find((team) => team.id === schoolWorld.playerTeamId)
@@ -63,18 +63,15 @@ check(schoolDivision.teams.every((team) => /(High|School|Secondary|Academy|Colle
 check(new Set(Object.values(schoolWorld.divisions).flatMap((division) => division.teams.map((team) => team.name))).size === 30, 'school identities are unique across all districts')
 const leagueWeek = SEASON_SCHEDULE.schoolLeague[0]
 check(activeCompetitionForWeek(leagueWeek, 'grassroots-season', 'school')?.competitionId === 'schoolLeague', 'selected route schedules the school league')
-check(activeCompetitionForWeek(leagueWeek, 'grassroots-season', 'sunday')?.competitionId === 'sundayLeague', 'released route schedules Sunday League instead')
-check(SUNDAY_SEASON_SCHEDULE.sundayCup.every((week, i) => activeCompetitionForWeek(week, 'grassroots-season', 'sunday')?.competitionId === 'sundayCup' && activeCompetitionForWeek(week, 'grassroots-season', 'sunday')?.round === i + 1), 'all four Sunday Cup rounds have playable matchdays')
-check(SUNDAY_SEASON_SCHEDULE.sundayCup.every(week => !SUNDAY_SEASON_SCHEDULE.schoolLeague.includes(week)), 'Sunday Cup never collides with the Sunday League')
 const excludedCup = initCupById('schoolCup', schoolDivision.teams.find(team => team.id === schoolWorld.playerTeamId)!, schoolDivision.teams)
 check(playerCupFixture({ ...excludedCup, playerEliminated: true }) === null, 'development route cannot re-enter Regional Cup group fixtures')
 check(ACADEMY_SEASON_SCHEDULE.academyLeagueCup.every(week => activeCompetitionForWeek(week, 'academy')?.competitionId === 'academyLeagueCup') && ACADEMY_SEASON_SCHEDULE.academyKnockoutCup.every(week => activeCompetitionForWeek(week, 'academy')?.competitionId === 'academyKnockoutCup'), 'academy cup rounds also remain reachable')
-check(ACADEMY_SEASON_SCHEDULE.academyChampionsCup.every((week, index) => activeCompetitionForWeek(week, 'academy')?.competitionId === 'academyChampionsCup' && activeCompetitionForWeek(week, 'academy')?.round === index + 1), 'three continental academy rounds have their own matchdays')
+check(ACADEMY_SEASON_SCHEDULE.academyChampionsCup.length === 5 && ACADEMY_SEASON_SCHEDULE.academyChampionsCup.every((week, index) => activeCompetitionForWeek(week, 'academy')?.competitionId === 'academyChampionsCup' && activeCompetitionForWeek(week, 'academy')?.round === index + 1), 'five continental knockout rounds have their own matchdays')
 for (let week = 24; week <= 28; week++) {
   check(activeCompetitionForWeek(week, 'grassroots-season', 'school', true)?.competitionId === 'schoolDevelopment', `development route plays week ${week}`)
-  check(activeCompetitionForWeek(week, 'grassroots-season', 'school')?.competitionId === 'schoolCup', `qualified route plays Regional Cup week ${week}`)
+  check((activeCompetitionForWeek(week, 'grassroots-season', 'school')?.competitionId ?? null) === (week <= 27 ? 'schoolCup' : null), `regional knockout occupies only its four scheduled rounds (week ${week})`)
 }
-for (const path of ['school', 'sunday'] as const) {
+for (const path of ['school'] as const) {
   for (const week of [36, 37, 38, 39]) {
     const base = { currentWeek: generateWeek(week, 1, 'grassroots-season', false, path), history: [] }
     const aligned = alignOctoberDevelopment(base, 15, 'grassroots-season', path, false)
@@ -82,7 +79,7 @@ for (const path of ['school', 'sunday'] as const) {
     check(fixtures.length === 1 && fixtures[0].day === (path === 'school' ? 'sat' : 'sun'), `${path} week ${week} has one October match`)
     check(alignOctoberDevelopment(aligned, 15, 'grassroots-season', path, false).currentWeek.events.filter(e => e.title === OCTOBER_DEVELOPMENT_TITLE).length === 1, 'loading an October week never duplicates its fixture')
     check(aligned.currentWeek.events.filter(e => e.day === fixtures[0].day).length === 1, 'October match replaces same-day rest or unavailable showcase')
-    if (week === 37 && path === 'school' || week === 38 && path === 'sunday') check(!aligned.currentWeek.events.some(e => e.title === 'matchday'), 'under-16 showcase slot is removed')
+    if (week === 37) check(!aligned.currentWeek.events.some(e => e.title === 'matchday'), 'under-16 showcase slot is removed')
   }
 }
 check(!alignOctoberDevelopment({ currentWeek: generateWeek(36, 1), history: [] }, 16, 'grassroots-season', 'school', false).currentWeek.events.some(e => e.title === OCTOBER_DEVELOPMENT_TITLE), 'age 16 does not enter the under-16 October series')

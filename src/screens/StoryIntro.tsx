@@ -30,8 +30,8 @@ const SLIDES: Slide[] = [
   },
   {
     eyebrow: 'the path',
-    title: 'grassroots → academy → pro',
-    body: () => `Build your career in school and Sunday football. Academy scouts start watching at 16, with the first invitations possible in October of your third year. Survive the academy, and a professional deal is the reward waiting at the end.`,
+    title: 'school → academy → pro',
+    body: () => `Earn a place at school, build a record in league and representative football, then attract an academy. A failed first trial is not the end: train, play school development fixtures and earn another assessment. A professional contract is the finish line.`,
   },
   {
     eyebrow: 'getting noticed',

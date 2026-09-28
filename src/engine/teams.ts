@@ -29,6 +29,9 @@ export interface Team {
   id: string
   name: string
   countryId?: string
+  /** Stable reference identity shared across academy age squads. */
+  academyClubKey?: string
+  academyRatingVersion?: number
   regionId?: string
   short: string // 3-letter code for scoreboards
   ratings: TeamRatings

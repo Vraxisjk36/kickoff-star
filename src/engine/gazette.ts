@@ -9,8 +9,13 @@ import type { Player } from '../types/player'
 import type { SquadPlayer } from './squad'
 import type { DepartureEvent } from './squadLifecycle'
 import { surnameOf } from './commentary'
+import type { Division } from './league'
+import type { MatchRecord } from './matchLedger'
+import { competitionDefinition } from './competitionCareer'
+import type { SchoolsRanking, SchoolsAwards, SchoolsRankingRow } from './worldSchools'
+import type { SchoolMatch, SchoolStar } from './worldSchools'
 
-export type ArticleKind = 'transfer' | 'spotlight' | 'preview' | 'injury' | 'recap' | 'filler'
+export type ArticleKind = 'transfer' | 'spotlight' | 'preview' | 'injury' | 'recap' | 'league' | 'filler' | 'world' | 'awards'
 
 export interface GazetteArticle {
   kind: ArticleKind
@@ -24,6 +29,9 @@ export interface GazetteIssue {
   seasonYear: number
   masthead: string // the "big story" headline, shown first/largest
   articles: GazetteArticle[]
+  ranking?: SchoolsRanking
+  scorers?: SchoolsRankingRow[]
+  awards?: SchoolsAwards
 }
 
 function id() { return crypto.randomUUID() }
@@ -54,7 +62,6 @@ function spotlightArticle(player: Player): GazetteArticle | null {
   const recent = player.matchRatings ?? []
   if (recent.length === 0) return null
   const last = recent[recent.length - 1]
-  const avgRecent = recent.slice(-5).reduce((a, b) => a + b, 0) / Math.min(5, recent.length)
   const surname = surnameOf(player.name)
 
   if (recent.length >= 3 && recent.slice(-3).every((r) => r >= 7.5)) {
@@ -66,7 +73,7 @@ function spotlightArticle(player: Player): GazetteArticle | null {
   if (last >= 8.5) {
     return { kind: 'spotlight', headline: `${surname.toUpperCase()} STEALS THE HEADLINES`, body: `A rating of ${last.toFixed(1)} in the last outing. Performances like that don't go unnoticed.` }
   }
-  return { kind: 'spotlight', headline: `THE WEEK IN NUMBERS`, body: `Recent average rating sits at ${avgRecent.toFixed(1)}. Steady, if unspectacular — there's more in the tank.` }
+  return null
 }
 
 export interface UpcomingFixtureInfo {
@@ -126,6 +133,35 @@ function recapArticle(result: LastResultInfo | null): GazetteArticle | null {
   }
 }
 
+function schoolLeagueArticle(division: Division | null, season: number, week: number, playerId: string): GazetteArticle | null {
+  const records = division?.matchRecords?.filter(record => record.season === season && record.competitionId === 'schoolLeague') ?? []
+  if (!records.length || records.length !== division?.fixtures.filter(fixture => fixture.played).length) return null
+  if (!records.some(record => record.week === week)) return null
+  const scorers = new Map<string, { name: string; team: string; goals: number; recent: number }>()
+  for (const record of records) for (const line of record.lines) {
+    if (line.playerId === playerId || line.goals <= 0) continue
+    const current = scorers.get(line.playerId)
+    const team = division!.teams.find(entry => entry.id === line.teamId)
+    scorers.set(line.playerId, { name: line.name, team: team?.name ?? 'Local school',
+      goals: (current?.goals ?? 0) + line.goals, recent: (current?.recent ?? 0) + (record.week >= week - 4 ? line.goals : 0) })
+  }
+  const leader = [...scorers.values()].sort((a, b) => b.goals - a.goals)[0]
+  if (!leader) return null
+  return { kind: 'league', headline: `${surnameOf(leader.name).toUpperCase()} SETS THE PACE`,
+    body: `${leader.name} of ${leader.team} has ${leader.goals} league goals this season, including ${leader.recent} in the last four weeks. The local scoring race is taking shape.` }
+}
+
+function cupArticle(records: MatchRecord[], season: number, week: number, playerId: string): GazetteArticle | null {
+  const match = records.filter(record => record.season === season && record.week === week &&
+    !record.lines.some(line => line.playerId === playerId)).sort((a, b) =>
+    (b.homeGoals + b.awayGoals) - (a.homeGoals + a.awayGoals))[0]
+  if (!match) return null
+  const leader = [...match.lines].sort((a, b) => b.goals - a.goals)[0]
+  const competition = competitionDefinition(match.competitionId).name
+  return { kind: 'league', headline: `${match.homeTeamName.toUpperCase()} ${match.homeGoals}–${match.awayGoals} ${match.awayTeamName.toUpperCase()}`,
+    body: `${competition}: ${match.homeTeamName} and ${match.awayTeamName} finished ${match.homeGoals}–${match.awayGoals}. ${leader?.goals ? `${leader.name} scored ${leader.goals} of those goals.` : 'The result moves the tournament forward.'}` }
+}
+
 const FILLER_LINES = [
   'The clubhouse tea urn remains, against all odds, still functional.',
   'Local pitch conditions described as "character-building" by anyone who trained on them this week.',
@@ -147,9 +183,46 @@ export function generateGazetteIssue(
   departures: DepartureEvent[],
   arrivals: SquadPlayer[],
   upcomingFixture: UpcomingFixtureInfo | null,
-  lastResult: LastResultInfo | null
+  lastResult: LastResultInfo | null,
+  schoolDivision: Division | null = null,
+  playerId = player.id,
+  completedWeek = weekNumber - 1,
+  cupRecords: MatchRecord[] = [],
+  ranking?: SchoolsRanking,
+  scorers?: SchoolsRankingRow[],
+  awards?: SchoolsAwards,
+  worldResult?: { match: SchoolMatch; star: SchoolStar },
+  worldStory?: GazetteArticle,
 ): GazetteIssue {
   const articles: GazetteArticle[] = []
+
+  if (worldStory) articles.push(worldStory)
+
+  if (awards) articles.push({ kind: 'awards', headline: `${awards.season} ${awards.scope === 'academy' ? 'ACADEMY' : 'WORLD SCHOOLS'} AWARDS`,
+    body: `${awards.winners[0]?.winnerName ?? 'The winner'} takes ${awards.winners[0]?.name ?? 'the top award'}. See the recorded winners and Team of the Year in this issue.` })
+  if (ranking?.rows.length) {
+    const leader = ranking.rows[0]
+    const newcomer = ranking.rows.find(row => !row.previousRank)
+    articles.push({ kind: 'world', headline: newcomer ? `${newcomer.name.toUpperCase()} ENTERS THE ${ranking.scope === 'academy' ? 'ACADEMY' : 'WORLD'} FIVE` : `${leader.name.toUpperCase()} LEADS THE ${ranking.scope === 'academy' ? 'ACADEMY' : 'WORLD'} FIVE`,
+      body: `${leader.name} of ${leader.school} leads on ${leader.points} season points after ${leader.goals} goals and ${leader.assists} assists. ` +
+        `${leader.monthGoals} goals and ${leader.monthAssists} assists came in the latest four-week period.` })
+  }
+  if (weekNumber === 33 && !ranking && player.careerClock.phase !== 'academy') articles.push({ kind: 'world', headline: 'THE WORLD FIVE GOES DARK',
+    body: 'The final public schools ranking is locked. Performances still count toward the year-end awards, but the contenders will not be revealed until the ceremony.' })
+  if (weekNumber === 24) articles.push({ kind: 'league', headline: 'LOCAL TITLES SET, CUP ROAD AHEAD',
+    body: 'Local school seasons have closed. Regional knockout football and the development competition now decide the next chapter.' })
+  if (weekNumber === 32 && player.careerClock?.phase !== 'academy') articles.push({ kind: 'league', headline: 'NATIONAL SCHOOLS CHAMPIONSHIP DRAW',
+    body: 'The National Schools Championship opens with a round of 16. Regional finalists now face schools from across the country; the draw and results appear in the competition hub.' })
+  if (weekNumber === 36 && player.careerClock?.phase !== 'academy') articles.push({ kind: 'league', headline: 'OCTOBER DEVELOPMENT SERIES OPENS',
+    body: 'Four fixtures offer under-16 players another route to be seen this October. The saved league table will follow every result.' })
+  if (weekNumber === (player.academyCountryId === 'esp' ? 37 : 25) && player.careerClock?.phase === 'academy') articles.push({ kind: 'league', headline: 'ACADEMY CHAMPIONS CUP KNOCKOUT DRAW',
+    body: 'The continental qualifiers have decided the 32-club field. Five knockout rounds lead to the Academy Champions Cup final.' })
+  if (worldResult) {
+    const { match, star } = worldResult
+    articles.push({ kind: 'world', headline: match.goals >= 2 ? `${star.name.toUpperCase()} HITS TWO` : match.cleanSheet && star.position === 'GK'
+      ? `${star.name.toUpperCase()} SHUTS THE DOOR` : `${star.school.toUpperCase()} IN THE SPOTLIGHT`,
+    body: `${star.name} of ${star.school} faced ${match.opponent} this week: ${match.goals} goals, ${match.assists} assists${star.position === 'GK' ? `, ${match.saves} saves` : ''}, and a ${match.rating.toFixed(1)} rating. The result enters the season's world school record.` })
+  }
 
   articles.push(...transferArticles(departures, arrivals))
   const injury = injuryArticle(player)
@@ -160,6 +233,10 @@ export function generateGazetteIssue(
   if (preview) articles.push(preview)
   const spotlight = spotlightArticle(player)
   if (spotlight) articles.push(spotlight)
+  const league = schoolLeagueArticle(schoolDivision, seasonYear, completedWeek, playerId)
+  if (league) articles.push(league)
+  const cup = cupArticle(cupRecords, seasonYear, completedWeek, playerId)
+  if (cup) articles.push(cup)
 
   // Always at least 2 articles so an early-career issue (nothing has
   // happened yet) doesn't read as a broken/empty page.
@@ -169,8 +246,8 @@ export function generateGazetteIssue(
   if (articles.length < 2) articles.push(fillerArticle())
 
   // Masthead priority: injury > transfer > preview (big game) > recap > spotlight
-  const priority: ArticleKind[] = ['injury', 'transfer', 'preview', 'recap', 'spotlight', 'filler']
+  const priority: ArticleKind[] = ['awards', 'world', 'league', 'injury', 'transfer', 'preview', 'recap', 'spotlight', 'filler']
   const masthead = priority.map((k) => articles.find((a) => a.kind === k)).find(Boolean)?.headline ?? articles[0].headline
 
-  return { id: id(), weekNumber, seasonYear, masthead, articles }
+  return { id: id(), weekNumber, seasonYear, masthead, articles, ranking, scorers, awards }
 }

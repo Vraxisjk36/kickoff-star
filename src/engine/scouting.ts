@@ -1,7 +1,7 @@
 import { rand } from './rng'
 import { generateTeam, type Team } from './teams'
 import { MIN_SCOUT_VISITS, type academyRecruitmentReport } from './academyRecruitment'
-import { academyClub } from './academyClubs'
+import { academyClub, seniorClubRatings } from './academyClubs'
 import { NATIONS } from './nations'
 
 // ============================================================================
@@ -122,7 +122,7 @@ const TIER_PRESTIGE_RANGE: Record<'local' | 'regional' | 'national', [number, nu
 
 // Weekly chance a new scout starts watching — small, tier-gated, so most weeks nothing happens
 // and most clubs in the world never notice the player (per Joel's requirement).
-export function maybeAddWatcher(state: ScoutingState, playerAge = 0, currentWeek?: number, homeCountryId?: string): ScoutingState {
+export function maybeAddWatcher(state: ScoutingState, playerAge = 0, currentWeek?: number, homeCountryId?: string, professional = false): ScoutingState {
   if (playerAge < 16 || currentWeek !== undefined && state.watchers.some(w => w.addedWeek === currentWeek)) return state
   const maxTier = reputationUnlocksTier(state.reputation)
   if (!maxTier) return state
@@ -136,9 +136,10 @@ export function maybeAddWatcher(state: ScoutingState, playerAge = 0, currentWeek
   const [lo, hi] = TIER_PRESTIGE_RANGE[tier]
   const prestige = lo + Math.floor(rand() * (hi - lo + 1))
   const countryId = homeCountryId && NATIONS.some(n => n.id === homeCountryId)
-    ? rand() < 0.7 ? homeCountryId : NATIONS[Math.floor(rand() * NATIONS.length)].id
+    ? state.reputation < 25 || rand() < 0.76 ? homeCountryId : NATIONS[Math.floor(rand() * NATIONS.length)].id
     : undefined
-  const club = countryId ? academyClub(countryId, prestige, state.watchers.filter(w => w.club.countryId === countryId).map(w => w.club.name)) : generateTeam(prestige)
+  const academy = countryId ? academyClub(countryId, prestige, state.watchers.filter(w => w.club.countryId === countryId).map(w => w.club.name)) : generateTeam(prestige)
+  const club = professional && countryId ? { ...academy, ratings: seniorClubRatings(countryId, academy.prestige) } : academy
   if (state.watchers.some((w) => w.club.id === club.id)) return state
 
   return { ...state, watchers: [...state.watchers, { club, interest: 8, tier, watchedMatches: 0, addedWeek: currentWeek }] }
@@ -149,8 +150,8 @@ export function updateWatcherInterest(state: ScoutingState, rating: number, curr
   const watchers = state.watchers.map((w) => {
     if (currentWeek !== undefined && w.lastObservedWeek === currentWeek) return w
     let delta = 0
-    if (rating >= 7.5) delta = 6
-    else if (rating >= 6.5) delta = 3
+    if (rating >= 7.5) delta = w.club.prestige >= 8 ? 4.5 : 6
+    else if (rating >= 6.5) delta = w.club.prestige >= 8 ? 1.5 : 3
     else if (rating >= 5) delta = 0.5
     else delta = -2
     return { ...w, interest: clamp(w.interest + delta, 0, 100), watchedMatches: (w.watchedMatches ?? 0) + 1, lastObservedWeek: currentWeek }
@@ -162,7 +163,9 @@ export function updateWatcherInterest(state: ScoutingState, rating: number, curr
 // each club decides independently, most never reach it).
 export function checkForOffers(state: ScoutingState, currentWeek: number, isInAcademy: boolean, playerAge = 18, review?: ReturnType<typeof academyRecruitmentReport>): ScoutingState {
   if (!isInAcademy && (playerAge < 16 || !review?.canInvite)) return state
-  const ready = state.watchers.filter((w) => w.interest >= 78 && (isInAcademy || (w.watchedMatches ?? 0) >= MIN_SCOUT_VISITS))
+  const ready = state.watchers.filter((w) => w.interest >= 78 + Math.max(0, w.club.prestige - 7) * 5
+    && state.reputation >= Math.max(8, (w.club.prestige - 3) * 5)
+    && (isInAcademy || (w.watchedMatches ?? 0) >= MIN_SCOUT_VISITS + Math.max(0, w.club.prestige - 7) * 2))
   if (ready.length === 0) return state
   // While in Grassroots, offers are Academy invitations (the real next step per the locked
   // spec). Only once IN an academy do offers become genuine professional contracts.

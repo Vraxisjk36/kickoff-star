@@ -277,7 +277,7 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
       ? resolveScenarioBeat(state, moment, optIndex, outcomeQuality, success, decisionQuality, 1, grade)
       : resolvePlayerMoment(state, moment, outcomeQuality, success, decisionQuality, 1, player.position === 'GK', grade)
 
-    const tag = inferStatTag(option.label, moment.isDefensive, moment.isDistribution, player.position === 'GK', success)
+    const tag = moment.isRoutine ? null : inferStatTag(option.label, moment.isDefensive, moment.isDistribution, player.position === 'GK', success)
     if (tag) matchStatsRef.current[tag] += 1
 
     stateRef.current = next

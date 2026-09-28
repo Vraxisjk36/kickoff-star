@@ -25,7 +25,7 @@ import type { TrainingIntensity } from './energy'
 //      of restarting.
 //  v4: separates school football from the Sunday League fallback route.
 //  v5: complete representative pathway + National Schools Championship.
-export const SAVE_SCHEMA_VERSION = 6
+export const SAVE_SCHEMA_VERSION = 8
 
 export type SaveSlotId = 0 | 1 | 2
 
@@ -84,6 +84,8 @@ function migrateSave(raw: SaveGame & { schemaVersion?: number }): SaveGame {
   }
   if (raw.schemaVersion < 5) return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, cups: { ...EMPTY_CUPS, ...(raw.cups ?? {}) } }
   if (raw.schemaVersion < 6) return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, cups: { ...EMPTY_CUPS, ...(raw.cups ?? {}) } }
+  if (raw.schemaVersion < 7) return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, cups: { ...EMPTY_CUPS, ...(raw.cups ?? {}) } }
+  if (raw.schemaVersion < 8) return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, cups: { ...EMPTY_CUPS, ...(raw.cups ?? {}) }, player: { ...raw.player, matchLedger: raw.player.matchLedger ?? [] } }
   return { ...raw, cups: { ...EMPTY_CUPS, ...(raw.cups ?? {}) } }
 }
 

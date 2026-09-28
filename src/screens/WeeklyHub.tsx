@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useCareerStore } from '../store/careerStore'
 import type { LeagueWorld, Division } from '../engine/league'
 import type { AcademyWorld } from '../engine/academy'
@@ -42,6 +42,7 @@ export default function WeeklyHub({
   const cups = useCareerStore((s) => s.cups)
   const [energyOpen, setEnergyOpen] = useState(false)
   const [gazetteOpen, setGazetteOpen] = useState(false)
+  const [gazettePeekId, setGazettePeekId] = useState<string | null>(null)
   const [inboxOpen, setInboxOpen] = useState(false)
   const [yearCalendarOpen, setYearCalendarOpen] = useState(false)
   const pendingAchievements = useCareerStore((s) => s.pendingAchievements)
@@ -53,15 +54,22 @@ export default function WeeklyHub({
   const clearCaptaincyStory = useCareerStore((s) => s.clearCaptaincyStory)
   const markStoryRead = useCareerStore((s) => s.markStoryRead)
 
+  const isAcademy = player?.careerClock.phase === 'academy'
+  const offerCount = (player?.contractOffers ?? []).length
+  const activeLabel = NAV_ITEMS.find((n) => n.tab === tab)?.label ?? ''
+  const latestGazette = player?.gazetteIssues?.at(-1) ?? null
+  const unreadStory = (player?.inbox ?? []).find((item) => !item.read) ?? null
+  useEffect(() => {
+    if (!latestGazette || window.localStorage.getItem(`gazette-seen:${latestGazette.id}`)) return
+    setGazettePeekId(latestGazette.id)
+  }, [latestGazette?.id])
+  const dismissGazettePeek = () => {
+    if (latestGazette) window.localStorage.setItem(`gazette-seen:${latestGazette.id}`, '1')
+    setGazettePeekId(null)
+  }
   if (!player || !calendar) {
     return <div className="min-h-screen bg-ks-black flex items-center justify-center text-ks-muted">no active career</div>
   }
-
-  const isAcademy = player.careerClock.phase === 'academy'
-  const offerCount = (player.contractOffers ?? []).length
-  const activeLabel = NAV_ITEMS.find((n) => n.tab === tab)?.label ?? ''
-  const latestGazette = player.gazetteIssues && player.gazetteIssues.length > 0 ? player.gazetteIssues[player.gazetteIssues.length - 1] : null
-  const unreadStory = (player.inbox ?? []).find((item) => !item.read) ?? null
 
   return (
     <div className="min-h-screen bg-ks-black flex flex-col">
@@ -110,9 +118,14 @@ export default function WeeklyHub({
       <BottomNav active={tab} onSelect={onTabChange} badges={{ scouts: offerCount }} />
 
       {energyOpen && <EnergySheet player={player} onClose={() => setEnergyOpen(false)} />}
-      {gazetteOpen && latestGazette && <GazetteScreen issue={latestGazette} onClose={() => setGazetteOpen(false)} />}
+      {gazetteOpen && latestGazette && <GazetteScreen issue={latestGazette} issues={player.gazetteIssues} onClose={() => setGazetteOpen(false)} />}
       {inboxOpen && <InboxScreen items={player.inbox ?? []} onRead={markStoryRead} onClose={() => setInboxOpen(false)} />}
       {yearCalendarOpen && <YearCalendarScreen player={player} calendar={calendar} cups={cups} onClose={() => setYearCalendarOpen(false)} />}
+      {latestGazette && gazettePeekId === latestGazette.id && !gazetteOpen && !pendingSeasonReview && !unreadStory && <div className="fixed z-30 bottom-20 left-3 right-3 max-w-md mx-auto rounded-xl border border-ks-gold/60 bg-[#171407] shadow-2xl p-4" role="status">
+        <div className="flex justify-between items-center"><span className="text-ks-gold font-display text-[10px] tracking-widest">THE GAZETTE · WEEK {latestGazette.weekNumber}</span><button onClick={dismissGazettePeek} className="text-ks-muted text-xs" aria-label="Dismiss Gazette headline">✕</button></div>
+        <h2 className="text-ks-ink font-display text-base mt-2">{latestGazette.masthead}</h2>
+        <button className="text-ks-gold text-xs mt-3" onClick={() => { dismissGazettePeek(); setGazetteOpen(true) }}>Read full issue →</button>
+      </div>}
 
       {/* the season review takes precedence — it's the biggest beat of the year */}
       {pendingSeasonReview && (

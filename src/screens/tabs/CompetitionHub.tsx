@@ -2,7 +2,7 @@ import type { Player } from '../../types/player'
 import type { Division } from '../../engine/league'
 import type { CupWorlds } from '../../engine/save'
 import { knockoutRoundLabel, type CupWorld } from '../../engine/cup'
-import { competitionDefinition } from '../../engine/competitionCareer'
+import { competitionDefinition, competitionPrestige } from '../../engine/competitionCareer'
 import { sortStandings } from '../../engine/league'
 import { Panel, EmptyNote } from '../../components/ui'
 import { useCareerStore } from '../../store/careerStore'
@@ -20,8 +20,9 @@ function competitionStatus(cup: CupWorld): string {
 
 export default function CompetitionHub({ player, division, playerTeamId, cups }: { player: Player; division: Division; playerTeamId: string; cups?: CupWorlds }) {
   const international = useCareerStore((s) => s.international)
-  const leagueKey = player.careerClock.phase === 'academy' ? 'academyLeague' : player.grassrootsPath === 'sunday' ? 'sundayLeague' : 'schoolLeague'
+  const leagueKey = player.careerClock.phase === 'academy' ? 'academyLeague' : 'schoolLeague'
   const leagueDef = competitionDefinition(leagueKey)
+  const homeCountryId = player.academyCountryId ?? getRegion(player.regionId)?.countryId
   const regionName = getRegion(player.regionId)?.name
   const leagueName = leagueKey === 'schoolLeague' && regionName ? `${regionName} Schools League` : leagueDef.name
   const sorted = sortStandings(division.standings)
@@ -32,15 +33,15 @@ export default function CompetitionHub({ player, division, playerTeamId, cups }:
   const pathway=player.pathway??initYouthPathway(player)
 
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="competition-centre flex flex-col gap-2.5">
       <div className="rounded-xl border border-ks-gold/35 bg-gradient-to-br from-[#1b180d] to-[#0d0d0b] px-4 py-3">
         <div className="text-[9px] text-ks-gold uppercase tracking-[0.25em]">competition centre</div>
         <div className="font-display text-lg text-ks-ink mt-1">Every match has a consequence.</div>
         <p className="text-[10px] text-ks-muted mt-1">Track your position, cup path, discipline and performance on each stage.</p>
       </div>
-      {player.careerClock.phase!=='academy'&&<div className="pathway-map"><div className="pathway-map-head"><span>{pathway.ageGroup} · {getRegion(player.regionId)?.name ?? 'LOCAL'} PATHWAY</span><b>{pathwayNextStep(player)}</b></div><div className="pathway-track">{player.grassrootsPath==='sunday'?<><PathStep label="Club" state={pathway.sundayStatus==='registered'?'complete':'active'}/><PathStep label="Sunday League" state={pathway.sundayStatus==='registered'?'active':'locked'}/><PathStep label="Academy" state={pathway.academyTrialStatus==='passed'?'complete':pathway.academyTrialStatus==='invited'?'active':'locked'}/><PathStep label="Pro" state="locked"/></>:<><PathStep label="School" state="complete"/><PathStep label="Regional XI" state={pathway.regionalSelection==='selected'?'complete':pathway.regionalSelection==='cut'?'missed':pathway.regionalSelection==='not-started'?'locked':'active'}/><PathStep label="National" state={pathway.nationalSelection==='selected'?'complete':pathway.nationalSelection==='cut'?'missed':pathway.nationalSelection==='not-started'?'locked':'active'}/><PathStep label="International" state={pathway.nationalSelection==='selected'?'active':'locked'}/></>}</div><div className="pathway-side-route"><span>{player.grassrootsPath==='school'?'Sunday route':'Community club'}</span><b>{pathway.sundayStatus.replace('-',' ')}</b><i>{pathway.sundayInterest}% interest</i></div></div>}
+      {player.careerClock.phase!=='academy'&&<div className="pathway-map"><div className="pathway-map-head"><span>{pathway.ageGroup} · {getRegion(player.regionId)?.name ?? 'LOCAL'} PATHWAY</span><b>{pathwayNextStep(player)}</b></div><div className="pathway-track"><><PathStep label="School" state="complete"/><PathStep label="Regional XI" state={pathway.regionalSelection==='selected'?'complete':pathway.regionalSelection==='cut'?'missed':pathway.regionalSelection==='not-started'?'locked':'active'}/><PathStep label="National" state={pathway.nationalSelection==='selected'?'complete':pathway.nationalSelection==='cut'?'missed':pathway.nationalSelection==='not-started'?'locked':'active'}/><PathStep label="International" state={pathway.nationalSelection==='selected'?'active':'locked'}/></></div></div>}
 
-      <CompetitionCard name={leagueName} format="League" prestige={leagueDef.prestige} status={position > 0 ? `${position}${position === 1 ? 'st' : position === 2 ? 'nd' : position === 3 ? 'rd' : 'th'} of ${sorted.length}` : 'Not placed'} stats={current[leagueKey]} />
+      <CompetitionCard name={leagueName} format="League" prestige={competitionPrestige(leagueKey, homeCountryId)} status={position > 0 ? `${position}${position === 1 ? 'st' : position === 2 ? 'nd' : position === 3 ? 'rd' : 'th'} of ${sorted.length}` : 'Not placed'} stats={current[leagueKey]} />
       {player.octoberLeague && player.careerClock.phase !== 'academy' && <section className="rounded-xl border border-ks-gold/35 bg-[#14120b] px-3 py-3">
         <div className="flex justify-between gap-2"><div><h2 className="font-display text-sm text-ks-gold">OCTOBER DEVELOPMENT SERIES</h2><p className="text-[9px] text-ks-muted mt-1">Season {player.octoberLeague.season} · four matches · five teams</p></div><span className="text-[10px] text-ks-gold">{player.octoberLeague.fixtures.filter(f => f.homeGoals !== null && (f.homeId === player.octoberLeague?.playerTeamId || f.awayId === player.octoberLeague?.playerTeamId)).length}/4 results</span></div>
         <div className="mt-3 space-y-1" aria-label="October league table">{octoberStandings(player.octoberLeague).map((row, i) => <div key={row.teamId} className={`grid grid-cols-[20px_1fr_22px_22px_25px] gap-1 text-[10px] py-1 border-b border-ks-border/40 ${row.teamId === player.octoberLeague?.playerTeamId ? 'text-ks-gold' : 'text-ks-ink'}`}><span>{i + 1}</span><span className="truncate">{row.teamName}</span><span>{row.played}</span><span>{row.goalsFor - row.goalsAgainst > 0 ? '+' : ''}{row.goalsFor - row.goalsAgainst}</span><b>{row.points}</b></div>)}</div>
@@ -49,7 +50,7 @@ export default function CompetitionHub({ player, division, playerTeamId, cups }:
       </section>}
       {activeCups.map((cup) => {
         const def = competitionDefinition(cup.competitionId)
-        return <CompetitionCard key={cup.competitionId} name={cup.competitionId === 'schoolCup' && regionName ? `${regionName} Schools Cup` : cup.label} format={def.format === 'group-knockout' ? 'Groups → Knockout' : 'Knockout'} prestige={def.prestige} status={competitionStatus(cup)} stats={current[cup.competitionId]} />
+        return <CompetitionCard key={cup.competitionId} name={cup.competitionId === 'schoolCup' && regionName ? `${regionName} Schools Cup` : cup.label} format={def.format === 'group-knockout' ? 'Groups → Knockout' : 'Knockout'} prestige={competitionPrestige(cup.competitionId, homeCountryId)} status={competitionStatus(cup)} stats={current[cup.competitionId]} />
       })}
       {international && (() => {
         const def = competitionDefinition('international')
@@ -82,7 +83,7 @@ function CompetitionCard({ name, format, prestige, status, stats }: { name: stri
     <div className={`competition-showcase ${prestige >= 45 ? 'competition-showcase-cup' : ''}`}>
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className="text-[9px] text-ks-gold uppercase tracking-[.22em] mb-1">{format} · season competition</div>
+          <div className="text-[9px] text-ks-gold uppercase tracking-[.22em] mb-1">{format} · prestige {prestige}/100</div>
           <div className="font-display text-base text-ks-ink leading-tight">{name}</div>
         </div>
         <span className="competition-showcase-status">{status}</span>

@@ -4,6 +4,7 @@ import { archetypeStaminaDrainMultiplier } from './archetypes'
 import type { Player } from '../types/player'
 import type { Team } from './teams'
 import { computeCurrentAbility } from './rating'
+import { effectiveValues } from './economy'
 import { fatigueModifier, driveStaminaCost, evaluateSub } from './fatigue'
 import { pacingPressure, pacedInvolvement, shouldPromoteHalfChance, isStarved } from './chancePacing'
 import { standingMatchEffects } from './standing'
@@ -117,6 +118,8 @@ export interface KeyMoment {
   isDistribution: boolean
   minute: number
   situation: string
+  /** Pacing safety net: a touch or defensive action, never a shot or goal. */
+  isRoutine?: boolean
   /** P38 — set when this moment is a beat within a MatchScenario, so the UI/resolution route through the scenario bridge instead of the flat option pools. */
   scenarioId?: string
   beatId?: string
@@ -140,7 +143,7 @@ export function initMatch(player: Player, playerTeam: Team, opponent: Team, play
   const entryMinute = !availability.canPlay ? 120 : role === 'starting-xi' || !role ? 0
     : role === 'bench' ? 55 + Math.floor(rand() * 16) // 55-70
     : 70 + Math.floor(rand() * 16) // reserves: 70-85, a cameo
-  const base: MatchState & { _playerPosition?: import('../types/attributes').Position } = {
+  const base: MatchState & { _playerPosition?: import('../types/attributes').Position; _playerAttributes?: Record<string, number> } = {
     homeTeam: playerIsHome ? playerTeam : opponent,
     awayTeam: playerIsHome ? opponent : playerTeam,
     playerIsHome,
@@ -176,6 +179,7 @@ export function initMatch(player: Player, playerTeam: Team, opponent: Team, play
     yellowCards: 0,
     redCarded: false,
     _playerPosition: player.position,
+    _playerAttributes: effectiveValues(player),
   }
   // P33: standingMatchEffects existed but was NEVER CALLED — the three meters
   // were decorative. A dressing room that wants you to do well makes you play
@@ -373,7 +377,7 @@ export function advanceToKeyMoment(state: MatchState, player: Player): AdvanceRe
     if (s.minute >= midpoint && s.minute < fullTime && s.playerMoments === 0 && !s.substituted && !s.injury && s.onPitch && !s.midpointMomentUsed) {
       s.playerMoments += 1
       s.midpointMomentUsed = true
-      const forced = buildKeyMoment(s, 'half', player.position === 'GK' || ['CB', 'FB'].includes(player.position), player)
+      const forced = buildRoutineMoment(s, player.position === 'GK' || ['CB', 'FB'].includes(player.position), player)
       return { state: s, keyMoment: forced }
     }
 
@@ -394,7 +398,7 @@ export function advanceToKeyMoment(state: MatchState, player: Player): AdvanceRe
       const guarantee = isStarterAppearance ? 3 : 2
       if (s.playerMoments < guarantee && !s.substituted && !s.injury && s.onPitch) {
         s.playerMoments += 1
-        const forced = buildKeyMoment(s, 'half', player.position === 'GK' || ['CB', 'FB'].includes(player.position), player)
+        const forced = buildRoutineMoment(s, player.position === 'GK' || ['CB', 'FB'].includes(player.position), player)
         return { state: s, keyMoment: forced }
       }
       s = finishMatchForAudit(s)
@@ -570,7 +574,7 @@ export function advanceToKeyMoment(state: MatchState, player: Player): AdvanceRe
       // opponent actually has the ball — on the GK's own team's drive,
       // buildKeyMoment correctly reads defensive=false as isDistribution.
       const defensive = (player.position === 'GK' && !isPlayerTeamDrive) || (!isPlayerTeamDrive && ['CB', 'FB'].includes(player.position))
-      return { state: s, keyMoment: buildKeyMoment(s, 'half', defensive, player) }
+      return { state: s, keyMoment: buildRoutineMoment(s, defensive, player) }
     } else if (drive.reached === 'final-third' && shouldPromoteHalfChance(pressure)
         && (isPlayerTeamDrive ? true : ['GK', 'CB', 'FB'].includes(player.position))) {
       // P31: THE guarantee. A player who has gone well past their expected gap
@@ -584,7 +588,7 @@ export function advanceToKeyMoment(state: MatchState, player: Player): AdvanceRe
       s.drivesSinceInvolved = 0
       s.playerMoments += 1
       s.lastMomentMinute = s.minute
-      return { state: s, keyMoment: buildKeyMoment(s, 'half', !isPlayerTeamDrive, player) }
+      return { state: s, keyMoment: buildRoutineMoment(s, !isPlayerTeamDrive, player) }
     } else {
       // final-third half chance that fizzles — now actually narrated
       if (rand() < 0.6) {
@@ -761,6 +765,18 @@ function buildKeyMoment(s: MatchState, tier: ChanceTier, isDefensive: boolean, p
   return { tier, isDefensive, isDistribution, minute: s.minute, situation }
 }
 
+function buildRoutineMoment(s: MatchState, isDefensive: boolean, player: Player): KeyMoment {
+  const moment = buildKeyMoment(s, 'half', isDefensive, player)
+  return {
+    ...moment, isRoutine: true,
+    situation: moment.isDistribution
+      ? 'Your team works the ball back to you. Start the next move under pressure.'
+      : isDefensive
+        ? 'The opponent builds through your area. Read the play and help stop the move.'
+        : 'You receive the ball with teammates moving around you. Keep the attack flowing.',
+  }
+}
+
 // Auto-resolve a teammate's chance (Section 1): scores based on attack vs defense.
 // Phase 22a: when a squad is present, the goal (and often an assist) is now
 // credited to a SPECIFIC named teammate, weighted by position/quality —
@@ -837,6 +853,31 @@ export function resolvePlayerMoment(
   next.executionQualityTotal += executionGrade === 'perfect' ? 1 : executionGrade === 'good' ? .82 : executionGrade === 'ok' ? .62 : executionGrade === 'miss' ? .28 : (success ? .72 : .42)
   next.ratedMoments += 1
 
+  if (moment.isRoutine) {
+    // Guarantees are about involvement, not an extra high-value scoring
+    // opportunity. A routine action may improve the move, but it never
+    // awards a goal, assist, save or a conceded goal directly.
+    if (moment.isDefensive) {
+      if (isGkMoment) next.playerStats.recoveries += success ? 1 : 0
+      else {
+        next.playerStats.tacklesAttempted += 1
+        next.playerStats.tacklesWon += success ? 1 : 0
+      }
+    } else {
+      next.playerStats.passesAttempted += 1
+      next.playerStats.passesCompleted += success ? 1 : 0
+      if (moment.isDistribution) {
+        next.playerStats.distributionAttempted += 1
+        next.playerStats.distributionCompleted += success ? 1 : 0
+      } else if (success && optionQuality > .7) next.playerStats.progressivePasses += 1
+    }
+    next.momentum = clamp(next.momentum + (success ? 1 : -1), -10, 10)
+    next.playerRating = clamp(next.playerRating + (success ? .12 : -.08), 1, 10)
+    next.events.push({ minute: s.minute,
+      text: success ? 'You handle the moment well and keep your team moving.' : 'The move breaks down, but play goes on.', kind: 'chance' })
+    return next
+  }
+
   if (moment.isDefensive) {
     // success = prevented the goal
     if (success) {
@@ -907,16 +948,23 @@ export function resolvePlayerMoment(
 // authored text instead of a commentary-bank line.
 function applyBeatOutcome(s: MatchState, outcome: import('./matchScenarios').BeatOutcome, text: string, tier: ChanceTier): MatchState {
   let next = { ...s, events: [...s.events], playerStats: { ...s.playerStats } }
+  const isKeeper = (s as MatchState & { _playerPosition?: import('../types/attributes').Position })._playerPosition === 'GK'
   switch (outcome.kind) {
     case 'save':
-      next.playerStats.shotsFaced += 1
-      next.playerStats.saves += 1
-      if (tier === 'clear') next.playerStats.highDifficultySaves += 1
+      if (isKeeper) {
+        next.playerStats.shotsFaced += 1
+        next.playerStats.saves += 1
+        if (tier === 'clear') next.playerStats.highDifficultySaves += 1
+      } else {
+        // Scenario "save" means the danger was prevented. An outfield
+        // clearance or tackle must never appear in goalkeeper save totals.
+        next.playerStats.recoveries += 1
+      }
       next.events.push({ minute: s.minute, text, kind: 'chance' })
       next.momentum = clamp(next.momentum + 2, -10, 10)
       return next
     case 'beaten':
-      next.playerStats.shotsFaced += 1
+      if (isKeeper) next.playerStats.shotsFaced += 1
       next.playerStats.goalsConceded += 1
       return applyGoal(next, false, text)
     case 'distribution-good':
@@ -1105,6 +1153,7 @@ export function finishMatchForAudit(s: MatchState): MatchState {
     position: (s as MatchState & { _playerPosition?: import('../types/attributes').Position })._playerPosition ?? 'CM',
     minutes, teamPossession: possession, teamGoals: playerGoalsFor, goalsConceded: conceded,
     rating: rawRating, decisionQuality, executionQuality,
+    attributes: (s as MatchState & { _playerAttributes?: Record<string, number> })._playerAttributes,
     seed: Math.round((s.minute + 1) * 1009 + s.homeScore * 97 + s.awayScore * 193 + s.playerMoments * 389),
   })
   const stats = mergeMatchStats(background, { ...s.playerStats, goalsConceded: conceded })

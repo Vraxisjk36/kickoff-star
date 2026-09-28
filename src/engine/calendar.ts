@@ -1,6 +1,7 @@
 import { rand } from './rng'
 import type { CalendarState, CalendarWeek, DayOfWeek, CalendarEvent } from '../types/calendar'
 import { allMatchWeeks, competitionRoundForWeek, type CompetitionRoundSpec } from './season'
+import { isStoryWeek } from './weeklyStories'
 
 const DAY_ORDER: DayOfWeek[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
 
@@ -44,9 +45,9 @@ export function markResolved(state: CalendarState, eventId: string): CalendarSta
 export const COMPETITION_SPECS: CompetitionRoundSpec[] = [
   { id: 'schoolFriendlies', rounds: 2 },
   { id: 'schoolLeague', rounds: 18 },
-  { id: 'schoolCup', rounds: 8 }, // fifth through eighth slots retain legacy group draws
+  { id: 'schoolCup', rounds: 4 }, // round of 16, quarters, semis, final
   { id: 'schoolDevelopment', rounds: 5 },
-  { id: 'nationalChampionship', rounds: 5 }, // fifth slot keeps in-progress legacy group draws playable
+  { id: 'nationalChampionship', rounds: 4 },
   { id: 'sundayCup', rounds: 4 }, // pure knockout, field 16 -> 4 rounds — grassroots only
   // Phase 21: Academy gets the same cup depth as grassroots, per the locked
   // product strategy ("same depth applied to academy competitions"). These
@@ -55,7 +56,7 @@ export const COMPETITION_SPECS: CompetitionRoundSpec[] = [
   // collides, it's just some slots are a no-op depending on which phase.
   { id: 'academyLeagueCup', rounds: 5 }, // U18 PL Cup equivalent — group + knockout
   { id: 'academyKnockoutCup', rounds: 4 }, // FA Youth Cup equivalent — pure knockout
-  { id: 'academyChampionsCup', rounds: 3 }, // eight clubs from eight countries
+  { id: 'academyChampionsCup', rounds: 5 }, // round of 32 through final
 ]
 
 // V4 career-year structure. Weeks 1-3 are onboarding trials and therefore
@@ -65,9 +66,9 @@ export const COMPETITION_SPECS: CompetitionRoundSpec[] = [
 export const SCHOOL_SEASON_SCHEDULE: Record<string, number[]> = {
   schoolFriendlies: [4, 5],
   schoolLeague: Array.from({ length: 18 }, (_, i) => i + 6), // W6-W23
-  schoolCup: Array.from({ length: 8 }, (_, i) => i + 24),   // new knockout W24-W27; legacy draws through W31
+  schoolCup: [24, 25, 26, 27],
   schoolDevelopment: Array.from({ length: 5 }, (_, i) => i + 24), // W24-W28
-  nationalChampionship: Array.from({ length: 5 }, (_, i) => i + 32), // new knockout W32-W35; W36 supports legacy draws
+  nationalChampionship: [32, 33, 34, 35],
   youthShowcase: [37],
 }
 export const SUNDAY_SEASON_SCHEDULE: Record<string, number[]> = {
@@ -81,7 +82,15 @@ export const ACADEMY_SEASON_SCHEDULE: Record<string, number[]> = {
   schoolLeague: Array.from({ length: 22 }, (_, i) => i + 1),
   academyLeagueCup: [24, 27, 30, 33, 36],
   academyKnockoutCup: [38, 40, 42, 44],
-  academyChampionsCup: [25, 31, 37],
+  academyChampionsCup: [25, 28, 34, 39, 43],
+}
+// Spain's regional Juvenil league has a longer home-and-away group season.
+// Cups move to the free dates, while England retains its shorter age-group schedule.
+export const SPAIN_ACADEMY_SCHEDULE: Record<string, number[]> = {
+  schoolLeague: Array.from({ length: 34 }, (_, i) => i + 1).filter(w => ![24, 27, 30, 33].includes(w)),
+  academyLeagueCup: [24, 27, 30, 33, 36],
+  academyKnockoutCup: [35, 38, 41, 44],
+  academyChampionsCup: [37, 39, 40, 42, 43],
 }
 export const SEASON_SCHEDULE = SCHOOL_SEASON_SCHEDULE
 
@@ -93,9 +102,9 @@ export const MATCH_WEEKS = allMatchWeeks(SEASON_SCHEDULE)
 // Which competition (and which round within it) is being played on a given
 // calendar week — the piece careerStore needs once more than one competition
 // can produce a matchday in the same season.
-export function scheduleFor(phase: CareerPhase, grassrootsPath: GrassrootsPath = 'school') { return phase === 'academy' ? ACADEMY_SEASON_SCHEDULE : grassrootsPath === 'sunday' ? SUNDAY_SEASON_SCHEDULE : SCHOOL_SEASON_SCHEDULE }
-export function competitionForWeek(weekNumber: number, phase: CareerPhase = 'grassroots-season', grassrootsPath: GrassrootsPath = 'school') {
-  return competitionRoundForWeek(scheduleFor(phase, grassrootsPath), weekNumber)
+export function scheduleFor(phase: CareerPhase, grassrootsPath: GrassrootsPath = 'school', countryId?: string) { return phase === 'academy' ? countryId === 'esp' ? SPAIN_ACADEMY_SCHEDULE : ACADEMY_SEASON_SCHEDULE : grassrootsPath === 'sunday' ? SUNDAY_SEASON_SCHEDULE : SCHOOL_SEASON_SCHEDULE }
+export function competitionForWeek(weekNumber: number, phase: CareerPhase = 'grassroots-season', grassrootsPath: GrassrootsPath = 'school', countryId?: string) {
+  return competitionRoundForWeek(scheduleFor(phase, grassrootsPath, countryId), weekNumber)
 }
 
 // Which competitions actually RUN in each career phase. The scheduler seats
@@ -116,26 +125,26 @@ export function isCompetitionActive(competitionId: string, phase: CareerPhase, g
 
 // The competition producing the player's Saturday match this week, or null
 // (dormant competition or no fixture week at all).
-export function activeCompetitionForWeek(weekNumber: number, phase: CareerPhase, grassrootsPath: GrassrootsPath = 'school', schoolDevelopment = false): { competitionId: string; round: number } | null {
+export function activeCompetitionForWeek(weekNumber: number, phase: CareerPhase, grassrootsPath: GrassrootsPath = 'school', schoolDevelopment = false, countryId?: string): { competitionId: string; round: number } | null {
   // The five development fixtures share Regional Cup weeks. The league table
   // decides which one the school enters; the saved cup world carries that choice.
   if (phase !== 'academy' && grassrootsPath === 'school' && schoolDevelopment) {
     const round = SCHOOL_SEASON_SCHEDULE.schoolDevelopment.indexOf(weekNumber)
     if (round !== -1) return { competitionId: 'schoolDevelopment', round: round + 1 }
   }
-  const comp = competitionForWeek(weekNumber, phase, grassrootsPath)
+  const comp = competitionForWeek(weekNumber, phase, grassrootsPath, countryId)
   if (!comp) return null
+  if (phase !== 'academy' && grassrootsPath === 'school' && comp.competitionId === 'schoolDevelopment' && !schoolDevelopment) return null
   const routed = comp.competitionId === 'schoolLeague' && (phase === 'academy' || grassrootsPath === 'sunday')
     ? { ...comp, competitionId: 'sundayLeague' }
     : comp
   return isCompetitionActive(routed.competitionId, phase, grassrootsPath) ? routed : null
 }
 
-// Midweek international windows (Wednesdays, like real life) so international
-// duty never collides with the packed Saturday club calendar. Four qualifier
-// rounds spread through the season, then a three-round finals bracket
-// (QF/SF/F) in the run-in.
-export const INTERNATIONAL_QUALIFIER_WEEKS = [38,39,40,41]
+// A five-nation single round robin takes FIVE rounds (one bye per nation).
+// Keep Wednesdays clear of Thursday school ties. The final three rounds
+// follow without forcing an unplayed qualifier into the knockout draw.
+export const INTERNATIONAL_QUALIFIER_WEEKS = [37,38,39,40,41]
 export const INTERNATIONAL_FINALS_WEEKS = [42,43,44]
 export function internationalRoundForWeek(weekNumber: number): { stage: 'qualifiers' | 'finals'; round: number } | null {
   const q = INTERNATIONAL_QUALIFIER_WEEKS.indexOf(weekNumber)
@@ -145,7 +154,7 @@ export function internationalRoundForWeek(weekNumber: number): { stage: 'qualifi
   return null
 }
 
-export function generateWeek(weekNumber: number, seasonYear: number, phase: CareerPhase = 'grassroots-season', hasInternationalDuty = false, grassrootsPath: GrassrootsPath = 'school', playsSundayFootball = false): CalendarWeek {
+export function generateWeek(weekNumber: number, seasonYear: number, phase: CareerPhase = 'grassroots-season', hasInternationalDuty = false, grassrootsPath: GrassrootsPath = 'school', playsSundayFootball = false, countryId?: string): CalendarWeek {
   void playsSundayFootball // Retained for callers and saved route compatibility.
   // International duty takes over the Wednesday slot on window weeks —
   // midweek internationals, so club Saturdays are untouched.
@@ -155,14 +164,12 @@ export function generateWeek(weekNumber: number, seasonYear: number, phase: Care
     internationalWeek
       ? { id: id(), day: 'wed', type: 'match', title: 'international duty', resolved: false }
       : { id: id(), day: 'wed', type: 'training', title: 'tactical training', resolved: false },
-    { id: id(), day: 'fri', type: 'school', title: 'off the pitch', resolved: false },
   ]
-  // Phase 15: Tue and Thu were completely empty every single week — the calendar
-  // only ever had 5 of 7 days doing anything. Using one of them for a second life
-  // event on roughly half of weeks is free density with no rebalancing.
-  if (weekNumber > 1 && rand() < 0.45) {
-    events.push({ id: id(), day: 'tue', type: 'school', title: 'off the pitch', resolved: false })
-  }
+  // One substantial life choice at most; story beats are guaranteed, ordinary
+  // weeks may stay quiet. Training and football still provide useful activity.
+  const storyWeek = isStoryWeek(weekNumber)
+  if (storyWeek || weekNumber > 1 && rand() < 0.28)
+    events.push({ id: id(), day: 'fri', type: 'school', title: 'off the pitch', resolved: false })
 
   // P32 — STREET GAMES. Player feedback: "it can sometimes get boring waiting
   // an entire week to play a match". Thursday was the last completely dead day
@@ -170,7 +177,7 @@ export function generateWeek(weekNumber: number, seasonYear: number, phase: Care
   // that turns up (street) or the coach running a small-sided game instead of
   // a drill session. Never on a week you already have midweek international
   // duty — two midweek games is too much on a 15-year-old's legs.
-  const schoolMatch = phase !== 'academy' && grassrootsPath === 'school' && activeCompetitionForWeek(weekNumber, phase, grassrootsPath) !== null
+  const schoolMatch = phase !== 'academy' && grassrootsPath === 'school' && activeCompetitionForWeek(weekNumber, phase, grassrootsPath, false, countryId) !== null
   if (weekNumber > 2 && !internationalWeek && !schoolMatch) {
     const roll = rand()
     if (roll < 0.34) {
@@ -179,12 +186,14 @@ export function generateWeek(weekNumber: number, seasonYear: number, phase: Care
       events.push({ id: id(), day: 'thu', type: 'street', title: 'small-sided session', resolved: false })
     }
   }
-  if (activeCompetitionForWeek(weekNumber, phase, grassrootsPath) !== null) {
-    events.push({ id: id(), day: phase === 'academy' ? 'sat' : grassrootsPath === 'school' ? 'thu' : 'sun', type: 'match', title: 'matchday', resolved: false })
+  if (activeCompetitionForWeek(weekNumber, phase, grassrootsPath, false, countryId) !== null) {
+    // A Wednesday international call-up moves the school showcase to
+    // Saturday; playing twice in 24 hours would exhaust a youth player.
+    events.push({ id: id(), day: phase === 'academy' || grassrootsPath === 'school' && internationalWeek ? 'sat' : grassrootsPath === 'school' ? 'thu' : 'sun', type: 'match', title: 'matchday', resolved: false })
   } else {
     events.push({ id: id(), day: 'sat', type: 'training', title: 'extra training', resolved: false })
   }
-  if (schoolMatch || events.some(e => e.day === 'sun' && e.type === 'match')) events.push({ id: id(), day: 'sat', type: 'rest', title: 'match recovery', resolved: false })
+  if (schoolMatch && !internationalWeek || events.some(e => e.day === 'sun' && e.type === 'match')) events.push({ id: id(), day: 'sat', type: 'rest', title: 'match recovery', resolved: false })
   // A youth career has one active route. School players no longer receive a second Sunday fixture.
   if (!events.some(e => e.day === 'sun')) events.push({ id: id(), day: 'sun', type: 'rest', title: 'rest day', resolved: false })
   return { weekNumber, seasonYear, events }
@@ -193,18 +202,61 @@ export function generateWeek(weekNumber: number, seasonYear: number, phase: Care
 /** Preserve event IDs/completion when updating an in-flight saved week. */
 export function alignMatchDays(state: CalendarState, phase: CareerPhase, path: GrassrootsPath, registered: boolean): CalendarState {
   if (phase === 'academy') return state
+  const hasInternationalDuty = state.currentWeek.events.some(e => e.title === 'international duty')
   let events = state.currentWeek.events.map(event => {
     if (event.type !== 'match' || event.title === 'international duty' || event.title === OCTOBER_DEVELOPMENT_TITLE) return event
     const sunday = event.title === 'Sunday community fixture' || event.title === 'Sunday league fixture'
-    return { ...event, day: (sunday || path === 'sunday' ? 'sun' : 'thu') as DayOfWeek, title: sunday ? 'Sunday league fixture' : event.title }
+    return { ...event, day: (sunday || path === 'sunday' ? 'sun' : hasInternationalDuty ? 'sat' : 'thu') as DayOfWeek, title: sunday ? 'Sunday league fixture' : event.title }
   })
   const hasThursdayMatch = events.some(e => e.type === 'match' && e.day === 'thu')
   if (hasThursdayMatch) events = events.filter(e => e.day !== 'thu' || e.type !== 'street' || e.resolved)
+  if (hasInternationalDuty) events = events.filter(e => !(e.day === 'sat' && e.type === 'rest' && !e.resolved && events.some(m => m.day === 'sat' && m.type === 'match')))
   // `registered` is retained in the signature for old saves/callers, but V4 now
   // keeps School and Grassroots exclusive instead of injecting a side Sunday match.
   void registered
   if (!events.some(e => e.day === 'sat')) events.push({ id: id(), day: 'sat', type: 'rest', title: 'match recovery', resolved: false })
   events = events.filter(e => !(e.day === 'sun' && e.type === 'rest' && !e.resolved && events.some(m => m.day === 'sun' && m.type === 'match')))
+  return { ...state, currentWeek: { ...state.currentWeek, events } }
+}
+
+/** Reconcile the Wednesday slot AFTER the previous week's results advance
+ * the campaign. This handles five-team qualifier byes and a newly drawn
+ * finals bracket without replaying a resolved event on save reload. */
+export function alignInternationalDuty(state: CalendarState, hasFixture: boolean): CalendarState {
+  const existing = state.currentWeek.events.find(event => event.day === 'wed' && (event.title === 'international duty' || event.title === 'tactical training'))
+  if (!existing || existing.title === 'international duty' && existing.resolved) return state
+  const title = hasFixture ? 'international duty' : 'tactical training'
+  return { ...state, currentWeek: { ...state.currentWeek, events: state.currentWeek.events.map(event => event.id === existing.id
+    ? { ...event, type: hasFixture ? 'match' as const : 'training' as const, title } : event) } }
+}
+
+/** Midweek continental qualification uses the existing Wednesday training slot. */
+export function alignContinentalQualifier(state: CalendarState, hasFixture: boolean): CalendarState {
+  const events = state.currentWeek.events.map(event => event.day === 'wed' && !event.resolved &&
+    (event.title === 'tactical training' || event.title === 'continental qualifier')
+    ? { ...event, type: hasFixture ? 'match' as const : 'training' as const,
+        title: hasFixture ? 'continental qualifier' : 'tactical training' } : event)
+  return { ...state, currentWeek: { ...state.currentWeek, events } }
+}
+
+/** The fifth development-group match depends on the week-23 league table.
+ * Align a saved/in-flight week without creating a phantom cup match for a
+ * regional qualifier. */
+export function alignSchoolPostseason(state: CalendarState, phase: CareerPhase, path: GrassrootsPath, developmentGroup: boolean): CalendarState {
+  if (phase === 'academy' || path !== 'school' || state.currentWeek.weekNumber !== 28) return state
+  const events = [...state.currentWeek.events]
+  const match = events.find(event => event.title === 'matchday' && !event.resolved)
+  if (developmentGroup && !match) {
+    const saturday = events.findIndex(event => event.day === 'sat' && !event.resolved && (event.type === 'training' || event.type === 'rest'))
+    if (saturday >= 0) events[saturday] = { ...events[saturday], type: 'rest', title: 'match recovery' }
+    else events.push({ id: id(), day: 'sat', type: 'rest', title: 'match recovery', resolved: false })
+    events.push({ id: id(), day: 'thu', type: 'match', title: 'matchday', resolved: false })
+  } else if (!developmentGroup && match) {
+    events.splice(events.indexOf(match), 1)
+    const saturday = events.findIndex(event => event.day === 'sat' && !event.resolved && event.type === 'rest')
+    if (saturday >= 0) events[saturday] = { ...events[saturday], type: 'training', title: 'extra training' }
+    else events.push({ id: id(), day: 'sat', type: 'training', title: 'extra training', resolved: false })
+  }
   return { ...state, currentWeek: { ...state.currentWeek, events } }
 }
 
@@ -235,7 +287,7 @@ export interface WeekAdvanceResult {
 
 // Advance the week, handling season rollover and age increment.
 // Age ticks each season (player ages ~1 year per season). Age cap = 20 (fail check upstream).
-export function advanceWeek(state: CalendarState, currentAge: number, phase: CareerPhase = 'grassroots-season', hasInternationalDuty = false, grassrootsPath: GrassrootsPath = 'school', playsSundayFootball = false): WeekAdvanceResult {
+export function advanceWeek(state: CalendarState, currentAge: number, phase: CareerPhase = 'grassroots-season', hasInternationalDuty = false, grassrootsPath: GrassrootsPath = 'school', playsSundayFootball = false, countryId?: string): WeekAdvanceResult {
   const isSeasonEnd = state.currentWeek.weekNumber >= SEASON_WEEKS
   const nextWeekNum = isSeasonEnd ? 1 : state.currentWeek.weekNumber + 1
   const nextSeason = isSeasonEnd ? state.currentWeek.seasonYear + 1 : state.currentWeek.seasonYear
@@ -243,7 +295,7 @@ export function advanceWeek(state: CalendarState, currentAge: number, phase: Car
 
   return {
     calendar: {
-      currentWeek: generateWeek(nextWeekNum, nextSeason, phase, hasInternationalDuty, grassrootsPath, playsSundayFootball),
+      currentWeek: generateWeek(nextWeekNum, nextSeason, phase, hasInternationalDuty, grassrootsPath, playsSundayFootball, countryId),
       history: [...state.history, state.currentWeek].slice(-6),
     },
     seasonEnded: isSeasonEnd,

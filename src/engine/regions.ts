@@ -35,6 +35,10 @@ const AREAS: Record<string, readonly (readonly [string, string, string, string])
   kor: [['Seoul', 'Gangnam', 'Mapo', 'Songpa'], ['Gyeonggi', 'Suwon', 'Seongnam', 'Goyang'], ['Busan', 'Haeundae', 'Dongnae', 'Saha'], ['Incheon', 'Bupyeong', 'Namdong', 'Yeonsu']],
   aus: [['New South Wales', 'Sydney', 'Newcastle NSW', 'Wollongong'], ['Victoria', 'Melbourne', 'Geelong', 'Ballarat'], ['Queensland', 'Brisbane', 'Gold Coast', 'Cairns'], ['Western Australia', 'Perth', 'Fremantle', 'Bunbury']],
   bel: [['Brussels', 'Brussels', 'Anderlecht', 'Ixelles'], ['Flanders', 'Antwerp', 'Ghent', 'Bruges'], ['Wallonia', 'Liège', 'Namur', 'Charleroi']],
+  sco: [['Central Belt', 'Glasgow', 'Edinburgh', 'Paisley'], ['North East', 'Aberdeen', 'Dundee', 'Perth'], ['Highlands', 'Inverness', 'Elgin', 'Fort William']],
+  aut: [['Vienna', 'Vienna', 'Favoriten', 'Floridsdorf'], ['Styria', 'Graz', 'Leoben', 'Kapfenberg'], ['Salzburg', 'Salzburg', 'Hallein', 'Zell am See']],
+  sui: [['Zürich', 'Zürich', 'Winterthur', 'Uster'], ['Romandy', 'Geneva', 'Lausanne', 'Nyon'], ['Bern', 'Bern', 'Thun', 'Biel']],
+  tur: [['Istanbul', 'Istanbul', 'Kadıköy', 'Üsküdar'], ['Ankara', 'Ankara', 'Çankaya', 'Keçiören'], ['Aegean', 'Izmir', 'Bornova', 'Karşıyaka']],
 }
 
 function slug(value: string) { return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') }

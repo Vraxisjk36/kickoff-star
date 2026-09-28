@@ -36,6 +36,8 @@ export interface Player {
   /** The one youth route chosen at onboarding. School and grassroots are mutually exclusive. */
   youthRoute?: 'school' | 'grassroots'
   schoolId: string | null
+  /** Season in which an unsuccessful school transfer assessment was attempted. */
+  schoolTransferSeason?: number
   grassrootsClubId?: string | null
   grassrootsClubName?: string | null
   /** Training sessions completed after an opening-trial cut, before a new club approach. */
@@ -107,6 +109,9 @@ export interface Player {
   activeArcs?: import('../engine/storylines').ActiveArc[]
   /** Arc template keys recently resolved, for no-repeat pacing. */
   recentArcKeys?: string[]
+  weeklyStories?: Record<string, { path: 'help' | 'focus'; beat: 1 | 2 | 3 }>
+  weeklyFocus?: { week: number; kind: 'recovery' | 'film' | 'shift' }
+  schoolGraduationDeadline?: number
   /** Four position-specific coach objectives for the current season. */
   seasonObjectives?: import('../engine/seasonObjectives').SeasonObjectives
 
@@ -125,6 +130,10 @@ export interface Player {
 
   // Match rating history (recent-window), feeds scouting later
   matchRatings: number[]
+  /** Exact played match lines across school, academy, cups and country. */
+  matchLedger?: import('../engine/matchLedger').MatchRecord[]
+  /** Completed cup and country fixtures, including other named players. */
+  worldMatchHistory?: import('../engine/matchLedger').MatchRecord[]
   seasonGoals: number
   seasonAssists: number
 
@@ -171,6 +180,8 @@ export interface Player {
 
   // fail-state: reached age cap (20) without turning pro
   careerEnded?: boolean
+  /** Final-season pro talks may finish shortly after the age cap; no new talks extend this deadline. */
+  proGraceDeadline?: number
 
   // Current injury (null if fit). weeksRemaining counts down each week advance.
   injury: { severity: string; weeksRemaining: number; description: string } | null
@@ -183,6 +194,9 @@ export interface Player {
   // Phase 25: weekly newspaper archive, most recent last. Capped in the store
   // so the save doesn't grow unbounded over a multi-season career.
   gazetteIssues?: import('../engine/gazette').GazetteIssue[]
+  worldSchools?: import('../engine/worldSchools').WorldSchoolsState
+  worldLeagues?: import('../engine/worldLeagues').WorldLeagues
+  academyRankings?: import('../engine/worldSchools').SchoolsRanking[]
   // Phase 25: last match result, for the Gazette's recap article. Overwritten
   // every match — this is a single most-recent snapshot, not a history log
   // (matchRatings already covers the rolling rating window).
@@ -201,7 +215,7 @@ export interface Player {
   // Scouting state (per-club interest, reputation-gated per Joel's locked design)
   reputation: number
   scoutWatchers: { clubId: string; clubName: string; clubShort: string; countryId?: string; interest: number; tier: string; prestige: number; watchedMatches?: number; lastObservedWeek?: number; addedWeek?: number; ratings: { attack: number; midfield: number; defense: number } }[]
-  contractOffers: { id: string; clubId: string; clubName: string; clubShort: string; countryId?: string; weekOffered: number; expiresInWeeks: number; prestige: number; ratings: { attack: number; midfield: number; defense: number }; kind: 'academy' | 'professional' | 'club'; divisionTier?: number; weeklyWage?: number; contractSeason?: number; renewal?: boolean }[]
+  contractOffers: { id: string; clubId: string; clubName: string; clubShort: string; countryId?: string; weekOffered: number; expiresInWeeks: number; prestige: number; ratings: { attack: number; midfield: number; defense: number }; kind: 'academy' | 'professional' | 'club'; availableFromAge?: number; divisionTier?: number; weeklyWage?: number; contractSeason?: number; renewal?: boolean }[]
 
   // Absolute week counter, never resets at season boundary (used for offer expiry math)
   totalWeeksElapsed: number

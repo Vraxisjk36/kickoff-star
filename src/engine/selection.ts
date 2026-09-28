@@ -113,6 +113,8 @@ export function promotionEvidence(player: Player): { played: number; required: n
  * week, which reads as the game being broken rather than as competition.
  */
 export function decideSelection(player: Player, squad: SquadPlayer[] | undefined): SelectionVerdict {
+  if (player.squadRole === 'released') return { role: 'reserves', pecking: 0, competing: 0, score: selectionScore(player), changed: null,
+    reason: 'Play school development fixtures and train for the week 12 school assessment.' }
   const score = selectionScore(player)
   const rivals = competitionFor(player, squad)
   const current = (player.squadRole ?? 'bench') as SquadRole
@@ -186,6 +188,7 @@ function reasonFor(player: Player, score: number, role: SquadRole, changed: Sele
 export function selectionAdvice(verdict: SelectionVerdict, player: Player): string {
   if (!matchAvailability(player).canStart) return 'Recover to 50% energy to be considered for a start. Below 30%, you cannot play.'
   if (verdict.role === 'starting-xi' && verdict.pecking === 1) return 'Keep this up and the shirt is yours.'
+  if (player.squadRole === 'released') return 'Play school development fixtures. Your next assessment is in week 12.'
   if (player.squadRole === 'reserves' || player.squadRole === 'bench') {
     const evidence = promotionEvidence(player)
     if (!evidence.ready) return `Earn ${evidence.required} appearances in this role at an average of ${player.squadRole === 'reserves' ? '6.4' : '6.7'} or better (${evidence.played}/${evidence.required} played). Training helps, but match performances earn promotion.`

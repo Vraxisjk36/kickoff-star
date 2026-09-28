@@ -3,6 +3,7 @@ import { generateTeam, generatePlayerTeam, type Team, type NotablePlayer, type N
 import { getRegion, regionalSchoolNames, regionalClubNames } from './regions'
 import { schoolsForRegion } from './schools'
 import { generateRoundRobin } from './competitions'
+import type { MatchLine, MatchRecord } from './matchLedger'
 
 // ============================================================================
 // GRASSROOTS SEASON LOOP (Phase 8) — locked world scope:
@@ -41,6 +42,7 @@ export interface Division {
   teams: Team[]
   standings: LeagueStanding[]
   fixtures: Fixture[]
+  matchRecords?: MatchRecord[]
 }
 
 export interface LeagueWorld {
@@ -51,6 +53,8 @@ export interface LeagueWorld {
    * the same standings/fixture engine. Optional only for legacy saves. */
   kind?: 'school' | 'sunday'
   regionId?: string
+  /** Completed-season match lines survive the annual table reset. */
+  matchHistory?: MatchRecord[]
 }
 
 const SCHOOL_NAMES = [
@@ -139,7 +143,7 @@ export function initSchoolLeagueWorld(playerSchoolName: string, regionId?: strin
   const region = getRegion(regionId)
   const schoolIndex = schoolsForRegion(regionId).findIndex(choice => choice.name === playerSchoolName)
   const playerTeam = { ...schoolTeam(playerSchoolName, schoolIndex === 0 ? 4 : schoolIndex === 2 ? 2 : 3), ...(region ? { regionId: region.id, countryId: region.countryId } : {}) }
-  const availableNames = (region ? regionalSchoolNames(region.id) : SCHOOL_NAMES).filter((name) => name !== playerSchoolName)
+  const availableNames = [...new Set(region ? regionalSchoolNames(region.id) : [...schoolsForRegion(undefined).map(school => school.name), ...SCHOOL_NAMES])].filter((name) => name !== playerSchoolName)
   const div1 = initDivision(1, playerTeam, 10, availableNames.slice(0, 9), region?.id, true)
   const div2 = initDivision(2, undefined, 10, availableNames.slice(9, 19), region?.id, true)
   const div3 = initDivision(3, undefined, 10, availableNames.slice(19, 29), region?.id, true)
@@ -193,6 +197,7 @@ export function migrateToSchoolLeagueWorld(world: LeagueWorld, playerSchoolName:
 /** Start a fresh season without moving schools between artificial pyramid
  * tiers. Team ratings and identities persist; tables and fixtures reset. */
 export function resetSchoolLeagueSeason(world: LeagueWorld): LeagueWorld {
+  const matchHistory = [...(world.matchHistory ?? []), ...Object.values(world.divisions).flatMap(division => division.matchRecords ?? [])]
   const divisions = {} as Record<DivisionTier, Division>
   for (const tier of [1, 2, 3] as const) {
     const division = world.divisions[tier]
@@ -201,9 +206,10 @@ export function resetSchoolLeagueSeason(world: LeagueWorld): LeagueWorld {
       teams: division.teams.map(resetTeamScorers),
       standings: division.teams.map(initStanding),
       fixtures: generateFixtures(division.teams, 2),
+      matchRecords: [],
     }
   }
-  return { ...world, divisions, kind: 'school' }
+  return { ...world, divisions, matchHistory, kind: 'school' }
 }
 
 function updateStandingsFromResult(standings: LeagueStanding[], homeId: string, awayId: string, hg: number, ag: number): LeagueStanding[] {
@@ -229,8 +235,28 @@ export function sortStandings(standings: LeagueStanding[]): LeagueStanding[] {
   })
 }
 
+/** Sixteen real schools selected from completed district tables. Each
+ * district sends its top three; seven best remaining finishers fill the draw. */
+export function regionalCupField(world: LeagueWorld): Team[] {
+  const automatic: Team[] = []
+  const wildcards: { team: Team; row: LeagueStanding }[] = []
+  for (const division of Object.values(world.divisions)) {
+    const ranked = sortStandings(division.standings)
+    ranked.forEach((row, index) => {
+      const team = division.teams.find(entry => entry.id === row.teamId)
+      if (!team) return
+      if (index < 3) automatic.push(team)
+      else wildcards.push({ team, row })
+    })
+  }
+  wildcards.sort((a, b) => b.row.points - a.row.points ||
+    (b.row.goalsFor - b.row.goalsAgainst) - (a.row.goalsFor - a.row.goalsAgainst) ||
+    b.row.goalsFor - a.row.goalsFor || a.team.name.localeCompare(b.team.name))
+  return [...automatic, ...wildcards.slice(0, 7).map(entry => entry.team)]
+}
+
 // Record the player's own match result into their division.
-export function recordPlayerMatchResult(world: LeagueWorld, opponentId: string, playerScored: number, opponentScored: number, playerWasHome: boolean, personalGoals = 0): LeagueWorld {
+export function recordPlayerMatchResult(world: LeagueWorld, opponentId: string, playerScored: number, opponentScored: number, playerWasHome: boolean, personalGoals = 0, playerLine?: MatchLine, season = 1, calendarWeek = 0): LeagueWorld {
   const division = world.divisions[world.playerDivision]
   const homeId = playerWasHome ? world.playerTeamId : opponentId
   const awayId = playerWasHome ? opponentId : world.playerTeamId
@@ -244,7 +270,35 @@ export function recordPlayerMatchResult(world: LeagueWorld, opponentId: string, 
   )
   const standings = updateStandingsFromResult(division.standings, homeId, awayId, hg, ag)
   const teams = division.teams.map(t => t.id === world.playerTeamId ? attributeGoals(t, Math.max(0, playerScored - personalGoals)) : t.id === opponentId ? attributeGoals(t, opponentScored) : t)
-  return { ...world, divisions: { ...world.divisions, [world.playerDivision]: { ...division, fixtures, standings, teams } } }
+  const fixture = division.fixtures.find(f => !f.played && f.homeTeamId === homeId && f.awayTeamId === awayId)
+  const matchRecords = fixture ? [...(division.matchRecords ?? []), fixtureRecord(fixture, division.teams, teams, hg, ag, world.kind === 'school' ? 'schoolLeague' : 'sundayLeague', season, calendarWeek, playerLine)] : division.matchRecords
+  return { ...world, divisions: { ...world.divisions, [world.playerDivision]: { ...division, fixtures, standings, teams, matchRecords } } }
+}
+
+export function fixtureRecord(fixture: Fixture, before: Team[], after: Team[], homeGoals: number, awayGoals: number, competitionId: string, season: number, week: number, userLine?: MatchLine): MatchRecord {
+  const lines: MatchLine[] = []
+  for (const teamId of [fixture.homeTeamId, fixture.awayTeamId]) {
+    const team = after.find(t => t.id === teamId)!
+    const previous = before.find(t => t.id === teamId)!
+    const scored = teamId === fixture.homeTeamId ? homeGoals : awayGoals
+    const conceded = teamId === fixture.homeTeamId ? awayGoals : homeGoals
+    team.notablePlayers.forEach((named, index) => {
+      const goals = Math.max(0, named.seasonGoals - (previous.notablePlayers[index]?.seasonGoals ?? 0))
+      // The lightweight simulation tracks four named players per team. Their
+      // lines are generated here, once, from the saved score and goal credits.
+      const assists = named.position === 'CM' ? Math.floor(scored * .65) : named.position === 'ST' ? Math.floor(scored * .2) : 0
+      const saves = named.position === 'GK' ? Math.max(1, Math.round((conceded + scored + 2) * .8)) : 0
+      lines.push({ playerId: `${teamId}:${index}`, name: named.name, position: named.position, teamId,
+        minutes: 90, started: true, rating: Math.max(5, Math.min(9, 6.2 + goals * .8 + (scored - conceded) * .12)),
+        goals, assists, saves, tackles: named.position === 'CB' ? 2 : 0,
+        interceptions: named.position === 'CB' ? 1 : 0, keyPasses: named.position === 'CM' ? assists + 1 : 0,
+        yellowCards: 0, redCards: 0 })
+    })
+  }
+  if (userLine) lines.push(userLine)
+  const home = after.find(t => t.id === fixture.homeTeamId)!, away = after.find(t => t.id === fixture.awayTeamId)!
+  return { id: fixture.id, competitionId, season, week, homeTeamId: home.id, awayTeamId: away.id,
+    homeTeamName: home.name, awayTeamName: away.name, homeGoals, awayGoals, lines }
 }
 
 function simpleScore(attack: number, defense: number): number {
@@ -290,9 +344,10 @@ export function attributeGoals(team: Team, goals: number): Team {
   return { ...team, notablePlayers: players }
 }
 
-export function batchSimDivisionRound(division: Division, round: number, playerTeamId: string, includePlayerTeam = false): Division {
+export function batchSimDivisionRound(division: Division, round: number, playerTeamId: string, includePlayerTeam = false, competitionId = 'schoolLeague', season = 1, week = 0): Division {
   const teamById = new Map(division.teams.map((t) => [t.id, t]))
   let standings = division.standings
+  const matchRecords = [...(division.matchRecords ?? [])]
   const fixtures = division.fixtures.map((f) => {
     if (f.played || f.week > round) return f
     if (!includePlayerTeam && (f.homeTeamId === playerTeamId || f.awayTeamId === playerTeamId)) return f
@@ -305,11 +360,13 @@ export function batchSimDivisionRound(division: Division, round: number, playerT
     // Attribute each goal to a real notable player, keeping teamById in
     // sync so a team that plays (and scores) more than once in the same
     // round accumulates correctly rather than each fixture overwriting it.
-    teamById.set(home.id, attributeGoals(home, hg))
-    teamById.set(away.id, attributeGoals(away, ag))
+    const creditedHome = attributeGoals(home, hg), creditedAway = attributeGoals(away, ag)
+    teamById.set(home.id, creditedHome)
+    teamById.set(away.id, creditedAway)
+    matchRecords.push(fixtureRecord(f, [home, away], [creditedHome, creditedAway], hg, ag, competitionId, season, week || f.week))
     return { ...f, played: true, homeGoals: hg, awayGoals: ag }
   })
-  return { ...division, teams: division.teams.map((t) => teamById.get(t.id) ?? t), fixtures, standings }
+  return { ...division, teams: division.teams.map((t) => teamById.get(t.id) ?? t), fixtures, standings, matchRecords }
 }
 
 // End-of-season promotion/relegation. Top 2 promoted, bottom 2 relegated.
@@ -331,7 +388,7 @@ export function topScorerInDivision(division: Division, excludeTeamId: string): 
 
 /** Builds a division from an explicit team list (not randomly generated) — fresh standings and fixtures for a new season, real team identities carried forward. */
 function buildDivisionFromTeams(tier: DivisionTier, teams: Team[]): Division {
-  return { tier, teams: teams.map(resetTeamScorers), standings: teams.map(initStanding), fixtures: generateFixtures(teams, 2) }
+  return { tier, teams: teams.map(resetTeamScorers), standings: teams.map(initStanding), fixtures: generateFixtures(teams, 2), matchRecords: [] }
 }
 
 export function resetTeamScorers(team: Team): Team {

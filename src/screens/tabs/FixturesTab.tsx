@@ -16,8 +16,8 @@ import { friendlyOpponent } from '../../engine/friendlies'
 // week. P25 fix: rounds map to the LEAGUE's own scheduled weeks — the old code
 // indexed into the union of every competition's weeks, so every label after
 // the first cup week pointed at the wrong Saturday.
-function calendarWeekFor(round:number,phase:'grassroots-trials'|'grassroots-season'|'academy',path:'school'|'sunday'):number|null {
-  const weeks=[...(scheduleFor(phase,path).schoolLeague??[])].sort((a,b)=>a-b)
+function calendarWeekFor(round:number,phase:'grassroots-trials'|'grassroots-season'|'academy',path:'school'|'sunday',countryId?:string):number|null {
+  const weeks=[...(scheduleFor(phase,path,countryId).schoolLeague??[])].sort((a,b)=>a-b)
   return weeks[round - 1] ?? null
 }
 
@@ -76,7 +76,7 @@ export default function FixturesTab({ division, playerTeamId, cups, route }: { d
   const calendar = useCareerStore(s => s.calendar)
   const season = calendar?.currentWeek.seasonYear ?? 1
   const currentWeek = calendar?.currentWeek.weekNumber ?? 4
-  const leagueRows = rows.map(r => ({ id:r.fixture.id, week:calendarWeekFor(r.fixture.week,phase,path) ?? r.fixture.week, opponent:r.opponent, name:r.opponent?.name ?? 'TBD', isHome:r.isHome, result:r.result, scoreLine:r.scoreLine, friendly:false }))
+  const leagueRows = rows.map(r => ({ id:r.fixture.id, week:calendarWeekFor(r.fixture.week,phase,path,player?.academyCountryId) ?? r.fixture.week, opponent:r.opponent, name:r.opponent?.name ?? 'TBD', isHome:r.isHome, result:r.result, scoreLine:r.scoreLine, friendly:false }))
   const friendlyRows = path === 'school' && phase !== 'academy' ? (scheduleFor(phase,path).schoolFriendlies ?? []).flatMap(week => {
     const saved = player?.friendlyResults?.find(f => f.season === season && f.week === week)
     if (!saved && week < currentWeek) return []

@@ -5,6 +5,7 @@ import { competitionDefinition } from './competitionCareer'
 import { initYouthPathway } from './pathway'
 import { addStoryMoment, createStoryMoment } from './presentation'
 import { computeCurrentAbility, toOvr } from './rating'
+import { getNation } from './nations'
 
 export function academyTrialBase(player: Player): number {
   const ratings = player.matchRatings.slice(-5)
@@ -121,4 +122,11 @@ export function academyOfferCleared(player: Player, offerId: string): boolean {
   const offer = player.contractOffers.find(o => o.id === offerId && o.kind === 'academy')
   return !!offer && player.pathway?.academyTrialStatus === 'passed' &&
     (player.pathway.academyQualifiedOfferIds?.includes(offerId) || player.pathway.academyTrialClubId === offer.clubId)
+}
+
+/** Interest/trials may cross borders, but a new international academy
+ * registration waits until adulthood in the simplified career model. */
+export function academyRegistrationOpen(player: Player, offer: Player['contractOffers'][number]): boolean {
+  const home = getNation(player.nationality).id
+  return player.careerClock.ageYears >= (offer.availableFromAge ?? (offer.countryId && offer.countryId !== home ? 18 : 16))
 }

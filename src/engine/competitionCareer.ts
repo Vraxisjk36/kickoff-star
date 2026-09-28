@@ -61,6 +61,21 @@ export function competitionDefinition(id: string): CompetitionDefinition {
   return COMPETITION_DEFINITIONS[id] ?? { ...FALLBACK_COMPETITION, id }
 }
 
+// Game-world visibility of local youth competitions. This measures scouting
+// coverage and competition reach, not the ability of a country's children.
+const COUNTRY_LEAGUE_VISIBILITY: Record<string, number> = {
+  eng: 1.22, esp: 1.20, fra: 1.17, ger: 1.16, ita: 1.13, por: 1.12, ned: 1.12, bel: 1.08,
+  bra: 1.15, arg: 1.12, rsa: 0.80, nga: 0.86, gha: 0.83, sen: 0.91, mar: 0.95,
+  usa: 1.02, mex: 1.03, jpn: 1.01, kor: 0.97, aus: 0.94,
+  sco: 1.07, aut: 1.07, sui: 1.06, tur: 1.05,
+}
+export function countryLeagueVisibility(countryId?: string): number { return COUNTRY_LEAGUE_VISIBILITY[countryId ?? ''] ?? 1 }
+export function competitionPrestige(competitionId: string, countryId?: string): number {
+  const definition = competitionDefinition(competitionId)
+  if (!countryId || definition.category === 'international' || definition.level === 'international' || definition.format === 'selection') return definition.prestige
+  return Math.min(99, Math.max(1, Math.round(definition.prestige * countryLeagueVisibility(countryId))))
+}
+
 export interface CompetitionPlayerStats {
   competitionId: string
   season: number
@@ -100,7 +115,7 @@ export interface QualificationRecord {
   competitionId: string
   qualifiedFor: string
   season: number
-  reason: 'league-position' | 'cup-result' | 'selection' | 'host'
+  reason: 'league-position' | 'cup-result' | 'selection' | 'host' | 'senior-qualification'
   position?: number
 }
 
@@ -204,8 +219,10 @@ export function selectionScore(input: { performance: number; attributes: number;
   return input.performance * 0.4 + input.attributes * 0.2 + input.coachTrust * 0.15 + input.fitness * 0.1 + input.form * 0.1 + input.mentality * 0.05
 }
 
-export function scoutingPrestigeMultiplier(competitionId: string): number {
-  return 0.75 + competitionDefinition(competitionId).prestige / 100
+export function scoutingPrestigeMultiplier(competitionId: string, countryId?: string): number {
+  const definition = competitionDefinition(competitionId)
+  const local = definition.category !== 'international' && definition.level !== 'international' && definition.format !== 'selection'
+  return (0.75 + competitionPrestige(competitionId, countryId) / 100) * (local ? countryLeagueVisibility(countryId) : 1)
 }
 
 function inferredAwards(stats: CompetitionPlayerStats): CompetitionAward['kind'][] {
@@ -218,7 +235,7 @@ function inferredAwards(stats: CompetitionPlayerStats): CompetitionAward['kind']
   return out
 }
 
-export function archiveCompetitionSeason(state: CompetitionCareerState | undefined, season: number, outcomes: Record<string, string> = {}): CompetitionCareerState {
+export function archiveCompetitionSeason(state: CompetitionCareerState | undefined, season: number, outcomes: Record<string, string> = {}, countryId?: string): CompetitionCareerState {
   const base = state ?? initCompetitionCareer()
   const seasonStats = Object.values(base.current).filter((s) => s.season === season && s.appearances > 0)
   const newAwards: CompetitionAward[] = []
@@ -226,7 +243,7 @@ export function archiveCompetitionSeason(state: CompetitionCareerState | undefin
     const def = competitionDefinition(stats.competitionId)
     const awards = inferredAwards(stats)
     for (const kind of awards) newAwards.push({ competitionId: stats.competitionId, season, kind })
-    return { ...stats, competitionName: def.name, prestige: def.prestige, outcome: outcomes[stats.competitionId] ?? 'Completed', awards }
+    return { ...stats, competitionName: def.name, prestige: competitionPrestige(stats.competitionId, countryId), outcome: outcomes[stats.competitionId] ?? 'Completed', awards }
   })
   return {
     ...base,

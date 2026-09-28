@@ -16,6 +16,10 @@ import Avatar from '../../components/Avatar'
 import { getNation } from '../../engine/nations'
 import { getArchetype } from '../../engine/archetypes'
 import ScoutsTab from './ScoutsTab'
+import { useCareerStore } from '../../store/careerStore'
+import { schoolsForRegion } from '../../engine/schools'
+import { currentPerformance } from '../../engine/youthOpportunities'
+import { competitionDefinition } from '../../engine/competitionCareer'
 
 // P27 restructure (Joel: 'one long ass scroll'): identity header + attributes
 // stay always-visible; everything else collapses behind section buttons.
@@ -41,6 +45,8 @@ function ratingColor(r: number): string {
 }
 
 export default function PlayerTab({ player, onOpenOffers }: { player: Player; onOpenOffers?: () => void }) {
+  const calendar = useCareerStore(s => s.calendar)
+  const requestSchoolTransfer = useCareerStore(s => s.requestSchoolTransfer)
   const [view, setView] = useState<'overview' | 'development' | 'career'>('overview')
   const c = player.career
   const values = player.attributes.values as Record<string, number>
@@ -79,6 +85,14 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
       </div>
 
       <div className="player-quick-strip"><div><span>APPS</span><b>{c?.appearances ?? 0}</b></div><div><span>GOALS</span><b>{c?.goals ?? 0}</b></div><div><span>ASSISTS</span><b>{c?.assists ?? 0}</b></div><div><span>BEST</span><b>{c?.bestRating?.toFixed(1) ?? '—'}</b></div></div>
+      {player.squadRole === 'released' && player.careerClock.phase !== 'academy' && <Panel title="School pathway · another chance">
+        <p className="text-xs text-ks-muted">Play development fixtures and train. Your school reviews you after weeks 12 and 23. Three appearances averaging 6.3 with at least 50% energy earn a reserve place.</p>
+        {(() => { const record = currentPerformance(player, ['schoolDevelopmentLeague','schoolReserveLeague']); return <p className="text-xs text-ks-gold mt-2">Development record: {record.appearances} matches · {record.average.toFixed(1)} average</p> })()}
+        {calendar && calendar.currentWeek.weekNumber >= 24 && calendar.currentWeek.weekNumber <= 31 && player.schoolTransferSeason !== calendar.currentWeek.seasonYear && <div className="mt-3 space-y-2">
+          <p className="text-xs text-ks-ink">Apply for one school transfer assessment this season:</p>
+          {schoolsForRegion(player.regionId).filter(s => s.id !== player.schoolId).map(s => <button key={s.id} onClick={() => requestSchoolTransfer(s.id)} className="block w-full rounded-lg border border-ks-gold/40 p-2 text-left text-xs text-ks-gold">Trial at {s.name} →</button>)}
+        </div>}
+      </Panel>}
       <nav className="player-view-switch" aria-label="Player details">{(['overview','development','career'] as const).map(tab => <button key={tab} aria-pressed={view === tab} onClick={() => setView(tab)}>{tab}</button>)}</nav>
       {view === 'overview' && <>
       {/* P50 — the coach's verdict used to only ever surface as a one-time
@@ -231,10 +245,24 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
         )}
       </Section>
 
+      <Section title="📋 match record">
+        {(player.matchLedger ?? []).length === 0 ? <EmptyNote>Played matches will appear here with the exact competition, score and performance.</EmptyNote>
+          : <div className="flex flex-col gap-2">
+            {[...(player.matchLedger ?? [])].reverse().slice(0, 12).map(record => {
+              const line = record.lines.find(entry => entry.playerId === player.id)
+              const home = line?.teamId === record.homeTeamId
+              return <div key={record.id} className="border-b border-ks-border/50 pb-2 text-[11px]">
+                <div className="flex justify-between gap-2 text-ks-ink"><span className="truncate">{competitionDefinition(record.competitionId).name} · W{record.week} S{record.season}</span><b>{record.homeGoals}–{record.awayGoals}</b></div>
+                <div className="text-ks-muted truncate">{home ? 'vs ' + record.awayTeamName : 'at ' + record.homeTeamName} · {line?.minutes ?? 0} min · {line?.rating.toFixed(1) ?? '—'} rating · {line?.goals ?? 0}G {line?.assists ?? 0}A{player.position === 'GK' ? ` · ${line?.saves ?? 0} saves` : ''}</div>
+              </div>
+            })}
+          </div>}
+      </Section>
+
       <Section title="🧭 career pathway" defaultOpen>
         <div className="flex items-stretch gap-1.5">
           {([
-            { key: 'grassroots', label: 'Grassroots', active: player.careerClock.phase !== 'academy' && !player.turnedPro, complete: player.careerClock.phase === 'academy' || !!player.turnedPro },
+            { key: 'school', label: 'School', active: player.careerClock.phase !== 'academy' && !player.turnedPro, complete: player.careerClock.phase === 'academy' || !!player.turnedPro },
             { key: 'academy', label: 'Academy', active: player.careerClock.phase === 'academy' && !player.turnedPro, complete: !!player.turnedPro },
             { key: 'pro', label: 'Professional', active: !!player.turnedPro, complete: false },
           ]).map((stage, index) => (
@@ -248,7 +276,7 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
           ))}
         </div>
         <p className="text-[10px] text-ks-muted leading-relaxed mt-2.5">
-          {player.careerClock.phase === 'academy' ? 'Perform in academy competitions, build scout interest and earn a professional contract.' : player.grassrootsPath === 'sunday' ? 'Build consistent Sunday performances. Academy scouts watch from 16 and review invitations each October, starting in year three.' : 'Build your school record first. Academy scouting starts at 16; invitations open in October of year three after a review of your previous seasons.'}
+          {player.careerClock.phase === 'academy' ? 'Perform in academy competitions, build scout interest and earn a professional contract.' : 'Build a school record through trials, fixtures and representative football. Academy scouting begins at 16 and reviews sustained performances.'}
         </p>
       </Section>
 

@@ -21,7 +21,7 @@ export default function ClubTab({ player, playerTeam, division, isAcademy }: {
   const standing = sorted.find((s) => s.teamId === playerTeam.id)
   const rivals = division.teams.filter((t) => t.id !== playerTeam.id)
   const divName = isAcademy
-    ? academyDivisionLabel(division.tier as 1 | 2)
+    ? academyDivisionLabel(division.tier as 1 | 2, player.academyCountryId)
     : player.grassrootsPath === 'school' ? 'Local School League' : divisionLabel(division.tier)
 
   return (

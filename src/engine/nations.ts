@@ -31,6 +31,10 @@ export const NATIONS: Nation[] = [
   { id: 'kor', name: 'South Korea', short: 'KOR', flag: '🇰🇷', strength: 5 },
   { id: 'aus', name: 'Australia', short: 'AUS', flag: '🇦🇺', strength: 5 },
   { id: 'bel', name: 'Belgium', short: 'BEL', flag: '🇧🇪', strength: 7 },
+  { id: 'sco', name: 'Scotland', short: 'SCO', flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', strength: 6 },
+  { id: 'aut', name: 'Austria', short: 'AUT', flag: '🇦🇹', strength: 6 },
+  { id: 'sui', name: 'Switzerland', short: 'SUI', flag: '🇨🇭', strength: 6 },
+  { id: 'tur', name: 'Türkiye', short: 'TUR', flag: '🇹🇷', strength: 6 },
 ]
 
 export function getNation(id: string | null | undefined): Nation {

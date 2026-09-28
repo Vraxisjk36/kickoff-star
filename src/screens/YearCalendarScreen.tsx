@@ -12,13 +12,13 @@ function weekItems(week: number, current: number, player: Player, cups: CupWorld
   if (!academy && week <= 3) return [{ label: 'Preseason trials', tone: 'window' }]
 
   const items: CalendarItem[] = []
-  const fixture = activeCompetitionForWeek(week, player.careerClock.phase, player.grassrootsPath, Boolean(cups.schoolDevelopment))
+  const fixture = activeCompetitionForWeek(week, player.careerClock.phase, player.grassrootsPath, Boolean(cups.schoolDevelopment), player.academyCountryId)
   const names: Record<string, string> = {
     schoolFriendlies: 'School friendly', schoolLeague: 'Local School League',
     schoolCup: 'Regional Schools Cup', schoolDevelopment: 'School Development Competition',
     nationalChampionship: 'National Schools Championship', sundayLeague: academy ? 'Academy League' : 'Sunday League',
-    sundayCup: 'Sunday Cup', academyLeagueCup: 'Academy League Cup',
-    academyKnockoutCup: 'Academy Knockout Cup', academyChampionsCup: 'Academy Champions Cup', youthShowcase: 'October academy showcase',
+    sundayCup: 'Sunday Cup', academyLeagueCup: 'U18 Premier Cup',
+    academyKnockoutCup: player.academyCountryId === 'esp' ? 'Copa Juvenil' : 'Youth Cup', academyChampionsCup: 'Academy Champions Cup', youthShowcase: 'October academy showcase',
   }
   if (fixture?.competitionId === 'youthShowcase' && !academy && player.careerClock.ageYears <= 15) {
     // The 16+ showcase is replaced by the October development fixture below.

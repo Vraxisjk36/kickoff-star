@@ -16,7 +16,7 @@ export default function BottomNav({ active, onSelect, badges }: {
   const activeTab: HubTab = active === 'scouts' ? 'player' : active === 'table' ? 'fixtures' : active
 
   return (
-    <div
+    <nav aria-label="Career navigation"
       className="fixed bottom-0 left-0 right-0 max-w-md mx-auto w-full z-30"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
@@ -63,6 +63,6 @@ export default function BottomNav({ active, onSelect, badges }: {
           })}
         </div>
       </div>
-    </div>
+    </nav>
   )
 }

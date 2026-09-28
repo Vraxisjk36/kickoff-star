@@ -16,6 +16,8 @@ assert.match(article.headline, /HAT-TRICK HERO/)
 assert(article.body.includes(`${scorer.goals} goals in 1 appearances`) || article.body.includes(`${scorer.goals} goals in 1 appearance`))
 assert.equal(article.detail?.split('\n\n').length, 4)
 assert(!/saved match|season record|league tracker|stats will/.test(article.detail ?? ''))
+const friendly = playerMatchArticle({ ...fixture, competitionId: 'schoolFriendlies' }, player, [fixture], division)!
+assert(!friendly.detail?.includes('three points'), 'friendlies must not claim league points')
 const issue = generateGazetteIssue(fixture.week + 1, 1, player, [], [], null, null, division, player.id, fixture.week,
   [], undefined, undefined, undefined, undefined, undefined, world)
 assert.equal(issue.masthead, article.headline)

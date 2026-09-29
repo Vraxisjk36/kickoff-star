@@ -114,7 +114,7 @@ export default function StreetGameScreen({ player, variant, onDone }: {
         <button
           onClick={start}
           className="w-full mt-4 bg-ks-gold text-ks-black font-display tracking-widest rounded-xl py-4 text-sm uppercase"
-          style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          style={{ marginBottom: 'var(--safe-bottom)' }}
         >
           kick off
         </button>

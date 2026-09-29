@@ -29,7 +29,7 @@ export default function HeadlineToast({ queue, onDismiss }: { queue: Headline[];
   const style = TONE_STYLE[headline.tone]
 
   return (
-    <div className="fixed top-0 inset-x-0 z-40 flex justify-center px-3 pt-3 pointer-events-none" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0px))' }}>
+    <div className="fixed top-0 inset-x-0 z-40 flex justify-center px-3 pt-3 pointer-events-none" style={{ paddingTop: 'max(0.75rem, var(--safe-top))' }}>
       <button
         onClick={() => { setVisible(false); window.setTimeout(onDismiss, 200) }}
         className={`pointer-events-auto max-w-md w-full rounded-xl border ${style.border} ${style.bg} backdrop-blur-sm px-3.5 py-3 text-left shadow-lg transition-all duration-300 ${

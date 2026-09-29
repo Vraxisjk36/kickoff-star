@@ -510,7 +510,7 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
         </div>
       )}
 
-      <div className="relative z-10 px-5 pb-8 max-w-md mx-auto w-full" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 2rem)' }}>
+      <div className="relative z-10 px-5 pb-8 max-w-md mx-auto w-full" style={{ paddingBottom: 'calc(var(--safe-bottom) + 2rem)' }}>
         {matchOver ? (
           <>
           <div className="fulltime-stage">

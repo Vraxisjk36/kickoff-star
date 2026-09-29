@@ -274,12 +274,12 @@ html,body,#root{min-height:100%;overscroll-behavior:none;-webkit-tap-highlight-c
 @media(max-width:380px){.career-menu-button{min-width:52px}.career-menu-button span{display:none}}
 
 /* Native-mobile viewport + safe-area contract */
-:root{--safe-top:env(safe-area-inset-top,0px);--safe-right:env(safe-area-inset-right,0px);--safe-bottom:env(safe-area-inset-bottom,0px);--safe-left:env(safe-area-inset-left,0px)}
+:root{--safe-top:var(--safe-area-inset-top,env(safe-area-inset-top,0px));--safe-right:var(--safe-area-inset-right,env(safe-area-inset-right,0px));--safe-bottom:var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px));--safe-left:var(--safe-area-inset-left,env(safe-area-inset-left,0px))}
 html,body,#root{width:100%;height:100%;min-height:100%;margin:0;background:#050504}
 body{min-height:100dvh;overflow-x:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 input,textarea,[contenteditable=true]{-webkit-user-select:text;user-select:text}
 .min-h-screen{min-height:100dvh}
-.sticky.top-0{padding-top:var(--safe-top)}
+.sticky.top-0{top:var(--safe-top)}
 .fixed.bottom-0{padding-bottom:var(--safe-bottom)}
 button,a,input,select,textarea{font:inherit}
 button{cursor:pointer}
@@ -289,3 +289,11 @@ button{cursor:pointer}
 .cup-round-progress{margin:0 14px 8px;padding:12px 15px;border:1px solid #d4af3730;border-radius:12px;background:linear-gradient(100deg,#201a0a,#0a0907);display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.cup-round-progress span{font-size:9px;letter-spacing:.2em;color:#99864a}.cup-round-progress strong{font-family:var(--font-display,inherit);font-size:14px;color:#f1cb55}.cup-round-progress div{grid-column:1/-1;height:3px;background:#383021;border-radius:5px}.cup-round-progress i{display:block;height:100%;background:#d4af37;border-radius:5px}.cup-tie{border:1px solid #ffffff20;border-radius:12px;overflow:hidden;background:linear-gradient(110deg,#161613,#0c0c0b);box-shadow:0 4px 15px #0005}.cup-tie-player{border-color:#d4af37;box-shadow:0 0 0 1px #d4af3730,0 7px 22px #d4af3717}
 .player-view-switch{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:4px;border:1px solid #d4af3738;border-radius:12px;background:#10100d}.player-view-switch button{padding:10px 3px;border-radius:8px;font-family:var(--font-display,inherit);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#89847a}.player-view-switch button[aria-pressed="true"]{background:#d4af37;color:#080806;box-shadow:0 3px 12px #d4af3735}
 .competition-showcase{position:relative;overflow:hidden;padding:15px;border:1px solid #d4af3733;border-radius:15px;background:radial-gradient(circle at 95% 0%,#d4af3721,transparent 42%),linear-gradient(125deg,#18160f,#0a0a09 70%);box-shadow:0 12px 30px #0006}.competition-showcase:before{content:'★';position:absolute;right:15px;bottom:-29px;font-size:100px;line-height:1;color:#d4af3708;pointer-events:none}.competition-showcase-cup{border-color:#d4af3766;background:radial-gradient(circle at 90% 5%,#d4af372a,transparent 42%),linear-gradient(120deg,#211909,#080808 75%)}.competition-showcase-status{position:relative;flex-shrink:0;max-width:100px;padding:5px 7px;border:1px solid #d4af3760;border-radius:6px;background:#d4af3712;color:#f1cb55;font-size:9px;text-align:center;text-transform:uppercase}.competition-showcase>.grid{position:relative}
+
+/* Insets come from Capacitor SystemBars on Android and CSS env() on the web.
+   Draw backgrounds edge to edge while keeping playable controls clear. */
+#root{box-sizing:border-box;height:auto;min-height:100dvh;padding-top:var(--safe-top);padding-right:var(--safe-right);padding-bottom:var(--safe-bottom);padding-left:var(--safe-left)}
+.fixed.inset-0{padding-top:max(var(--safe-top),1rem);padding-right:max(var(--safe-right),1rem);padding-bottom:max(var(--safe-bottom),1rem);padding-left:max(var(--safe-left),1rem);box-sizing:border-box}
+/* A short landscape window must scroll to every action on the title screen. */
+.main-stage{overflow-y:auto!important}
+@media(max-height:520px) and (orientation:landscape){.main-stage-content{min-height:max(100dvh,560px)}.main-stage-actions{margin-block:12px}.main-stage-title>div{font-size:clamp(45px,9vh,70px)}.route-stage>div{min-height:0}}

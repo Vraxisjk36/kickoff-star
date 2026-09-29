@@ -134,7 +134,7 @@ export default function NegotiationScreen({ player, onClose }: { player: Player;
         </div>
       </div>
 
-      <div className="flex flex-col gap-2" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <div className="flex flex-col gap-2" style={{ paddingBottom: 'var(--safe-bottom)' }}>
         {dead ? (
           <>
             <div className="rounded-xl border border-red-500/40 bg-red-500/5 px-4 py-3 text-[11px] text-ks-ink leading-relaxed">

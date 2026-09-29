@@ -1,4 +1,4 @@
-.match-broadcast {padding-top:max(16px,env(safe-area-inset-top,0px));background:linear-gradient(#111813ed,#11181377)}
+.match-broadcast {padding-top:max(16px,var(--safe-top));background:linear-gradient(#111813ed,#11181377)}
 .playback-selector {display:flex;gap:2px;min-width:96px;border-bottom:1px solid #ffffff20}
 .playback-selector button {font-size:12px;color:#929d92;min-width:32px;min-height:42px}
 .playback-selector button[aria-pressed="true"] {color:#f3dc84;border-bottom:2px solid #d4af37;background:#d4af370c}

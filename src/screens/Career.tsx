@@ -582,7 +582,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
         playerTeam={playerTeam}
         playerDivision={playerDivision}
       />
-      <div className="career-continue fixed left-0 right-0 px-3 max-w-md mx-auto z-20" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 4.5rem)' }}>
+      <div className="career-continue fixed left-0 right-0 px-3 max-w-md mx-auto z-20" style={{ bottom: 'calc(var(--safe-bottom) + 4.5rem)' }}>
         <button
           onClick={handleContinue}
           className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-3.5 text-sm shadow-[0_0_25px_rgba(212,175,55,0.3)] active:scale-[0.99] transition-transform"

@@ -367,7 +367,7 @@ export function playerCupFixture(world: CupWorld): GenericFixture | null {
 // group cups = 3 group rounds (groups of 4) + semi + final (16 -> 4 winners);
 // pure knockouts = 16 -> 4 rounds.
 export const CUP_CONFIGS: Record<string, Omit<CupConfig, 'competitionId' | 'label'> & { label: string }> = {
-  schoolCup: { label: 'Regional Schools Cup', groupSize: 0, fieldSize: 16, prestigeRange: [2, 6] },
+  schoolCup: { label: 'Regional Schools Cup', groupSize: 4, fieldSize: 16, prestigeRange: [2, 6], qualifiersPerGroup: 1 },
   schoolDevelopment: { label: 'School Development Competition', groupSize: 6, fieldSize: 6, prestigeRange: [2, 5], qualifiersPerGroup: 1 },
   nationalChampionship: { label: 'National Schools Championship', groupSize: 0, fieldSize: 16, prestigeRange: [5, 8] },
   sundayCup: { label: 'Sunday Cup', groupSize: 0, fieldSize: 16, prestigeRange: [2, 6] },

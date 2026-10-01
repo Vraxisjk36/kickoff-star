@@ -30,7 +30,7 @@ assert.equal(world.rankings.length, 2)
 assert.ok(world.rankings[1].rows.some(row => row.previousRank !== undefined))
 const row = world.rankings[1].rows[0]
 const issue = generateGazetteIssue(13, 1, player, [], [], null, null, null, player.id, 12, [], world.rankings[1], schoolsLeaders(world, player, 12))
-assert.ok(issue.articles.some(article => article.kind === 'world' && article.body.includes(`${row.goals} goals`)))
+assert.ok(issue.articles.some(article => article.kind === 'world' && article.detail?.includes(`${row.goals} goals`)))
 world = publishSchoolsRanking(advanceWorldSchools(world, 1, 32), player, 32)
 assert.equal(publishSchoolsRanking(world, player, 36).rankings.length, 3)
 

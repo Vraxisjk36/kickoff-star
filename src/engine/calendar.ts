@@ -45,7 +45,7 @@ export function markResolved(state: CalendarState, eventId: string): CalendarSta
 export const COMPETITION_SPECS: CompetitionRoundSpec[] = [
   { id: 'schoolFriendlies', rounds: 3 },
   { id: 'schoolLeague', rounds: 18 },
-  { id: 'schoolCup', rounds: 4 }, // round of 16, quarters, semis, final
+  { id: 'schoolCup', rounds: 5 }, // three group dates, semi-final, final
   { id: 'schoolDevelopment', rounds: 5 },
   { id: 'nationalChampionship', rounds: 4 },
   { id: 'sundayCup', rounds: 4 }, // pure knockout, field 16 -> 4 rounds — grassroots only
@@ -66,7 +66,7 @@ export const COMPETITION_SPECS: CompetitionRoundSpec[] = [
 export const SCHOOL_SEASON_SCHEDULE: Record<string, number[]> = {
   schoolFriendlies: [4, 5, 29],
   schoolLeague: Array.from({ length: 18 }, (_, i) => i + 6), // W6-W23
-  schoolCup: [24, 25, 26, 27],
+  schoolCup: [24, 25, 26, 27, 28],
   schoolDevelopment: Array.from({ length: 5 }, (_, i) => i + 24), // W24-W28
   nationalChampionship: [32, 33, 34, 35],
   youthShowcase: [37],

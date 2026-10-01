@@ -114,10 +114,10 @@ sunday.pathway!.sundayStatus = 'registered'
 check(updateSundayRecruitment(sunday, 4).pathway?.sundayStatus === 'registered', 'A registered Sunday player never loses registration after a match')
 check(!representativeEvidence(young, 'regional').eligible && !selectionPassed(representativeSelection(young, 'regional'), 'regional'), 'Three excellent games cannot qualify for Regional XI')
 check(representativeEvidence(addMatches(player(), 10, 1, 7.5), 'regional').eligible, 'A sustained school-season record can qualify for regional consideration')
-const regional = { ...addMatches(player(), 2, 1, 9, 'nationalChampionship'), pathway: { ...initYouthPathway(player()), regionalSelection: 'selected' as const } }
-check(!representativeEvidence(regional, 'national').eligible, 'Two championship matches cannot earn national selection')
+const regional = { ...addMatches(addMatches(player(), 10, 1, 7.5), 2, 1, 9, 'nationalChampionship'), pathway: { ...initYouthPathway(player()), regionalSelection: 'selected' as const } }
+check(representativeEvidence(regional, 'national').eligible, 'Strong local form can earn national consideration without a final')
 const national = addMatches(regional, 1, 1, 9, 'nationalChampionship')
-check(representativeEvidence(national, 'national').eligible, 'Three strong championship appearances can reach national consideration')
+check(representativeEvidence(national, 'national').eligible, 'A sustained local record plus three championship appearances can reach national consideration')
 check(playerForMatch(regional, 'nationalChampionship').squadRole === 'bench', 'School starter begins representative football on the bench')
 check(playerForMatch(national, 'nationalChampionship').squadRole === 'starting-xi', 'Representative starts can be earned through representative appearances')
 check(!formQualifiesForSelection([9, 9]) && formQualifiesForSelection([7.5, 7.5, 7.5, 7.5, 7.5]), 'International match selection requires a full five-match form window')

@@ -8,23 +8,29 @@ export function currentPerformance(player: Player, ids: string[]) {
   return { appearances, average }
 }
 
+/** Private scouting ledger: every appearance counts, with larger stages carrying
+ * more weight. Selection still considers form, ability and fitness separately. */
+export function representativePoints(player: Player): number {
+  const weights: Record<string, number> = { schoolLeague: 1, schoolReserveLeague: .65, schoolCup: 1.45,
+    schoolDevelopment: .55, schoolDevelopmentLeague: .45, sundayLeague: .8,
+    octoberDevelopment: .7, nationalChampionship: 1.8, youthShowcase: 1.2 }
+  return Math.round(Object.values(player.competitionCareer?.current ?? {}).reduce((total, row) => {
+    const weight = weights[row.competitionId] ?? 0
+    return total + weight * (row.appearances * 4 + Math.max(0, row.ratingTotal - row.appearances * 5.5) * 3 + row.goals * 2 + row.assists * 1.5)
+  }, 0))
+}
+
 export function representativeEvidence(player: Player, level: 'regional' | 'national') {
   const record = currentPerformance(player, level === 'regional'
-    ? ['schoolLeague', 'schoolReserveLeague', 'schoolCup'] : ['nationalChampionship'])
-  const minimum = level === 'regional' ? 10 : 3
-  const requiredRating = level === 'regional' ? 6.7 : 7
-  const regionalFinalist = level === 'regional' && player.competitionCareer?.qualifications.some(q =>
-    q.competitionId === 'schoolCup' && q.qualifiedFor === 'nationalChampionship' &&
-    q.season === player.competitionCareer?.current.schoolCup?.season) &&
-    (player.competitionCareer?.current.schoolCup?.appearances ?? 0) >= 3
-  const finalist = level === 'national' && player.competitionCareer?.qualifications.some(q =>
-    q.competitionId === 'nationalChampionship' && q.qualifiedFor === 'international' &&
-    q.season === player.competitionCareer?.current.nationalChampionship?.season)
-  const eligible = record.appearances >= minimum && (level === 'national' && player.regionId ? finalist : record.average >= requiredRating || regionalFinalist)
-    && (level === 'regional' || player.pathway?.regionalSelection === 'selected')
-  return { ...record, eligible, reason: eligible ? 'Sustained performances meet the selection standard.'
-    : level === 'national' && player.regionId ? 'Your regional XI must reach the national final, and you need three championship appearances.'
-      : `Requires ${minimum} ${level === 'regional' ? 'school league/cup' : 'National Schools Championship'} appearances averaging ${requiredRating.toFixed(1)}.` }
+    ? ['schoolLeague', 'schoolReserveLeague', 'schoolCup']
+    : ['schoolLeague', 'schoolReserveLeague', 'schoolCup', 'schoolDevelopment', 'schoolDevelopmentLeague', 'sundayLeague', 'octoberDevelopment', 'nationalChampionship'])
+  const points = representativePoints(player)
+  const eligible = level === 'regional'
+    ? record.appearances >= 10 && record.average >= 6.5 && points >= 85
+    : record.appearances >= 12 && record.average >= 6.6 && points >= 115 && player.pathway?.regionalSelection === 'selected'
+  return { ...record, points, eligible, reason: eligible ? 'The season-long scouting record meets the selection standard.'
+    : level === 'regional' ? 'Build ten school appearances and sustained form for the regional shortlist.'
+      : 'National scouts weigh your local, regional and championship performances; a trophy is not required.' }
 }
 
 export function updateSundayRecruitment(player: Player, rating: number): Player {

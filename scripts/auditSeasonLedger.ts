@@ -16,7 +16,7 @@ let world = initSchoolLeagueWorld(school.name, region.id)
 assert.deepEqual(SCHOOL_SEASON_SCHEDULE.schoolFriendlies, [4, 5, 29])
 assert.equal(SCHOOL_SEASON_SCHEDULE.schoolLeague.length, 18)
 assert.equal(new Set(SCHOOL_SEASON_SCHEDULE.schoolLeague).size, 18)
-assert.equal(SCHOOL_SEASON_SCHEDULE.schoolCup.length, 4)
+assert.equal(SCHOOL_SEASON_SCHEDULE.schoolCup.length, 5)
 assert.equal(SCHOOL_SEASON_SCHEDULE.schoolDevelopment.length, 5)
 assert.equal(SCHOOL_SEASON_SCHEDULE.nationalChampionship.length, 4)
 assert.equal(INTERNATIONAL_QUALIFIER_WEEKS.length, 5)
@@ -24,7 +24,7 @@ assert.equal(INTERNATIONAL_FINALS_WEEKS.length, 3)
 for (const week of [1, 2, 3, 30, 31, 36]) assert.equal(competitionForWeek(week, 'grassroots-season'), null)
 assert.equal(competitionForWeek(29, 'grassroots-season')?.competitionId, 'schoolFriendlies')
 const week28 = { currentWeek: generateWeek(28, 1, 'grassroots-season', false, 'school'), history: [] }
-assert.equal(week28.currentWeek.events.filter(e => e.type === 'match').length, 0)
+assert.equal(week28.currentWeek.events.filter(e => e.type === 'match').length, 1)
 assert.equal(alignSchoolPostseason(week28, 'grassroots-season', 'school', true).currentWeek.events.filter(e => e.type === 'match' && e.day === 'thu').length, 1)
 assert.equal(alignSchoolPostseason(week28, 'grassroots-season', 'school', false).currentWeek.events.filter(e => e.type === 'match').length, 0)
 const doubleDuty = generateWeek(37, 1, 'grassroots-season', true, 'school')
@@ -79,14 +79,14 @@ assert.equal(world.matchHistory?.length, 270)
 assert.equal(world.divisions[1].matchRecords?.length, 0)
 
 const playerTeam = world.divisions[1].teams[0]
-for (const [id, rounds] of [['schoolCup', 4], ['schoolDevelopment', 5], ['nationalChampionship', 4]] as const) {
+for (const [id, rounds] of [['schoolCup', 5], ['schoolDevelopment', 5], ['nationalChampionship', 4]] as const) {
   let cup = initCupById(id, playerTeam, Object.values(world.divisions).flatMap(d => d.teams))
   for (let round = 1; round <= rounds; round++) {
     cup = batchSimCupStage(cup, round, true)
     cup = advanceCupStage(captureCupMatches(cup, 1, id === 'nationalChampionship' ? 31 + round : 23 + round))
   }
   assert.equal(cup.stage, 'complete', `${id} should finish within its scheduled window`)
-  assert.equal(cup.matchRecords?.length, 15, `${id} saves all fifteen real match results`)
+  assert.equal(cup.matchRecords?.length, id === 'schoolCup' ? 27 : 15, `${id} saves every real match result`)
   if (id === 'schoolCup') {
     const issue = generateGazetteIssue(25, 1, { id: playerLine.playerId, name: playerLine.name, matchRatings: [] } as Player,
       [], [], null, null, null, playerLine.playerId, 24, cup.matchRecords ?? [])

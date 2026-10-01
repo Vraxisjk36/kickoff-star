@@ -181,8 +181,8 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
           <>
             <div className="form-track mb-3">{recent.map((r,i)=><div key={i} className="form-match"><span className={ratingColor(r)}>{r.toFixed(1)}</span><i style={{height:`${Math.max(14,(r-4)*18)}px`}}/><small>M{i+1}</small></div>)}</div>
             <div className="flex flex-col gap-1.5">
-              <StatRow label="matches played" value={ratings.length} />
-              <StatRow label="average rating" value={avg ? avg.toFixed(2) : '—'} />
+              <StatRow label="matches played this season" value={(player.matchLedger ?? []).filter(record => record.season === calendar?.currentWeek.seasonYear && record.lines.some(line => line.playerId === player.id)).length} />
+              <StatRow label="recent form (last 10)" value={avg ? avg.toFixed(2) : '—'} />
               <StatRow label="season goals" value={player.seasonGoals ?? 0} />
               <StatRow label="season assists" value={player.seasonAssists ?? 0} />
             </div>

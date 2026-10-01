@@ -16,6 +16,7 @@ import type { SchoolMatch } from './worldSchools'
 import { sortStandings } from './league'
 import type { WorldLeagues, SchoolPowerRanking } from './worldLeagues'
 import { schoolRival } from './friendlies'
+import { octoberTournamentName } from './tournamentNames'
 
 export type ArticleKind = 'transfer' | 'spotlight' | 'preview' | 'injury' | 'recap' | 'league' | 'filler' | 'world' | 'awards'
 
@@ -166,9 +167,9 @@ export function competitionOpening(player: Player, week: number, season: number,
         25: ['academyChampionsCup', 'THE CONTINENTAL ROAD', 'The Academy Champions Cup brings qualified European academy sides together. Qualification and the knockout draw are determined by actual results; your club must earn its place.'] }
     : { 4: ['schoolFriendlies', 'A NEW SCHOOL FOOTBALL YEAR', 'Two friendlies in weeks four and five give coaches their first match evidence. The local league starts in week six, followed by the regional cup, national championship for qualifying sides, and the autumn development series.'],
         6: ['schoolLeague', 'THE LOCAL CHAMPIONSHIP BEGINS', 'Ten schools, eighteen rounds, home and away. The title is there to be won, and every meeting can change who gets a shot at regional football.'],
-        24: ['schoolCup', 'THE REGIONAL CUP OPENS', 'The regional schools competition is knockout football: one result can end a run. Follow the draw, the scorers, and the road toward the national stage.'],
-        32: ['nationalChampionship', 'THE NATIONAL STAGE', 'Regional finalists meet in the National Schools Championship. The round of sixteen narrows through four rounds, with the national squad and the wider world watching.'],
-        36: ['octoberDevelopment', 'OCTOBER OFFERS ANOTHER STAGE', 'Four autumn fixtures give younger players another competitive record. Every result goes into the development table and can become part of the scouting conversation.'],
+        24: ['schoolCup', 'THE REGIONAL CUP OPENS', 'Sixteen schools enter four groups. Each plays three fixtures; group winners reach the semifinals in week twenty-seven and the final in week twenty-eight.'],
+        32: ['nationalChampionship', 'THE NATIONAL STAGE', 'Selected Regional XIs meet in the National Schools Championship. The round of sixteen narrows through four rounds, with the national squad and the wider world watching.'],
+        36: ['octoberDevelopment', `${octoberTournamentName(season).toUpperCase()} ANNOUNCED`, `The ${octoberTournamentName(season)} is this season's sponsored under-16 competition. Four autumn fixtures give younger players another competitive record. Every result goes into the development table and can become part of the scouting conversation.`],
         37: ['international', 'THE INTERNATIONAL WINDOW', 'Selected national school players begin with qualifying matches. The strongest sides reach the finals in weeks forty-two to forty-four. Selection, draws, and results determine who continues; the international fixture list carries the actual scores.'] }
   const spec = specs[week]
   if (!spec) return null
@@ -179,9 +180,9 @@ export function competitionOpening(player: Player, week: number, season: number,
   const contenders = division && week <= 6 ? [...division.teams].sort((a, b) => b.prestige - a.prestige).slice(0, 3)
     .map(team => team.name).join(', ') : ''
   return { kind: 'league', headline, byline: 'The Gazette · season guide',
-    body: `${first ? explanation : `The ${competitionDefinition(competitionId).name} returns this week. A new run at silverware begins now.`} ${history}`,
-    detail: first ? `${explanation}\n\n${contenders ? `Teams to watch on pre-season strength: ${contenders}. Reputation makes them early favourites, but only played results decide the title.\n\n` : ''}${history} The upcoming fixtures and the standings are available in the competition centre.`
-      : `The ${competitionDefinition(competitionId).name} returns this week. ${history} Follow the live draw, fixtures, and standings in the competition centre.`,
+    body: `${first || week > 6 ? explanation : `The ${competitionDefinition(competitionId).name} returns for this year's campaign.`} ${history}`,
+    detail: first || week > 6 ? `${explanation}\n\n${contenders ? `Teams to watch on pre-season strength: ${contenders}. Reputation makes them early favourites, but only played results decide the title.\n\n` : ''}${history} The upcoming fixtures and the standings are available in the competition centre.`
+      : `The ${competitionDefinition(competitionId).name} opens this week. ${history} Follow the live draw, fixtures, and standings in the competition centre.`,
   }
 }
 
@@ -304,8 +305,8 @@ function seasonGuideArticles(player: Player, week: number, division: Division | 
       body: `The Gazette is tracking ${Object.keys(world?.divisions ?? {}).length + (division && !world?.divisions[division.teams[0]?.countryId ?? ''] ? 1 : 0)} featured school divisions across the world. Their results and named scorers will begin appearing with the league fixtures.`,
       detail: `Every featured division has its own saved fixture list, standings, match reports, and named player lines. A player mentioned here can be found again in the recorded scoring list. The monthly World Schools Five will draw from those matches and the player's own record. The list is a season-long race: a strong month helps, but the previous months still count. The published ranking later closes ahead of the awards, leaving the final result for the ceremony.` },
     { kind: 'league', headline: 'THE ROAD AFTER THE LOCAL LEAGUE', byline: 'Competition guide',
-      body: 'Regional knockout football follows the local campaign. The national championship, October development fixtures, and international selection each have their own qualification rules.',
-      detail: 'The local season runs through week twenty-three. Regional cup football begins after the league; the cup is knockout rather than a second league table. Qualifying regional sides move toward the national championship. Younger players may have four development fixtures in October, while selected national school players can enter the international window. Your position, form, eligibility, and actual results determine which of these stages you play. The competition centre will show the draw and saved scores as each event arrives.' },
+      body: 'Regional groups follow the local campaign, then a semifinal and final. The national championship, October development fixtures, and international selection each have their own qualification rules.',
+      detail: 'The local league ends in week twenty-three. The regional cup has four groups of four; each winner reaches a semifinal and then the final. Qualifying regional sides move toward the national championship. Younger players may have four development fixtures in October, while selected national school players can enter the international window. Your position, form, eligibility, and actual results determine which of these stages you play. The competition centre will show the draw and saved scores as each event arrives.' },
   ]
 }
 
@@ -340,8 +341,8 @@ function cupArticle(records: MatchRecord[], season: number, week: number, player
 
 function fillerArticle(): GazetteArticle {
   return { kind: 'filler', headline: 'WHAT WE ARE FOLLOWING', byline: 'The Gazette sports desk',
-    body: 'The fixtures, tables, young players, and academy routes will shape the weeks ahead. This issue is the beginning of a season-long record.',
-    detail: 'The season has room for a new name to break through, an old rivalry to flare up, and a cup run no one saw coming. The fixtures will decide whose story comes next.' }
+    body: 'The fixtures, tables, young players, and academy routes will shape the weeks ahead. The next fixture has its own stakes, and the season archive keeps the earlier results in view.',
+    detail: 'The table, the injury list and the remaining fixtures set the agenda this week. We will return to the scores once those matches are played.' }
 }
 
 // --- assembly ----------------------------------------------------------------
@@ -395,20 +396,38 @@ export function generateGazetteIssue(
   if (awards) articles.push({ kind: 'awards', headline: `${awards.season} ${awards.scope === 'academy' ? 'ACADEMY' : 'WORLD SCHOOLS'} AWARDS`,
     body: `${awards.winners[0]?.winnerName ?? 'The winner'} takes ${awards.winners[0]?.name ?? 'the top award'}. See the recorded winners and Team of the Year in this issue.` })
   if (ranking?.rows.length) {
-    const leader = ranking.rows[0]
-    const newcomer = ranking.rows.find(row => !row.previousRank)
-    articles.push({ kind: 'world', headline: newcomer ? `${newcomer.name.toUpperCase()} ENTERS THE ${ranking.scope === 'academy' ? 'ACADEMY' : 'WORLD'} FIVE` : `${leader.name.toUpperCase()} LEADS THE ${ranking.scope === 'academy' ? 'ACADEMY' : 'WORLD'} FIVE`,
-      body: `${leader.name} of ${leader.school} leads on ${leader.points} season points after ${leader.goals} goals and ${leader.assists} assists. ` +
-        `${leader.monthGoals} goals and ${leader.monthAssists} assists came in the latest four-week period.` })
+    const rows = ranking.rows.slice(0, 5)
+    const leader = rows[0]
+    const newcomers = rows.filter(row => row.previousRank === undefined)
+    const headline = newcomers.length && ranking.week > 8
+      ? `${newcomers[0].name.toUpperCase()} BREAKS INTO THE ${ranking.scope === 'academy' ? 'ACADEMY' : 'WORLD'} FIVE`
+      : `${leader.name.toUpperCase()} HOLDS THE ${ranking.scope === 'academy' ? 'ACADEMY' : 'WORLD'} LEAD`
+    const portraits = rows.map((row, index) => {
+      const movement = row.previousRank === undefined
+        ? 'A first appearance in the published five.'
+        : row.previousRank === index + 1 ? 'The position is unchanged from the last edition.'
+        : `Up from ${row.previousRank} to ${index + 1}.`
+      const contribution = row.position === 'GK' ? `${row.saves} saves and ${row.cleanSheets} clean sheets`
+        : row.position === 'CB' ? `${row.cleanSheets} clean sheets and ${row.assists} assists`
+          : `${row.goals} goals and ${row.assists} assists`
+      return `${index + 1}. ${row.name} · ${row.school}. ${row.points} points from ${row.appearances} appearances, with ${contribution}. ${movement} ${row.monthGoals || row.monthAssists ? `The latest month added ${row.monthGoals} goals and ${row.monthAssists} assists.` : `The latest month was quieter in front of goal; an average rating of ${row.averageRating.toFixed(1)} keeps the full season in view.`}`
+    })
+    articles.push({ kind: 'world', headline, byline: 'The Gazette · five to watch',
+      body: `${leader.name} leads the published five on ${leader.points} points. ${newcomers.length && ranking.week > 8 ? `${newcomers[0].name} is the new face in the list.` : 'Here is how each contender earned a place.'}`,
+      detail: `The order is built from appearances throughout this season. A single afternoon may change the pace, but the earlier matches stay on the record.
+
+${portraits.join('\n\n')}
+
+The next ranking will carry these totals forward. The margins above and below fifth place leave room for another change before the awards.` })
   }
   if (weekNumber === 33 && !ranking && player.careerClock.phase !== 'academy') articles.push({ kind: 'world', headline: 'THE WORLD FIVE GOES DARK',
     body: 'The final public schools ranking is locked. Performances still count toward the year-end awards, but the contenders will not be revealed until the ceremony.' })
   if (weekNumber === 24) articles.push({ kind: 'league', headline: 'LOCAL TITLES SET, CUP ROAD AHEAD',
-    body: 'Local school seasons have closed. Regional knockout football and the development competition now decide the next chapter.' })
+    body: 'Local school seasons have closed. The local table is final. Regional groups are under way, with a semifinal and final still to come; the development route has its own table.' })
   if (weekNumber === 32 && player.careerClock?.phase !== 'academy') articles.push({ kind: 'league', headline: 'NATIONAL SCHOOLS CHAMPIONSHIP DRAW',
-    body: 'The National Schools Championship opens with a round of 16. Regional finalists now face schools from across the country; the draw and results appear in the competition hub.' })
-  if (weekNumber === 36 && player.careerClock?.phase !== 'academy') articles.push({ kind: 'league', headline: 'OCTOBER DEVELOPMENT SERIES OPENS',
-    body: 'Four October matches await the under-16s. For some, this is the chance they have been waiting for all year.' })
+    body: 'The National Schools Championship opens with a round of 16. Selected Regional XIs now face teams from across the country; the draw and results appear in the competition hub.' })
+  if (weekNumber === 36 && player.careerClock?.phase !== 'academy') articles.push({ kind: 'league', headline: `${octoberTournamentName(seasonYear).toUpperCase()} OPENS`,
+    body: `The ${octoberTournamentName(seasonYear)} sponsor backs four October matches for the under-16s. For some, this is the chance they have been waiting for all year.` })
   if (weekNumber === (player.academyCountryId === 'esp' ? 37 : 25) && player.careerClock?.phase === 'academy') articles.push({ kind: 'league', headline: 'ACADEMY CHAMPIONS CUP KNOCKOUT DRAW',
     body: 'The continental qualifiers have decided the 32-club field. Five knockout rounds lead to the Academy Champions Cup final.' })
   if (worldResult) {

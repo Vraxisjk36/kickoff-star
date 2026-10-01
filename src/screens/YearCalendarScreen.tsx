@@ -3,10 +3,11 @@ import type { CalendarState } from '../types/calendar'
 import type { CupWorlds } from '../engine/save'
 import { activeCompetitionForWeek, internationalRoundForWeek, SEASON_WEEKS } from '../engine/calendar'
 import { monthForWeek } from '../engine/pathway'
+import { octoberTournamentName } from '../engine/tournamentNames'
 
 type CalendarItem = { label: string; tone: 'match' | 'pathway' | 'window' | 'rest' }
 
-function weekItems(week: number, current: number, player: Player, cups: CupWorlds): CalendarItem[] {
+function weekItems(week: number, current: number, player: Player, cups: CupWorlds, season: number): CalendarItem[] {
   const academy = player.careerClock.phase === 'academy'
   const school = !academy && player.grassrootsPath === 'school'
   if (!academy && week <= 3) return [{ label: 'Preseason trials', tone: 'window' }]
@@ -33,7 +34,7 @@ function weekItems(week: number, current: number, player: Player, cups: CupWorld
   if (school && week >= 29 && week <= 31) items.push({ label: 'Regional XI selection window', tone: 'pathway' })
   if (school && week >= 35 && week <= 36) items.push({ label: 'National selection window', tone: 'pathway' })
   if (!academy && player.careerClock.ageYears <= 15 && week >= 36 && week <= 39) {
-    items.push({ label: `October Development Series · ${week - 35}/4`, tone: 'match' })
+    items.push({ label: `${octoberTournamentName(season)} · ${week - 35}/4`, tone: 'match' })
   } else if (!academy && week >= 36 && week <= 38) {
     items.push({ label: 'Academy assessment window', tone: 'window' })
   }
@@ -70,7 +71,7 @@ export default function YearCalendarScreen({ player, calendar, cups, onClose }: 
               <div className="space-y-1.5">
                 {weeks.map(week => <div key={week} className={`flex gap-3 rounded-lg border px-3 py-2 ${week === current ? 'border-ks-gold bg-ks-gold/10' : 'border-ks-border/60 bg-[#0f0f0d]'}`}>
                   <div className="w-12 shrink-0"><b className={`text-xs ${week === current ? 'text-ks-gold' : 'text-white'}`}>W{week}</b><div className="text-[9px] text-ks-muted">{week < current ? 'past' : week === current ? 'now' : 'ahead'}</div></div>
-                  <div className="flex-1 space-y-1">{weekItems(week, current, player, cups).map((item, i) => <div key={i} className={`text-[11px] ${item.tone === 'match' ? 'text-white' : item.tone === 'rest' ? 'text-ks-muted' : 'text-ks-gold'}`}>{item.label}</div>)}</div>
+                  <div className="flex-1 space-y-1">{weekItems(week, current, player, cups, calendar.currentWeek.seasonYear).map((item, i) => <div key={i} className={`text-[11px] ${item.tone === 'match' ? 'text-white' : item.tone === 'rest' ? 'text-ks-muted' : 'text-ks-gold'}`}>{item.label}</div>)}</div>
                 </div>)}
               </div>
             </section>

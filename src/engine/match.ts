@@ -1030,14 +1030,14 @@ function rollCardConsequence(s: MatchState, cardRisk: number): MatchState {
   let next = { ...s, events: [...s.events] }
 
   const severityRoll = rand()
-  if (severityRoll < 0.55) {
+  if (severityRoll < 0.28) {
     // A warning — narrated, but no lasting consequence. Most reckless
     // challenges in real football draw a word from the referee, not a card.
     next.events.push({ minute: s.minute, text: next.commentator.line('card-warning', ctxOf(next)), kind: 'info' })
     return next
   }
 
-  if (severityRoll < 0.9) {
+  if (severityRoll < 0.97) {
     // Yellow.
     next.yellowCards += 1
     if (next.yellowCards >= 2) {

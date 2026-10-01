@@ -151,6 +151,15 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
     if (moment !== null && !momentStillValid) { setMoment(null); setBundle(null) }
   }, [moment, momentStillValid])
   const matchOver = state.finished && caughtUp && !moment && !revealed
+  useEffect(() => {
+    if (matchOver || halfTimeShown) return
+    sfx.crowd()
+    const crowdInterval = window.setInterval(() => {
+      if (document.visibilityState === 'visible') sfx.crowd()
+    }, 4200)
+    return () => window.clearInterval(crowdInterval)
+  }, [matchOver, halfTimeShown])
+
 
   useEffect(() => {
     const paused = showMoment || captainMoment !== null || revealed !== null || matchOver || celebration !== null || halfTimeShown
@@ -377,10 +386,11 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
             <span className={`font-display tracking-wide text-xs ${!playerIsHome ? 'text-ks-black' : 'text-ks-ink'}`}>{state.awayTeam.short}</span>
           </div>
         </div>
+        <div className="broadcast-phase"><span className="broadcast-live-dot"/> LIVE MATCH · {playerIsHome ? state.homeTeam.name : state.awayTeam.name} <strong>{state.onPitch ? "ON THE PITCH" : state.substituted ? "SUBSTITUTED" : "BENCH"}</strong></div>
         <div className="grid grid-cols-3 gap-1.5 mb-2">
           <div className="broadcast-stat"><span>RATING</span><b>{state.playerRating.toFixed(1)}</b></div>
           <div className="broadcast-stat"><span>STAMINA</span><b>{Math.round(state.matchStamina)}%</b></div>
-          <div className="broadcast-stat"><span>ROLE</span><b>{player.captaincy?.role==='captain'?'© CAP':player.position}</b></div>
+          <div className="broadcast-stat"><span>{state.yellowCards ? 'DISCIPLINE' : 'ROLE'}</span><b>{state.redCarded ? '🟥 RED' : state.yellowCards ? '🟨 YELLOW' : player.captaincy?.role==='captain'?'© CAP':player.position}</b></div>
         </div>
                 <div className="h-1 rounded-full bg-[#2a2a27] overflow-hidden mb-3 relative">
           <div className="absolute inset-y-0 left-1/2 w-px bg-ks-border" />

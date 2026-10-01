@@ -69,7 +69,7 @@ check(ACADEMY_SEASON_SCHEDULE.academyLeagueCup.every(week => activeCompetitionFo
 check(ACADEMY_SEASON_SCHEDULE.academyChampionsCup.length === 5 && ACADEMY_SEASON_SCHEDULE.academyChampionsCup.every((week, index) => activeCompetitionForWeek(week, 'academy')?.competitionId === 'academyChampionsCup' && activeCompetitionForWeek(week, 'academy')?.round === index + 1), 'five continental knockout rounds have their own matchdays')
 for (let week = 24; week <= 28; week++) {
   check(activeCompetitionForWeek(week, 'grassroots-season', 'school', true)?.competitionId === 'schoolDevelopment', `development route plays week ${week}`)
-  check((activeCompetitionForWeek(week, 'grassroots-season', 'school')?.competitionId ?? null) === (week <= 27 ? 'schoolCup' : null), `regional knockout occupies only its four scheduled rounds (week ${week})`)
+  check((activeCompetitionForWeek(week, 'grassroots-season', 'school')?.competitionId ?? null) === (week <= 28 ? 'schoolCup' : null), `regional groups and finals occupy five scheduled rounds (week ${week})`)
 }
 for (const path of ['school'] as const) {
   for (const week of [36, 37, 38, 39]) {

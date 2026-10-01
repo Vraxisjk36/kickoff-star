@@ -17,6 +17,7 @@ import { formQualifiesForSelection } from '../engine/international'
 import { representativeSquad } from '../engine/matchPresentation'
 import { rand } from '../engine/rng'
 import { sfx } from '../engine/audio'
+import { octoberTournamentName } from '../engine/tournamentNames'
 import { playMusic, pauseMusic } from '../engine/music'
 import { pickLifeEvent, buildLifeContext } from '../engine/lifeEvents'
 import { weeklyStoryDecision } from '../engine/weeklyStories'
@@ -217,7 +218,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
         const isHome = fixture.homeId === october!.playerTeamId
         const opponent = october!.teams.find(team => team.id === (isHome ? fixture.awayId : fixture.homeId))
         if (!opponent) { resolveCurrentEvent(); return }
-        setMode({ kind: 'matchday', opponent, isHome, competitionId: 'octoberDevelopment', competitionLabel: `October Development Series · Match ${round + 1}/4`, isKnockout: false })
+        setMode({ kind: 'matchday', opponent, isHome, competitionId: 'octoberDevelopment', competitionLabel: `${octoberTournamentName(calendar.currentWeek.seasonYear)} · Match ${round + 1}/4`, isKnockout: false })
         return
       }
 
@@ -461,7 +462,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
           applyMatchResult(
             mode.rating, mode.goals, mode.assists, mode.finalMatchStamina, mode.injury,
             mode.opponent.id, mode.playerGoalsScored, mode.opponentGoalsScored, mode.playerWasHome,
-            mode.squad, mode.opponent.name, mode.competitionId, shootoutWon, mode.redCarded, mode.matchStats, mode.motm?.playerWon, { minutes: mode.minutesPlayed, started: matchdayPlayer.squadRole === 'starting-xi' }
+            mode.squad, mode.opponent.name, mode.competitionId, shootoutWon, mode.redCarded, mode.matchStats, mode.motm?.playerWon, { minutes: mode.minutesPlayed, started: matchdayPlayer.squadRole === 'starting-xi', yellowCards: mode.yellowCards }
           )
           // Must run AFTER the result lands — career counters are what most
           // achievements read, and they only exist once applyMatchResult has run.

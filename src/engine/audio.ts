@@ -94,6 +94,9 @@ export const sfx = {
     tone(2100, 0.18, 0.12, 'square', 0.10)
     tone(2100, 0.36, 0.30, 'square', 0.10)
   },
+  /** A brief low crowd bed between key incidents. Kept short so background
+   * audio never runs after the match or when the app is paused. */
+  crowd() { noise(0, 2.8, 520, 0.045); noise(0.5, 1.8, 1100, 0.025) },
   /** Goal — crowd swell plus a rising hit. */
   goal() {
     noise(0, 1.1, 900, 0.35)

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { advanceWorldLeagues } from '../src/engine/worldLeagues'
-import { competitionOpening, generateGazetteIssue } from '../src/engine/gazette'
+import { competitionOpening, generateGazetteIssue, presentGazetteIssue } from '../src/engine/gazette'
 import type { Player } from '../src/types/player'
 
 let world = advanceWorldLeagues(undefined, 1, 3, 'rsa', true)
@@ -26,4 +26,14 @@ const openingIssue = generateGazetteIssue(4, 1, player, [], [], null, null, worl
   [], undefined, undefined, undefined, undefined, undefined, world)
 assert.ok(openingIssue.articles.length >= 5, 'opening issue has a full season guide')
 assert.ok(openingIssue.articles.some(article => article.body.includes('Joe Kazadi')), 'the player is named in the story')
+const quiet = generateGazetteIssue(39, 1, player, [], [], null, null, null, player.id, 38)
+assert.equal(quiet.masthead, 'THE FIXTURE LIST AHEAD', 'week 39 cannot announce a new season')
+const saved = { ...quiet, masthead: 'A NEW SEASON BEGINS', articles: [
+  { kind: 'filler' as const, headline: 'A NEW SEASON BEGINS', body: 'All eyes on the weeks ahead.' },
+  { kind: 'filler' as const, headline: 'WHAT WE ARE FOLLOWING', body: 'The fixtures will shape the weeks ahead.' },
+] }
+const repaired = presentGazetteIssue(saved, player, null)
+assert.equal(repaired.masthead, 'THE FIXTURE LIST AHEAD', 'saved week 39 masthead is repaired on display')
+assert.ok(repaired.articles.every(article => !/A NEW SEASON BEGINS|WHAT WE ARE FOLLOWING/.test(article.headline)),
+  'saved filler stories are repaired on display')
 console.log('Gazette upgrade: world catch-up, named goals, idempotence, honest champion history, and recorded long stories passed.')

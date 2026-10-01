@@ -339,10 +339,29 @@ function cupArticle(records: MatchRecord[], season: number, week: number, player
     body: `${competition}: ${match.homeTeamName} and ${match.awayTeamName} finished ${match.homeGoals}–${match.awayGoals}. ${leader?.goals ? `${leader.name} scored ${leader.goals} of those goals.` : 'The winner has taken another step toward the trophy.'}` }
 }
 
-function fillerArticle(): GazetteArticle {
-  return { kind: 'filler', headline: 'WHAT WE ARE FOLLOWING', byline: 'The Gazette sports desk',
-    body: 'The fixtures, tables, young players, and academy routes will shape the weeks ahead. The next fixture has its own stakes, and the season archive keeps the earlier results in view.',
-    detail: 'The table, the injury list and the remaining fixtures set the agenda this week. We will return to the scores once those matches are played.' }
+function fillerArticle(player: Player, season: number, completedWeek: number): GazetteArticle {
+  const appearances = player.matchLedger?.filter(record => record.season === season && record.week <= completedWeek &&
+    record.lines.some(line => line.playerId === player.id)) ?? []
+  const lines = appearances.flatMap(record => record.lines.filter(line => line.playerId === player.id))
+  const goals = lines.reduce((total, line) => total + line.goals, 0)
+  const assists = lines.reduce((total, line) => total + line.assists, 0)
+  return { kind: 'filler', headline: `${player.name.toUpperCase()}: THE SEASON SO FAR`, byline: 'The Gazette · player file',
+    body: `${appearances.length} recorded appearances, ${goals} goals and ${assists} assists for ${player.name} through week ${completedWeek}.`,
+    detail: `${player.name}'s recorded season stands at ${appearances.length} ${appearances.length === 1 ? 'appearance' : 'appearances'}, ${goals} goals and ${assists} assists through week ${completedWeek}. These figures come from the played match reports.\n\nThere is no new personal result in this edition. The next appearance will add to this record when it is played.` }
+}
+
+function quietWeekArticle(player: Player, season: number, completedWeek: number): GazetteArticle {
+  const latest = player.matchLedger?.filter(record => record.season === season && record.week <= completedWeek)
+    .sort((a, b) => b.week - a.week)[0]
+  if (latest) {
+    const score = `${latest.homeTeamName} ${latest.homeGoals}–${latest.awayGoals} ${latest.awayTeamName}`
+    return { kind: 'league', headline: 'BETWEEN MATCHDAYS', byline: 'The Gazette · season notebook',
+      body: `The last recorded result remains ${score}. The season is still in progress; the next edition will follow the next played fixture.`,
+      detail: `Week ${latest.week} gave us ${score}. That result remains in the season record while the next fixture is pending.\n\nThere is no new match score to report this week. Selection and training continue, and the paper will return to the pitch when the next result is recorded.` }
+  }
+  return { kind: 'league', headline: 'THE FIXTURE LIST AHEAD', byline: 'The Gazette · season notebook',
+    body: 'No match result has been recorded yet this season. The next fixture will give the paper its first scoreline.',
+    detail: 'The season has started, but there is no played match in the record yet. The fixture list and team selection will decide the first story from the pitch.' }
 }
 
 // --- assembly ----------------------------------------------------------------
@@ -464,9 +483,9 @@ The next ranking will carry these totals forward. The margins above and below fi
   // Always at least 2 articles so an early-career issue (nothing has
   // happened yet) doesn't read as a broken/empty page.
   if (articles.length === 0) {
-    articles.push({ kind: 'filler', headline: 'A NEW SEASON BEGINS', body: 'All eyes on the weeks ahead. The Gazette will be here every Monday with the full story.' })
+    articles.push(quietWeekArticle(player, seasonYear, completedWeek))
   }
-  if (articles.length < 2) articles.push(fillerArticle())
+  if (articles.length < 2) articles.push(fillerArticle(player, seasonYear, completedWeek))
 
   // Masthead priority: injury > transfer > preview (big game) > recap > spotlight
   const priority: ArticleKind[] = ['awards', 'world', 'league', 'injury', 'transfer', 'preview', 'recap', 'spotlight', 'filler']
@@ -488,6 +507,10 @@ export function presentGazetteIssue(issue: GazetteIssue, player: Player, divisio
   const record = player.matchLedger?.find(entry => entry.season === issue.seasonYear && entry.week === week && entry.lines.some(line => line.playerId === player.id))
   const playerFeature = record && playerMatchArticle(record, player, player.matchLedger ?? [], division)
   const articles = issue.articles.map(article => {
+    if (article.headline === 'A NEW SEASON BEGINS' && issue.weekNumber > 4)
+      return quietWeekArticle(player, issue.seasonYear, week)
+    if (article.headline === 'WHAT WE ARE FOLLOWING' && issue.weekNumber > 4)
+      return fillerArticle(player, issue.seasonYear, week)
     if (article.kind === 'recap' && article.headline.startsWith('WIN AGAINST') || article.kind === 'recap' && article.headline.startsWith('DEFEAT AGAINST') || article.kind === 'recap' && article.headline.startsWith('DRAW AGAINST')) return playerFeature ?? article
     if (article.headline === 'ROUTINE FIXTURE AHEAD') {
       const opponent = article.body.match(/against (.+?)\./)?.[1]
@@ -512,6 +535,8 @@ export function presentGazetteIssue(issue: GazetteIssue, player: Player, divisio
   })
   const standout = record?.lines.find(line => line.playerId === player.id)?.goals ?? 0
   if (standout >= 2 && playerFeature && !articles.some(article => article.headline === playerFeature.headline)) articles.unshift(playerFeature)
-  const masthead = standout >= 2 && playerFeature ? playerFeature.headline : issue.masthead.endsWith(' HITS TWO') ? articles.find(article => article.headline.includes('HAT-TRICK HERO') || article.headline.includes('AT THE DOUBLE'))?.headline ?? issue.masthead : issue.masthead
+  const masthead = standout >= 2 && playerFeature ? playerFeature.headline : issue.masthead === 'A NEW SEASON BEGINS' && issue.weekNumber > 4
+    ? articles.find(article => article.headline === 'BETWEEN MATCHDAYS' || article.headline === 'THE FIXTURE LIST AHEAD')?.headline ?? issue.masthead
+    : issue.masthead.endsWith(' HITS TWO') ? articles.find(article => article.headline.includes('HAT-TRICK HERO') || article.headline.includes('AT THE DOUBLE'))?.headline ?? issue.masthead : issue.masthead
   return { ...issue, articles, masthead }
 }

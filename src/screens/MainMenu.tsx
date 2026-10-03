@@ -38,7 +38,9 @@ export default function MainMenu({ onNewCareer, onContinue, onLoadCareer, onOpen
   }
 
   return (
-    <div className="relative min-h-screen w-full bg-ks-black overflow-hidden">
+    <div className="main-stage relative min-h-screen w-full bg-ks-black overflow-hidden">
+      <div className="main-stage-lights" aria-hidden="true"><i/><i/><i/></div>
+      <div className="main-stage-pitch" aria-hidden="true"><span/><span/><span/></div>
       <div className="absolute inset-0" style={{
         background: `radial-gradient(ellipse 40% 60% at 70% 20%, rgba(212,175,55,0.12), transparent 60%), radial-gradient(ellipse 50% 40% at 75% 90%, rgba(120,140,180,0.08), transparent 55%), linear-gradient(105deg, #050504 0%, #0a0a09 40%, #0d0d0b 70%, #050504 100%)`,
       }} />
@@ -46,17 +48,17 @@ export default function MainMenu({ onNewCareer, onContinue, onLoadCareer, onOpen
       <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.75) 35%, rgba(0,0,0,0.25) 65%, transparent 100%)' }} />
       <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 200px 60px rgba(0,0,0,0.8)' }} />
 
-      <div className="relative z-10 min-h-screen flex flex-col justify-between px-6 md:px-16 py-8 max-w-2xl">
+      <div className="relative z-10 min-h-screen flex flex-col justify-between px-6 md:px-16 py-8 max-w-2xl main-stage-content">
         <div>
           <div className="text-[11px] tracking-[0.3em] text-ks-muted uppercase mb-5">the journey starts here</div>
-          <div style={{ filter: 'drop-shadow(0 0 30px rgba(212,175,55,0.3))' }} className="mb-5">
+          <div style={{ filter: 'drop-shadow(0 0 30px rgba(212,175,55,0.3))' }} className="mb-5 main-stage-title">
             <div className="font-display font-black text-5xl md:text-6xl tracking-wide leading-none text-ks-gold">KICKOFF</div>
             <div className="font-display font-black text-5xl md:text-6xl tracking-wide leading-none text-ks-ink">STAR</div>
           </div>
           <div className="text-[11px] text-ks-muted uppercase tracking-[0.15em]">from school football to a pro contract</div>
         </div>
 
-        <div className="flex flex-col gap-2 my-6 max-w-md">
+        <div className="flex flex-col gap-2 my-6 max-w-md main-stage-actions">
           {MENU_ITEMS(hasSave).map((item) => {
             const primary = item.action === 'new'
             return (
@@ -65,7 +67,7 @@ export default function MainMenu({ onNewCareer, onContinue, onLoadCareer, onOpen
                 type="button"
                 onClick={() => handleClick(item.action)}
                 disabled={item.disabled}
-                className={`group min-h-14 text-left rounded-xl px-5 py-3 flex items-center gap-4 transition-all active:scale-[0.99] disabled:opacity-25 ${primary ? 'bg-ks-gold text-ks-black shadow-[0_0_30px_rgba(212,175,55,0.25)]' : 'text-ks-ink border border-transparent hover:border-ks-border hover:bg-white/[0.03]'}`}
+                className={`menu-action group min-h-14 text-left rounded-xl px-5 py-3 flex items-center gap-4 transition-all active:scale-[0.99] disabled:opacity-25 ${primary ? 'bg-ks-gold text-ks-black shadow-[0_0_30px_rgba(212,175,55,0.25)]' : 'text-ks-ink border border-transparent hover:border-ks-border hover:bg-white/[0.03]'}`}
               >
                 <span className={`text-lg w-5 ${primary ? '' : 'text-ks-muted group-hover:text-ks-gold'}`}>{item.icon}</span>
                 <span className="flex flex-col">
@@ -81,7 +83,7 @@ export default function MainMenu({ onNewCareer, onContinue, onLoadCareer, onOpen
           <div className="max-w-xs mb-6 text-ks-ink italic">“Every legend started somewhere.”</div>
           <div className="flex items-center justify-between pt-4 border-t border-ks-border/40 max-w-md">
             <span className="text-ks-muted text-[10px] tracking-wider">PHASE 1 COMPLETE</span>
-            <span className="text-ks-muted text-[10px] tracking-wider">v3.1.0</span>
+            <span className="text-ks-muted text-[10px] tracking-wider">V5.6 · RELEASE</span>
           </div>
         </div>
       </div>

@@ -46,6 +46,8 @@ export function emptyMatchStats(): PlayerMatchStats {
 
 export interface MatchStatContext {
   position: Position
+  /** Live player attributes; absent for legacy callers and neutral audit fixtures. */
+  attributes?: Record<string, number>
   minutes: number
   teamPossession: number // 0..1
   teamGoals: number
@@ -59,6 +61,10 @@ export interface MatchStatContext {
 function clamp(v:number,lo:number,hi:number){ return Math.max(lo,Math.min(hi,v)) }
 function seeded(seed:number){ let s=seed>>>0; return ()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296} }
 function jitter(base:number,rng:()=>number,spread=.18){ return Math.max(0,Math.round(base*(1-spread+rng()*spread*2))) }
+function roundedSuccesses(attempts:number, chance:number, rng:()=>number){
+  const expected=attempts*chance, whole=Math.floor(expected)
+  return Math.min(attempts,whole+(rng()<expected-whole?1:0))
+}
 
 /**
  * Builds the off-ball/background statistical layer. The player only sees a few
@@ -73,6 +79,13 @@ export function simulateBackgroundStats(ctx:MatchStatContext): PlayerMatchStats 
   const s=emptyMatchStats(), rng=seeded(ctx.seed ?? 3202601)
   const mins=clamp(ctx.minutes,0,120), m=mins/90, poss=clamp(ctx.teamPossession,.25,.75)
   const q=clamp(.42 + ctx.decisionQuality*.34 + ctx.executionQuality*.18 + (ctx.rating-6)*.035,.28,.94)
+  // Attribute effects stay modest. The authored moments decide goals/saves;
+  // these modifiers give ordinary off-ball actions their own skill signal.
+  const skill=(...keys:string[])=>keys.reduce((sum,key)=>sum+(ctx.attributes?.[key] ?? 8),0)/keys.length
+  const delta=(...keys:string[])=>clamp((skill(...keys)-8)/12,-.55,.75)
+  const passing=ctx.position==='GK'?delta('distribution'):delta('passing','vision')
+  const dribbling=delta('dribbling','agility')
+  const defending=delta('tackling','positioning')
   const profiles:Record<Position,{passes:number,touches:number,dribbles:number,runs:number,tackles:number,ints:number,rec:number,clear:number,blocks:number,duels:number}> = {
     GK:{passes:28,touches:38,dribbles:.1,runs:0,tackles:0,ints:0,rec:4,clear:0,blocks:0,duels:0},
     CB:{passes:46,touches:59,dribbles:.5,runs:.5,tackles:2.0,ints:1.5,rec:6,clear:4.2,blocks:1.0,duels:6},
@@ -87,21 +100,21 @@ export function simulateBackgroundStats(ctx:MatchStatContext): PlayerMatchStats 
   s.touches=jitter(p.touches*m*possessionFactor,rng)
   s.passesAttempted=jitter(p.passes*m*possessionFactor,rng)
   const passBase=ctx.position==='GK'||ctx.position==='CB'?.88:ctx.position==='CM'?.84:ctx.position==='ST'?.72:.78
-  const passPct=clamp(passBase+(q-.6)*.14,.58,.95)
+  const passPct=clamp(passBase+(q-.6)*.14+passing*.085,.52,.97)
   s.passesCompleted=Math.min(s.passesAttempted,Math.round(s.passesAttempted*passPct))
   s.progressivePasses=jitter(s.passesCompleted*(ctx.position==='CM'?.16:ctx.position==='WM'?.14:ctx.position==='WG'?.11:.09),rng,.28)
   s.dribblesAttempted=jitter(p.dribbles*m*(.75+poss*.5),rng,.28)
-  s.dribblesCompleted=Math.min(s.dribblesAttempted,Math.round(s.dribblesAttempted*clamp(.42+q*.30,.42,.72)))
+  s.dribblesCompleted=roundedSuccesses(s.dribblesAttempted,clamp(.42+q*.30+dribbling*.12,.32,.82),rng)
   s.progressiveRuns=jitter(p.runs*m*(.72+poss*.55),rng,.28)
   s.tacklesAttempted=jitter(p.tackles*m*(1.15-poss*.3),rng,.28)
-  s.tacklesWon=Math.min(s.tacklesAttempted,Math.round(s.tacklesAttempted*clamp(.46+q*.27,.48,.74)))
-  s.interceptions=jitter(p.ints*m*(1.2-poss*.35)*(0.85+q*.25),rng,.3)
+  s.tacklesWon=roundedSuccesses(s.tacklesAttempted,clamp(.46+q*.27+defending*.11,.38,.82),rng)
+  s.interceptions=jitter(p.ints*m*(1.2-poss*.35)*(0.85+q*.25)*(1+delta('positioning','concentration')*.24),rng,.3)
   s.recoveries=jitter(p.rec*m*(1.12-poss*.22),rng,.25)
   s.clearances=jitter(p.clear*m*(1.22-poss*.4)*(1+Math.max(0,ctx.goalsConceded-1)*.05),rng,.3)
   s.blocks=jitter(p.blocks*m*(1.18-poss*.3),rng,.35)
   s.duelsAttempted=jitter(p.duels*m,rng,.25)
   s.duelsWon=Math.min(s.duelsAttempted,Math.round(s.duelsAttempted*clamp(.43+q*.25,.44,.72)))
-  s.keyPasses=jitter((ctx.position==='CM'?1.5:ctx.position==='WM'?1.35:ctx.position==='WG'?1.4:.35)*m*(.75+q*.5),rng,.35)
+  s.keyPasses=jitter((ctx.position==='CM'?1.5:ctx.position==='WM'?1.35:ctx.position==='WG'?1.4:.35)*m*(.75+q*.5)*(1+passing*.27),rng,.35)
   s.chancesCreated=Math.max(s.keyPasses,jitter(s.keyPasses*(.9+rng()*.45),rng,.2))
   if(ctx.position==='GK'){
     s.distributionAttempted=s.passesAttempted

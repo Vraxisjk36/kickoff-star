@@ -63,7 +63,7 @@ export default function AgentSelect({ onDone }: { onDone: () => void }) {
         className={`w-full rounded-xl py-4 font-display tracking-widest text-sm uppercase transition-all ${
           picked ? 'bg-ks-gold text-ks-black shadow-[0_0_28px_rgba(212,175,55,0.3)]' : 'border border-ks-border text-ks-muted/40'
         }`}
-        style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        style={{ marginBottom: 'var(--safe-bottom)' }}
       >
         sign with them
       </button>

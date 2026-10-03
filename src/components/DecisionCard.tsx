@@ -53,6 +53,7 @@ export default function DecisionCard({ decision, onResolved }: DecisionCardProps
         {/* options or outcome */}
         {phase === 'choosing' ? (
           <div className="flex flex-col gap-2.5">
+            {(decision.context === 'training' || decision.context === 'trial') && <p className="text-[11px] text-ks-muted">Pick the approach that suits your attributes. Each attempt has a chance to work; a failed roll does not mean your answer was wrong.</p>}
             {decision.options.map((option) => (
               <button
                 key={option.id}

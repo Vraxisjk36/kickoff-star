@@ -273,7 +273,7 @@ async function runCareer(cfg: CareerConfig) {
         continue
       }
 
-      const comp = activeCompetitionForWeek(calendar.currentWeek.weekNumber, phase)
+      const comp = activeCompetitionForWeek(calendar.currentWeek.weekNumber, phase, player.grassrootsPath)
       if (!comp) { st.resolveCurrentEvent(); continue }
 
       const m = fakeMatch(player.position)

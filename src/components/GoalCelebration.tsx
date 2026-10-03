@@ -57,8 +57,8 @@ export default function GoalCelebration({ kind, scorerName, homeShort, awayShort
       className="fixed inset-0 z-[70] flex flex-col items-center justify-center transition-opacity duration-200"
       style={{
         background: isGood
-          ? 'radial-gradient(ellipse at center, rgba(212,175,55,0.22), rgba(0,0,0,0.94) 70%)'
-          : 'radial-gradient(ellipse at center, rgba(224,72,62,0.16), rgba(0,0,0,0.94) 70%)',
+          ? 'radial-gradient(ellipse at center, #3a3013 0%, #090805 54%, #000 78%)'
+          : 'radial-gradient(ellipse at center, #35100d 0%, #090504 54%, #000 78%)',
         opacity: phase === 'out' ? 0 : 1,
       }}
     >

@@ -23,6 +23,11 @@ import { Capacitor } from '@capacitor/core'
 
 export type AdPlacement = 'energy' | 'cash' | 'xp'
 
+/** The browser build has no rewarded-ad SDK, so it must not offer ad buttons. */
+export function rewardedAdsAvailable(): boolean {
+  return Capacitor.isNativePlatform()
+}
+
 const AD_UNIT_IDS: Record<AdPlacement, string> = {
   // TESTING PHASE: using Google's official test ad unit IDs to avoid
   // AdMob invalid-traffic flags from concentrated tester activity.

@@ -33,8 +33,30 @@ export interface Player {
   careerClock: CareerClock
 
   // Grassroots trials fields (Football Engine Spec Section: Grassroots opening)
+  /** The one youth route chosen at onboarding. School and grassroots are mutually exclusive. */
+  youthRoute?: 'school' | 'grassroots'
   schoolId: string | null
+  /** Season in which an unsuccessful school transfer assessment was attempted. */
+  schoolTransferSeason?: number
+  grassrootsClubId?: string | null
+  grassrootsClubName?: string | null
+  /** Training sessions completed after an opening-trial cut, before a new club approach. */
+  communityTrialSessions?: number
   trialWeekCompleted: 0 | 1 | 2 | 3
+  /** The active grassroots route. Selected players represent their school;
+      Sunday football is the fallback route after release/elimination. */
+  grassrootsPath?: 'school' | 'sunday'
+  /** A real second club while remaining registered with the school. */
+  sundayLeague?: import('../engine/league').LeagueWorld
+  sundaySquad?: import('../engine/squad').SquadPlayer[]
+  sundayContract?: import('../engine/sundayContracts').SundayContract
+  lastSundayOfferSeason?: number
+  sundayContractsVersion?: number
+  /** Match-only context, supplied when selecting the player for a fixture. */
+  matchEnergyMultiplier?: number
+  leagueGoals?: import('../engine/leagueScorers').PlayerLeagueGoals[]
+  pathway?: import('../engine/pathway').YouthPathwayState
+  octoberLeague?: import('../engine/octoberLeague').OctoberLeague | null
 
   // Phase 32 — standing with the three groups (coach reads off coachTrust)
   standing?: import('../engine/standing').Standing
@@ -63,6 +85,8 @@ export interface Player {
 
   // Phase 29 — money, kit and consumables
   money?: number
+  /** V4 Layer 6: auditable youth-finance ledger, family context and club support. */
+  finances?: import('../engine/youthFinances').YouthFinanceState
   equipment?: import('../engine/economy').OwnedEquipment[]
   consumables?: import('../engine/economy').Consumables
   /** P35: the synthetic rival scorer the golden-boot headline tracks against — see engine/headlines.ts. */
@@ -85,9 +109,15 @@ export interface Player {
   activeArcs?: import('../engine/storylines').ActiveArc[]
   /** Arc template keys recently resolved, for no-repeat pacing. */
   recentArcKeys?: string[]
+  weeklyStories?: Record<string, { path: 'help' | 'focus'; beat: 1 | 2 | 3 }>
+  weeklyFocus?: { week: number; kind: 'recovery' | 'film' | 'shift' }
+  schoolGraduationDeadline?: number
+  /** Four position-specific coach objectives for the current season. */
+  seasonObjectives?: import('../engine/seasonObjectives').SeasonObjectives
 
   // Phase 27 — identity picked at onboarding
   nationality?: string // Nation.id (engine/nations.ts); drives the international layer
+  regionId?: string // Region.id (engine/regions.ts); anchors local schools and clubs
   avatarId?: number // 0-7, components/Avatar.tsx
   archetype?: string | null // Archetype.id (engine/archetypes.ts)
 
@@ -100,6 +130,10 @@ export interface Player {
 
   // Match rating history (recent-window), feeds scouting later
   matchRatings: number[]
+  /** Exact played match lines across school, academy, cups and country. */
+  matchLedger?: import('../engine/matchLedger').MatchRecord[]
+  /** Completed cup and country fixtures, including other named players. */
+  worldMatchHistory?: import('../engine/matchLedger').MatchRecord[]
   seasonGoals: number
   seasonAssists: number
 
@@ -137,15 +171,24 @@ export interface Player {
     international: { goals: number; assists: number; appearances: number }
     other: { goals: number; assists: number; appearances: number }
   }
+  /** V4 Layer 5: exact competition records, discipline, awards and history. */
+  competitionCareer?: import('../engine/competitionCareer').CompetitionCareerState
+  /** V4 Layer 8: durable announcements and career story beats. */
+  inbox?: import('../engine/presentation').StoryMoment[]
   /** Phase 16: unlocked achievement keys. */
   achievements?: string[]
 
   // fail-state: reached age cap (20) without turning pro
   careerEnded?: boolean
+  /** Final-season pro talks may finish shortly after the age cap; no new talks extend this deadline. */
+  proGraceDeadline?: number
 
   // Current injury (null if fit). weeksRemaining counts down each week advance.
   injury: { severity: string; weeksRemaining: number; description: string } | null
   recentInjuryCount: number // rolling count feeding injury-risk history factor
+  /** Confirmed champions recorded from completed fixtures, used by future Gazette previews. */
+  gazetteHonours?: { season: number; competitionId: string; winner: string }[]
+  gazetteInterviewSeason?: number
   // Phase 22a: the player's own Tier-1 NPC squad — 15 named teammates who can
   // individually score/assist in match sim. Optional so old saves (and any
   // code path before a squad exists yet, e.g. mid-trials) keep working —
@@ -154,6 +197,9 @@ export interface Player {
   // Phase 25: weekly newspaper archive, most recent last. Capped in the store
   // so the save doesn't grow unbounded over a multi-season career.
   gazetteIssues?: import('../engine/gazette').GazetteIssue[]
+  worldSchools?: import('../engine/worldSchools').WorldSchoolsState
+  worldLeagues?: import('../engine/worldLeagues').WorldLeagues
+  academyRankings?: import('../engine/worldSchools').SchoolsRanking[]
   // Phase 25: last match result, for the Gazette's recap article. Overwritten
   // every match — this is a single most-recent snapshot, not a history log
   // (matchRatings already covers the rolling rating window).
@@ -171,20 +217,25 @@ export interface Player {
 
   // Scouting state (per-club interest, reputation-gated per Joel's locked design)
   reputation: number
-  scoutWatchers: { clubId: string; clubName: string; clubShort: string; interest: number; tier: string; prestige: number; ratings: { attack: number; midfield: number; defense: number } }[]
-  contractOffers: { id: string; clubId: string; clubName: string; clubShort: string; weekOffered: number; expiresInWeeks: number; prestige: number; ratings: { attack: number; midfield: number; defense: number }; kind: 'academy' | 'professional' | 'club'; divisionTier?: number }[]
+  scoutWatchers: { clubId: string; clubName: string; clubShort: string; countryId?: string; interest: number; tier: string; prestige: number; watchedMatches?: number; lastObservedWeek?: number; addedWeek?: number; ratings: { attack: number; midfield: number; defense: number } }[]
+  contractOffers: { id: string; clubId: string; clubName: string; clubShort: string; countryId?: string; weekOffered: number; expiresInWeeks: number; prestige: number; ratings: { attack: number; midfield: number; defense: number }; kind: 'academy' | 'professional' | 'club'; availableFromAge?: number; divisionTier?: number; weeklyWage?: number; contractSeason?: number; renewal?: boolean }[]
 
   // Absolute week counter, never resets at season boundary (used for offer expiry math)
   totalWeeksElapsed: number
 
   // Academy club name once transitioned from Grassroots (set when an 'academy' offer is accepted)
   academyClubName: string | null
+  academyCountryId?: string
 
   // Win-state: signed a professional contract (the V1.0 end goal)
   turnedPro: { clubName: string; weekSigned: number } | null
   squadRole: 'starting-xi' | 'bench' | 'reserves' | 'released' | null
   /** P50 — the week (totalWeeksElapsed) squadRole last changed. Selection is now STICKY: a trial or coach verdict has to hold for a settling-in period before the coach reconsiders, so it actually means something rather than being recomputed away within a week. */
   squadRoleSetWeek?: number
+  /** Career appearances when this squad role began, for evidence-based promotion. */
+  squadRoleSetAppearances?: number
+  /** Preseason friendlies are not league fixtures but still belong on the schedule. */
+  friendlyResults?: { season: number; week: number; opponentId: string; opponentName: string; isHome: boolean; goalsFor: number; goalsAgainst: number }[]
 }
 
 type AttributeValue = number

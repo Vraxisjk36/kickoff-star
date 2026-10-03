@@ -1,91 +1,52 @@
-name: Deploy Kickoff Star V3 to GitHub Pages
+name: Deploy Unified V4 to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [codex/v32-v4-unified]
   workflow_dispatch: {}
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout unified V4 source
         uses: actions/checkout@v4
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Locate and extract V3 source
-        shell: bash
-        run: |
-          ZIP=$(find . -maxdepth 1 -type f -name 'kickoff-star-v3-aab-ready*.zip' | head -n 1)
-          if [ -z "$ZIP" ]; then
-            echo "Kickoff Star V3 source ZIP not found"
-            exit 1
-          fi
-          rm -rf /tmp/kickoff-v3
-          mkdir -p /tmp/kickoff-v3
-          unzip -q "$ZIP" -d /tmp/kickoff-v3
-          test -f /tmp/kickoff-v3/kickoff-star-main/package.json
-          test -f /tmp/kickoff-v3/kickoff-star-main/src/screens/MainMenu.tsx
-          echo "V3 source extracted from: $ZIP"
-
-      - name: Restore privacy policy into V3 public assets
-        shell: bash
-        run: |
-          mkdir -p /tmp/kickoff-v3/kickoff-star-main/public
-          cp public/privacy-policy.html /tmp/kickoff-v3/kickoff-star-main/public/privacy-policy.html
-
-      - name: Verify V3 source
-        working-directory: /tmp/kickoff-v3/kickoff-star-main
-        shell: bash
-        run: |
-          grep -q '"version": "3.0.0"' package.json
-          grep -q 'onOpenSettings' src/screens/MainMenu.tsx
-          grep -q 'onOpenCredits' src/screens/MainMenu.tsx
-          grep -q 'onOpenHelp' src/screens/MainMenu.tsx
-          test -f src/screens/CreditsScreen.tsx
-          test -f public/privacy-policy.html
-          echo "Verified Kickoff Star V3 source"
+          cache: npm
 
       - name: Install dependencies
-        working-directory: /tmp/kickoff-v3/kickoff-star-main
         run: npm ci
 
-      - name: Build V3 web app
-        working-directory: /tmp/kickoff-v3/kickoff-star-main
-        run: npm run build
-
-      - name: Verify Pages output
-        shell: bash
+      - name: Verify unified game
         run: |
-          test -f /tmp/kickoff-v3/kickoff-star-main/dist/index.html
-          test -f /tmp/kickoff-v3/kickoff-star-main/dist/privacy-policy.html
-          grep -R -q 'v3.0.0' /tmp/kickoff-v3/kickoff-star-main/dist || true
+          npm run lint
+          npm run audit:v4
+          npm run audit:season
+          npm run build
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Prepare Pages fallback
+        run: |
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
+          test -f dist/index.html
+          test -f dist/404.html
+
+      - name: Publish unified V4 site
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: /tmp/kickoff-v3/kickoff-star-main/dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./dist
+          keep_files: true
+          enable_jekyll: false

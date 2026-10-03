@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { SCHOOLS, type School } from '../engine/schools'
+import { schoolsForRegion, type School } from '../engine/schools'
+import { useCareerStore } from '../store/careerStore'
 
 function DiffMeter({ label, value, max = 1.4 }: { label: string; value: number; max?: number }) {
   const pct = Math.round((value / max) * 100)
@@ -15,6 +16,8 @@ function DiffMeter({ label, value, max = 1.4 }: { label: string; value: number; 
 
 export default function SchoolSelection({ onChoose }: { onChoose: (school: School) => void }) {
   const [selected, setSelected] = useState<School | null>(null)
+  const regionId = useCareerStore(s => s.player?.regionId)
+  const schools = schoolsForRegion(regionId)
 
   return (
     <div className="relative min-h-screen w-full bg-ks-black flex flex-col px-5 py-8">
@@ -26,7 +29,7 @@ export default function SchoolSelection({ onChoose }: { onChoose: (school: Schoo
         <p className="text-ks-muted text-xs mb-6">Each school changes how hard the trials are and how many scouts watch you.</p>
 
         <div className="flex flex-col gap-3 flex-1">
-          {SCHOOLS.map((school) => (
+          {schools.map((school) => (
             <button
               key={school.id}
               onClick={() => setSelected(school)}

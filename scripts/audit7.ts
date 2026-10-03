@@ -148,10 +148,12 @@ console.log('\n[D] SELECTION — there is now a path off the bench')
     { trust: -3, form: 5.0 }, { trust: 0, form: 6.0 }, { trust: 3, form: 7.0 }, { trust: 6, form: 7.8 }, { trust: 9, form: 8.5 },
   ]
   const rolesWeak = progression.map((p) =>
-    decideSelection(mk('bench', 'ST', { coachTrust: p.trust, matchRatings: Array(5).fill(p.form) } as Partial<Player>), weakSquad).role)
+    decideSelection(mk('bench', 'ST', { coachTrust: p.trust, matchRatings: Array(5).fill(p.form), squadRoleSetAppearances: 9 } as Partial<Player>), weakSquad).role)
   console.log(`    grassroots squad: ${rolesWeak.join(' → ')}`)
   check(rolesWeak[rolesWeak.length - 1] === 'starting-xi', 'improving gets you into the starting XI')
   check(rolesWeak[0] !== 'starting-xi', 'a poor player does not start')
+  check(decideSelection(mk('reserves', 'ST', { coachTrust: 10, matchRatings: [], squadRoleSetAppearances: 12 }), weakSquad).role === 'reserves', 'training and trust cannot promote a reserve with zero matches')
+  check(decideSelection(mk('reserves', 'ST', { coachTrust: 10, matchRatings: [7, 7], squadRoleSetAppearances: 10 }), weakSquad).role === 'bench', 'two good reserve matches earn a bench opportunity, not an instant start')
 
   // Scores must be monotonic in the things a player can control.
   const scores = progression.map((p) =>

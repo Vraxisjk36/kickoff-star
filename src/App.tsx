@@ -104,11 +104,6 @@ export default function App() {
   }
 
   const handleTrialsComplete = (role: SquadRole, performance: number) => {
-    if (role === 'released') {
-      setChosenSchool(null)
-      replace('school')
-      return
-    }
     completeTrials(role, performance)
     replace('career')
   }

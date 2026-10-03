@@ -34,6 +34,9 @@ export interface OutcomeEffect {
   startArc?: string
   /** P29: cash won or spent by this outcome. */
   money?: number
+  /** Persist a chosen route through a three-beat weekly story. */
+  storyChoice?: { key: string; path: 'help' | 'focus'; beat: 1 | 2 | 3 }
+  attributePractice?: 'passing' | 'shooting' | 'tackling' | 'vision' | 'handling' | 'distribution'
 }
 
 export interface Decision {

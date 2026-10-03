@@ -11,7 +11,7 @@ import {
   monthlyAllowance, allowanceDue, ALLOWANCE_INTERVAL_WEEKS, REWARD_CYCLE, rewardForStreak,
   ODD_JOBS, availableJobs, formatMoney, type OwnedEquipment,
 } from '../src/engine/economy'
-import { initMatch, advanceToKeyMoment } from '../src/engine/match'
+import { initMatch, advanceToKeyMoment, resolvePlayerMoment, resolveScenarioBeat, resolveInjuryDecision } from '../src/engine/match'
 import { generateTeam } from '../src/engine/teams'
 import { initialCast } from '../src/engine/relationships'
 import { NAV_ITEMS } from '../src/components/navItems'
@@ -204,13 +204,13 @@ console.log('\n[F] SUB APPEARANCES — being dropped must actually cost you')
     while (!s.finished && guard++ < 200) {
       const r = advanceToKeyMoment(s, p)
       s = r.state
-      if (r.keyMoment) s = { ...s, playerMoments: s.playerMoments } // auto-skip the decision
       if (r.keyMoment) {
-        // resolve trivially so the sim can continue
-        s = { ...s, drivesSinceInvolved: 0 }
-        // advance past the moment by forcing another step
-        const r2 = advanceToKeyMoment({ ...s }, p)
-        s = r2.state
+        // Resolve the surfaced decision so a multi-beat V3.2 scenario can
+        // genuinely advance. Calling advanceToKeyMoment again without a
+        // choice just returns the same active beat forever.
+        if (r.keyMoment.isInjuryDecision) s = resolveInjuryDecision(s, false, p)
+        else if (r.keyMoment.scenarioId) s = resolveScenarioBeat(s, r.keyMoment, 0, 1, true, 1, 1, 'good')
+        else s = resolvePlayerMoment(s, r.keyMoment, 1, true, 1, 1, p.position === 'GK', 'good')
       }
     }
     return { entry, moments: s.playerMoments, rating: s.playerRating, minutes: (90 + s.addedTime) - entry }

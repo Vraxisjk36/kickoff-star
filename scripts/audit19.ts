@@ -16,11 +16,11 @@ console.log('\n[A] every real cup/league competition ID calendar.ts defines is c
   const calendarSrc = readFileSync('src/engine/calendar.ts', 'utf-8')
   const careerSrc = readFileSync('src/screens/Career.tsx', 'utf-8')
 
-  // Pull the real competition IDs straight from GRASSROOTS_ACTIVE and
-  // ACADEMY_ACTIVE — the actual source of truth for what can occur, not a
+  // Pull the real competition IDs straight from SCHOOL_ACTIVE,
+  // SUNDAY_ACTIVE and ACADEMY_ACTIVE — the actual source of truth, not a
   // hand-maintained list here that could itself drift.
   const activeSetMatches = [...calendarSrc.matchAll(/const \w+_ACTIVE = new Set\(\[([^\]]+)\]\)/g)]
-  check(activeSetMatches.length === 2, `found both phase-active competition sets (${activeSetMatches.length})`)
+  check(activeSetMatches.length === 3, `found all three phase-active competition sets (${activeSetMatches.length})`)
 
   const allRealCompetitionIds = new Set<string>()
   for (const m of activeSetMatches) {

@@ -79,7 +79,7 @@ export default function TrainingScreen({ player, forcedType, onComplete }: Train
   // P63 — a small bonus at streak milestones (every 5th session in a row,
   // no missed week) — cheap, sticky, matches how mobile career games like
   // New Star Soccer reward consistency without needing a whole new system.
-  const streakMilestoneBonus = () => ((player.trainingStreak ?? 0) + 1) % 5 === 0 ? 100 : 0
+  const streakMilestoneBonus = () => ((player.trainingStreak ?? 0) + 1) % 5 === 0 ? 50 : 0
 
   const simulateSession = () => {
     let s = session

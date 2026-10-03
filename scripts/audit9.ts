@@ -114,9 +114,12 @@ console.log('\n[B] the WIN STATE is earned, not tapped')
   console.log(`    pro offers at 16: ${at16.offers.length} · at 17: ${at17.offers.length}`)
   check(at16.offers.length === 0, 'no professional contract before 17 — a probe was turning pro at 16 and ending the game years early')
   check(at17.offers.length > 0, 'but they arrive once you are old enough')
-  // Academy invites are NOT age-gated — that's the whole point of being young.
+  // Academy recruitment opens at 16 after the three-season review.
   const academyAt15 = checkForOffers(state, 100, false, 15)
-  check(academyAt15.offers.length > 0, 'academy invitations are still open to younger players')
+  check(academyAt15.offers.length === 0, 'no academy invitation before the age-16 review')
+  const reviewedWatchers = [{ ...watchers[0], watchedMatches: 6 }]
+  const academyAt16 = checkForOffers({ ...state, watchers: reviewedWatchers }, 100, false, 16, { canInvite: true } as Parameters<typeof checkForOffers>[4])
+  check(academyAt16.offers.length > 0, 'eligible 16-year-olds with sustained scouting can receive an invitation')
 }
 
 // ---------------------------------------------------------------------------

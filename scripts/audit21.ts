@@ -30,8 +30,8 @@ check(app.includes("window.addEventListener('popstate'"), 'popstate restores the
 console.log('\n[C] Android hardware back is connected to WebView history')
 const mainActivity = readFileSync('android/app/src/main/java/com/vraxis/kickoffstar/MainActivity.java', 'utf8')
 check(mainActivity.includes('onBackPressed'), 'MainActivity overrides Android back')
-check(mainActivity.includes('canGoBack()'), 'Android back checks WebView history before exiting')
-check(mainActivity.includes('goBack()'), 'Android back navigates to the previous in-app screen')
+check(mainActivity.includes("kickoffstar:native-back"), 'Android back delegates to the game navigation contract')
+check(app.includes("window.addEventListener('kickoffstar:native-back'"), 'the app handles native back without exiting the active game')
 
 console.log('\n[D] load/continue are no longer fake duplicates')
 check(app.includes('listSaves()'), 'Continue inspects all save slots')

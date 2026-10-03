@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import type { Player } from '../../types/player'
+import { objectiveProgress, completedSeasonObjectives } from '../../engine/seasonObjectives'
 import { computeCurrentAbility, toOvr } from '../../engine/rating'
 import { trustLabel, trustEmoji, generateNotebookEntry, notebookTone } from '../../engine/coachTrust'
 import { Panel, Bar, TickBar, VerticalBarChart, RadarChart, StatRow, EmptyNote, Section, Icon } from '../../components/ui'
@@ -7,13 +9,17 @@ import iconScouts from '../../assets/icons/scouts.png'
 import iconMedical from '../../assets/icons/medical.png'
 import iconGlory from '../../assets/icons/glory.png'
 import iconCoachNotebook from '../../assets/icons/coach_notebook.png'
-import { decideSelection } from '../../engine/selection'
+import { decideSelection, promotionEvidence, selectionAdvice } from '../../engine/selection'
 import AchievementList from '../../components/AchievementList'
 import GloryCabinet from '../../components/GloryCabinet'
 import Avatar from '../../components/Avatar'
 import { getNation } from '../../engine/nations'
 import { getArchetype } from '../../engine/archetypes'
 import ScoutsTab from './ScoutsTab'
+import { useCareerStore } from '../../store/careerStore'
+import { schoolsForRegion } from '../../engine/schools'
+import { currentPerformance } from '../../engine/youthOpportunities'
+import { competitionDefinition } from '../../engine/competitionCareer'
 
 // P27 restructure (Joel: 'one long ass scroll'): identity header + attributes
 // stay always-visible; everything else collapses behind section buttons.
@@ -39,6 +45,9 @@ function ratingColor(r: number): string {
 }
 
 export default function PlayerTab({ player, onOpenOffers }: { player: Player; onOpenOffers?: () => void }) {
+  const calendar = useCareerStore(s => s.calendar)
+  const requestSchoolTransfer = useCareerStore(s => s.requestSchoolTransfer)
+  const [view, setView] = useState<'overview' | 'development' | 'career'>('overview')
   const c = player.career
   const values = player.attributes.values as Record<string, number>
   const isGk = player.attributes.kind === 'goalkeeper'
@@ -76,12 +85,23 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
       </div>
 
       <div className="player-quick-strip"><div><span>APPS</span><b>{c?.appearances ?? 0}</b></div><div><span>GOALS</span><b>{c?.goals ?? 0}</b></div><div><span>ASSISTS</span><b>{c?.assists ?? 0}</b></div><div><span>BEST</span><b>{c?.bestRating?.toFixed(1) ?? '—'}</b></div></div>
+      {player.squadRole === 'released' && player.careerClock.phase !== 'academy' && <Panel title="School pathway · another chance">
+        <p className="text-xs text-ks-muted">Play development fixtures and train. Your school reviews you after weeks 12 and 23. Three appearances averaging 6.3 with at least 50% energy earn a reserve place.</p>
+        {(() => { const record = currentPerformance(player, ['schoolDevelopmentLeague','schoolReserveLeague']); return <p className="text-xs text-ks-gold mt-2">Development record: {record.appearances} matches · {record.average.toFixed(1)} average</p> })()}
+        {calendar && calendar.currentWeek.weekNumber >= 24 && calendar.currentWeek.weekNumber <= 31 && player.schoolTransferSeason !== calendar.currentWeek.seasonYear && <div className="mt-3 space-y-2">
+          <p className="text-xs text-ks-ink">Apply for one school transfer assessment this season:</p>
+          {schoolsForRegion(player.regionId).filter(s => s.id !== player.schoolId).map(s => <button key={s.id} onClick={() => requestSchoolTransfer(s.id)} className="block w-full rounded-lg border border-ks-gold/40 p-2 text-left text-xs text-ks-gold">Trial at {s.name} →</button>)}
+        </div>}
+      </Panel>}
+      <nav className="player-view-switch" aria-label="Player details">{(['overview','development','career'] as const).map(tab => <button key={tab} aria-pressed={view === tab} onClick={() => setView(tab)}>{tab}</button>)}</nav>
+      {view === 'overview' && <>
       {/* P50 — the coach's verdict used to only ever surface as a one-time
           weekly note that scrolled away. Now it's always visible: where you
           actually stand, and how long until it can change — the real
           substance behind the "sticky" selection system. */}
       {player.squadRole && player.squadRole !== 'released' && (() => {
         const verdict = decideSelection(player, player.squad)
+        const evidence = promotionEvidence(player)
         const SETTLE_WEEKS = 3
         const weeksSinceSet = (player.totalWeeksElapsed ?? 0) - (player.squadRoleSetWeek ?? 0)
         const weeksLeft = Math.max(0, SETTLE_WEEKS - weeksSinceSet)
@@ -93,11 +113,11 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
               <span className="text-[11px] text-ks-muted">{verdict.pecking} of {verdict.competing} for your position</span>
             </div>
             <p className="text-[11px] text-ks-muted leading-relaxed">
-              {weeksLeft > 0
-                ? `The coach won't reconsider the side for ${weeksLeft} more week${weeksLeft === 1 ? '' : 's'}.`
-                : verdict.changed
-                ? `Your recent form is enough to change this — expect a decision soon.`
-                : `You've settled into this role. Keep performing to move up.`}
+              {player.squadRole !== 'starting-xi' && !evidence.ready
+                ? selectionAdvice(verdict, player)
+                : weeksLeft > 0
+                ? `The coach reviews the side in ${weeksLeft} week${weeksLeft === 1 ? '' : 's'}.`
+                : verdict.changed ? 'Your performances have earned a selection review.' : 'Keep performing to move up.'}
             </p>
           </Panel>
         )
@@ -116,10 +136,11 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
           <p className="text-[10px] text-ks-muted leading-relaxed mt-2">Leadership is earned through trust, consistency, standing and time in the side.</p>
         </Panel>
       )}
+      </>}
 
       {/* P60 — reference: a radar/hexagon chart showing the player's
           attribute "shape" at a glance, alongside (not replacing) the bars. */}
-      <div className="development-card"><div className="development-title"><span><Icon src={iconShape} /> PLAYER DNA</span><b>OVR {ovr}</b></div><div className="development-radar"><RadarChart
+      {view === 'development' && <><div className="development-card"><div className="development-title"><span><Icon src={iconShape} /> PLAYER DNA</span><b>OVR {ovr}</b></div><div className="development-radar"><RadarChart
           points={groups.flatMap((g) => g.attrs.slice(0, isGk ? 4 : 2)).map((attr) => ({
             label: ATTR_LABELS[attr] ?? attr,
             value: values[attr] ?? 0,
@@ -152,15 +173,16 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
         </div>
       )}
 
-      <Section title="📈 form & season" defaultOpen>
+      </>}
+      {view === 'overview' && <><Section title="📈 form & season" defaultOpen>
         {recent.length === 0 ? (
           <EmptyNote>No matches played yet. Your recent ratings will show here.</EmptyNote>
         ) : (
           <>
             <div className="form-track mb-3">{recent.map((r,i)=><div key={i} className="form-match"><span className={ratingColor(r)}>{r.toFixed(1)}</span><i style={{height:`${Math.max(14,(r-4)*18)}px`}}/><small>M{i+1}</small></div>)}</div>
             <div className="flex flex-col gap-1.5">
-              <StatRow label="matches played" value={ratings.length} />
-              <StatRow label="average rating" value={avg ? avg.toFixed(2) : '—'} />
+              <StatRow label="matches played this season" value={(player.matchLedger ?? []).filter(record => record.season === calendar?.currentWeek.seasonYear && record.lines.some(line => line.playerId === player.id)).length} />
+              <StatRow label="recent form (last 10)" value={avg ? avg.toFixed(2) : '—'} />
               <StatRow label="season goals" value={player.seasonGoals ?? 0} />
               <StatRow label="season assists" value={player.seasonAssists ?? 0} />
             </div>
@@ -168,7 +190,21 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
         )}
       </Section>
 
-      <Section title={<span className="flex items-center gap-1"><Icon src={iconScouts} />scouts & interest</span>}>
+      {player.seasonObjectives && <Section title="🎯 coach's season goals" defaultOpen>
+        <p className="text-[11px] text-ks-muted mb-3">{completedSeasonObjectives(player.seasonObjectives, player)} of 4 reached. The coach reviews these at season's end; missing one never automatically changes your squad role.</p>
+        <div className="flex flex-col gap-2">
+          {player.seasonObjectives.objectives.map(objective => {
+            const progress = objectiveProgress(player.seasonObjectives!, objective, player)
+            return <div key={objective.kind} className="rounded-lg border border-ks-border bg-[#11110e] px-3 py-2.5 flex items-center justify-between gap-2">
+              <span className="text-[11px] text-ks-ink">{objective.title}</span>
+              <span className={`text-[10px] text-right ${progress.met ? 'text-green-400' : 'text-ks-gold'}`}>{progress.met ? '✓ ' : ''}{progress.label}</span>
+            </div>
+          })}
+        </div>
+      </Section>}
+
+      </>}
+      {view === 'career' && <><Section title={<span className="flex items-center gap-1"><Icon src={iconScouts} />scouts & interest</span>}>
         <ScoutsTab player={player} onOpenOffers={onOpenOffers ?? (() => {})} />
       </Section>
 
@@ -193,6 +229,7 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
                 ['league', 'league'],
                 ['cup', 'cups'],
                 ['international', 'international'],
+                ['other', 'friendlies & other'],
               ] as const).map(([key, label]) => {
                 const b = player.careerByCompetition![key]
                 if (b.appearances === 0) return null
@@ -208,6 +245,41 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
         )}
       </Section>
 
+      <Section title="📋 match record">
+        {(player.matchLedger ?? []).length === 0 ? <EmptyNote>Played matches will appear here with the exact competition, score and performance.</EmptyNote>
+          : <div className="flex flex-col gap-2">
+            {[...(player.matchLedger ?? [])].reverse().slice(0, 12).map(record => {
+              const line = record.lines.find(entry => entry.playerId === player.id)
+              const home = line?.teamId === record.homeTeamId
+              return <div key={record.id} className="border-b border-ks-border/50 pb-2 text-[11px]">
+                <div className="flex justify-between gap-2 text-ks-ink"><span className="truncate">{competitionDefinition(record.competitionId).name} · W{record.week} S{record.season}</span><b>{record.homeGoals}–{record.awayGoals}</b></div>
+                <div className="text-ks-muted truncate">{home ? 'vs ' + record.awayTeamName : 'at ' + record.homeTeamName} · {line?.minutes ?? 0} min · {line?.rating.toFixed(1) ?? '—'} rating · {line?.goals ?? 0}G {line?.assists ?? 0}A{player.position === 'GK' ? ` · ${line?.saves ?? 0} saves` : ''}</div>
+              </div>
+            })}
+          </div>}
+      </Section>
+
+      <Section title="🧭 career pathway" defaultOpen>
+        <div className="flex items-stretch gap-1.5">
+          {([
+            { key: 'school', label: 'School', active: player.careerClock.phase !== 'academy' && !player.turnedPro, complete: player.careerClock.phase === 'academy' || !!player.turnedPro },
+            { key: 'academy', label: 'Academy', active: player.careerClock.phase === 'academy' && !player.turnedPro, complete: !!player.turnedPro },
+            { key: 'pro', label: 'Professional', active: !!player.turnedPro, complete: false },
+          ]).map((stage, index) => (
+            <div key={stage.key} className="contents">
+              <div className={`flex-1 rounded-lg border px-2 py-2.5 text-center ${stage.active ? 'border-ks-gold bg-ks-gold/10' : stage.complete ? 'border-green-500/40 bg-green-500/5' : 'border-ks-border bg-[#0f0f0d]'}`}>
+                <div className={`text-[8px] uppercase tracking-wider ${stage.active ? 'text-ks-gold' : stage.complete ? 'text-green-500' : 'text-ks-muted'}`}>{stage.complete ? 'complete' : stage.active ? 'current' : 'locked'}</div>
+                <div className="font-display text-[10px] text-ks-ink mt-1">{stage.label}</div>
+              </div>
+              {index < 2 && <div className="flex items-center text-ks-muted text-[10px]">›</div>}
+            </div>
+          ))}
+        </div>
+        <p className="text-[10px] text-ks-muted leading-relaxed mt-2.5">
+          {player.careerClock.phase === 'academy' ? 'Perform in academy competitions, build scout interest and earn a professional contract.' : 'Build a school record through trials, fixtures and representative football. Academy scouting begins at 16 and reviews sustained performances.'}
+        </p>
+      </Section>
+
       <Section title={<span className="flex items-center gap-1"><Icon src={iconGlory} />glory</span>}>
         <GloryCabinet player={player} />
       </Section>
@@ -215,8 +287,9 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
       <Section title="🎖️ trophy cabinet & achievements">
         <AchievementList player={player} />
       </Section>
+      </>}
 
-      <Section title={<span className="flex items-center gap-1"><Icon src={iconCoachNotebook} />coach's notebook</span>}>
+      {view === 'overview' && <><Section title={<span className="flex items-center gap-1"><Icon src={iconCoachNotebook} />coach's notebook</span>}>
         <div className="flex items-center gap-3 mb-2.5">
           <Bar value={(player.coachTrust ?? 0) + 10} max={20} />
           <span className="text-[11px] text-ks-ink w-20 text-right">{trustEmoji(player.coachTrust ?? 0)} {trustLabel(player.coachTrust ?? 0)}</span>
@@ -251,6 +324,7 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
           <p className="text-[11px] text-ks-muted leading-relaxed mt-2">{player.injury.description}</p>
         </Panel>
       )}
+      </>}
     </div>
   )
 }

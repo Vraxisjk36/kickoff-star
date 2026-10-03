@@ -79,7 +79,7 @@ export function buildSeasonReview(
     seasonNumber,
     clubName: player.academyClubName ?? 'your club',
     competitionLabel: world
-      ? isAcademy ? academyDivisionLabel(world.playerDivision as 1 | 2) : divisionLabel(world.playerDivision as 1 | 2 | 3)
+      ? isAcademy ? academyDivisionLabel(world.playerDivision as 1 | 2, player.academyCountryId) : divisionLabel(world.playerDivision as 1 | 2 | 3)
       : 'the season',
     finishPosition,
     teamsInDivision,

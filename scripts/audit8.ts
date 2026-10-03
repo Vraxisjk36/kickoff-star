@@ -238,15 +238,19 @@ console.log('\n[D] STREET GAMES')
 // ---------------------------------------------------------------------------
 console.log('\n[E] the week actually contains mid-week football')
 {
-  let streetWeeks = 0
+  let streetWeeks = 0, schoolStreetWeeks = 0
   const WEEKS = 400
   for (let i = 0; i < WEEKS; i++) {
-    const w = generateWeek(5 + (i % 40), 1, 'grassroots-season', false)
+    const week = 5 + (i % 40)
+    const w = generateWeek(week, 1, 'grassroots-season', false, 'sunday')
     if (w.events.some((e) => e.type === 'street')) streetWeeks++
+    const school = generateWeek(week, 1, 'grassroots-season', false, 'school')
+    if (school.events.some((e) => e.type === 'street')) schoolStreetWeeks++
   }
   const rate = streetWeeks / WEEKS
-  console.log(`    ${(rate * 100).toFixed(0)}% of weeks offer a mid-week game`)
-  check(rate > 0.35 && rate < 0.65, `mid-week football appears often enough to matter, not so often it replaces the season (${(rate * 100).toFixed(0)}%)`)
+  console.log(`    Sunday route ${(rate * 100).toFixed(0)}% · school route ${(schoolStreetWeeks / WEEKS * 100).toFixed(0)}%`)
+  check(rate > 0.35 && rate < 0.65, `Sunday route offers mid-week football on open Thursdays (${(rate * 100).toFixed(0)}%)`)
+  check(schoolStreetWeeks < streetWeeks, 'school match Thursdays take precedence over street games')
 
   // Never on an international week — two midweek games is too much.
   let clash = 0

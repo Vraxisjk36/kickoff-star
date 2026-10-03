@@ -50,6 +50,7 @@ export type GloryCounts<K extends string> = Partial<Record<K, number>>
 export function computeSeasonAwards(
   review: SeasonReview,
   rival: SyntheticScorer | undefined,
+  leagueLeaders?: { playerGoals: number; playerAssists: number; rivalGoals: number; rivalAssists: number },
 ): PersonalGloryKey[] {
   const won: PersonalGloryKey[] = []
 
@@ -57,11 +58,13 @@ export function computeSeasonAwards(
   if (review.appearances >= 15 && review.averageRating >= 7.2) won.push('bestXI')
 
   // Golden Boot: outscored the division's tracked rival striker by season end.
-  if (rival && review.goals > rival.goals) won.push('goldenBoot')
+  if (leagueLeaders ? leagueLeaders.playerGoals > 0 && leagueLeaders.playerGoals > leagueLeaders.rivalGoals
+    : rival && review.goals > rival.goals) won.push('goldenBoot')
 
   // Top Assister: a real creative season — matches the kind of tally a
   // division's best creator would actually put up, not a generous freebie.
-  if (review.assists >= 10 && review.appearances >= 15) won.push('topAssister')
+  if (leagueLeaders ? leagueLeaders.playerAssists > 0 && leagueLeaders.playerAssists > leagueLeaders.rivalAssists
+    : review.assists >= 10 && review.appearances >= 15) won.push('topAssister')
 
   // League MVP: the headline award — grade A season AND team success (won
   // the league or a cup, or was promoted). The individual alone isn't enough;

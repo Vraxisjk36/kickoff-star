@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useCareerStore } from '../store/careerStore'
 import type { LeagueWorld, Division } from '../engine/league'
 import type { AcademyWorld } from '../engine/academy'
 import type { Team } from '../engine/teams'
 import BottomNav from '../components/BottomNav'
+import BroadcastHeader from '../components/BroadcastHeader'
 import { NAV_ITEMS, type HubTab } from '../components/navItems'
 import HomeTab from './tabs/HomeTab'
 import PlayerTab from './tabs/PlayerTab'
@@ -13,11 +14,14 @@ import LeagueTab from './tabs/LeagueTab'
 import ShopTab from './tabs/ShopTab'
 import EnergySheet from '../components/EnergySheet'
 import AchievementCeremony from '../components/AchievementCeremony'
-import ArcVerdictCard from '../components/ArcVerdictCard'
 import SeasonReviewCard from '../components/SeasonReviewCard'
 import HeadlineToast from '../components/HeadlineToast'
 import GazetteScreen from './GazetteScreen'
+import { presentGazetteIssue } from '../engine/gazette'
 import CaptaincyStoryCard from '../components/CaptaincyStoryCard'
+import InboxScreen from './InboxScreen'
+import StoryRevealCard from '../components/StoryRevealCard'
+import YearCalendarScreen from './YearCalendarScreen'
 
 // Phase 10: WeeklyHub is now a shell that hosts six real, routed tabs.
 // Tab state is owned by Career so it survives event resolution (training,
@@ -40,35 +44,52 @@ export default function WeeklyHub({
   const cups = useCareerStore((s) => s.cups)
   const [energyOpen, setEnergyOpen] = useState(false)
   const [gazetteOpen, setGazetteOpen] = useState(false)
+  const [gazettePeekId, setGazettePeekId] = useState<string | null>(null)
+  const [inboxOpen, setInboxOpen] = useState(false)
+  const [yearCalendarOpen, setYearCalendarOpen] = useState(false)
   const pendingAchievements = useCareerStore((s) => s.pendingAchievements)
-  const pendingArcVerdicts = useCareerStore((s) => s.pendingArcVerdicts)
   const pendingSeasonReview = useCareerStore((s) => s.pendingSeasonReview)
   const clearSeasonReview = useCareerStore((s) => s.clearSeasonReview)
-  const clearArcVerdicts = useCareerStore((s) => s.clearArcVerdicts)
   const pendingHeadlines = useCareerStore((s) => s.pendingHeadlines)
   const clearHeadline = useCareerStore((s) => s.clearHeadline)
   const clearPendingAchievements = useCareerStore((s) => s.clearPendingAchievements)
   const clearCaptaincyStory = useCareerStore((s) => s.clearCaptaincyStory)
+  const markStoryRead = useCareerStore((s) => s.markStoryRead)
 
+  const isAcademy = player?.careerClock.phase === 'academy'
+  const offerCount = (player?.contractOffers ?? []).length
+  const activeLabel = NAV_ITEMS.find((n) => n.tab === tab)?.label ?? ''
+  const latestGazette = player?.gazetteIssues?.at(-1) ?? null
+  const latestHeadline = latestGazette && player ? presentGazetteIssue(latestGazette, player, league?.kind === 'school' ? league.divisions[league.playerDivision] : null).masthead : null
+  const unreadStory = (player?.inbox ?? []).find((item) => !item.read) ?? null
+  useEffect(() => {
+    if (!latestGazette || window.localStorage.getItem(`gazette-seen:${latestGazette.id}`)) return
+    setGazettePeekId(latestGazette.id)
+  }, [latestGazette?.id])
+  const dismissGazettePeek = () => {
+    if (latestGazette) window.localStorage.setItem(`gazette-seen:${latestGazette.id}`, '1')
+    setGazettePeekId(null)
+  }
   if (!player || !calendar) {
     return <div className="min-h-screen bg-ks-black flex items-center justify-center text-ks-muted">no active career</div>
   }
 
-  const isAcademy = player.careerClock.phase === 'academy'
-  const offerCount = (player.contractOffers ?? []).length
-  const activeLabel = NAV_ITEMS.find((n) => n.tab === tab)?.label ?? ''
-  const latestGazette = player.gazetteIssues && player.gazetteIssues.length > 0 ? player.gazetteIssues[player.gazetteIssues.length - 1] : null
-
   return (
-    <div className="min-h-screen bg-ks-black flex flex-col">
+    <div className={`hub-shell hub-shell--${tab} min-h-screen bg-ks-black flex flex-col`}>
       {/* tab header — gives every destination a sense of place */}
       <div className="sticky top-0 z-20 bg-ks-black/95 backdrop-blur border-b border-ks-border/50">
         <div className="max-w-md mx-auto w-full px-3 py-2">
           <div className="flex items-center justify-between gap-3"><span className="font-display tracking-widest text-[10px] text-ks-gold uppercase">{activeLabel}</span><button type="button" onClick={onExitToMenu} className="career-menu-button" aria-label="Return to Kickoff Star main menu">☰ <span>MENU</span></button></div>
+          <button type="button" onClick={() => setEnergyOpen(true)} className="mt-2 flex w-full items-center gap-2 text-left" aria-label={`Energy ${Math.round(player.fitness.stamina)} percent. Open recovery details`}>
+            <span className="font-display text-[10px] tracking-wider text-ks-muted">ENERGY</span>
+            <span className="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden"><span className={`block h-full rounded-full transition-all ${player.fitness.stamina < 30 ? 'bg-red-500' : player.fitness.stamina < 50 ? 'bg-orange-400' : 'bg-ks-gold'}`} style={{ width: `${Math.max(0, Math.min(100, player.fitness.stamina))}%` }} /></span>
+            <strong className="text-xs tabular-nums text-ks-ink">{Math.round(player.fitness.stamina)}%</strong>
+          </button>
         </div>
       </div>
 
-      <div className="flex-1 px-3 pt-3 pb-40 flex flex-col gap-2.5 max-w-md mx-auto w-full">
+      <div key={tab} className="hub-content flex-1 px-3 pt-3 pb-40 flex flex-col gap-2.5 max-w-md mx-auto w-full">
+        <BroadcastHeader tab={tab} player={player} team={playerTeam} division={playerDivision} week={calendar.currentWeek.weekNumber} />
         {tab === 'home' && (
           <HomeTab
             player={player}
@@ -79,8 +100,10 @@ export default function WeeklyHub({
             onOpenOffers={onOpenOffers}
             onGoTo={onTabChange}
             onOpenEnergy={() => setEnergyOpen(true)}
-            latestGazetteMasthead={latestGazette?.masthead ?? null}
+            latestGazetteMasthead={latestHeadline}
             onOpenGazette={() => setGazetteOpen(true)}
+            onOpenInbox={() => setInboxOpen(true)}
+            onOpenYearCalendar={() => setYearCalendarOpen(true)}
           />
         )}
         {(tab === 'player' || tab === 'scouts') && <PlayerTab player={player} onOpenOffers={onOpenOffers} />}
@@ -104,19 +127,26 @@ export default function WeeklyHub({
       <BottomNav active={tab} onSelect={onTabChange} badges={{ scouts: offerCount }} />
 
       {energyOpen && <EnergySheet player={player} onClose={() => setEnergyOpen(false)} />}
-      {gazetteOpen && latestGazette && <GazetteScreen issue={latestGazette} onClose={() => setGazetteOpen(false)} />}
+      {gazetteOpen && latestGazette && <GazetteScreen issue={latestGazette} issues={player.gazetteIssues} onClose={() => setGazetteOpen(false)} />}
+      {inboxOpen && <InboxScreen items={player.inbox ?? []} onRead={markStoryRead} onClose={() => setInboxOpen(false)} />}
+      {yearCalendarOpen && <YearCalendarScreen player={player} calendar={calendar} cups={cups} onClose={() => setYearCalendarOpen(false)} />}
+      {latestGazette && gazettePeekId === latestGazette.id && !gazetteOpen && !pendingSeasonReview && !unreadStory && <div className="fixed z-30 bottom-20 left-3 right-3 max-w-md mx-auto rounded-xl border border-ks-gold/60 bg-[#171407] shadow-2xl p-4" role="status">
+        <div className="flex justify-between items-center"><span className="text-ks-gold font-display text-[10px] tracking-widest">THE GAZETTE · WEEK {latestGazette.weekNumber}</span><button onClick={dismissGazettePeek} className="text-ks-muted text-xs" aria-label="Dismiss Gazette headline">✕</button></div>
+        <h2 className="text-ks-ink font-display text-base mt-2">{latestHeadline}</h2>
+        <button className="text-ks-gold text-xs mt-3" onClick={() => { dismissGazettePeek(); setGazetteOpen(true) }}>Read full issue →</button>
+      </div>}
 
       {/* the season review takes precedence — it's the biggest beat of the year */}
       {pendingSeasonReview && (
         <SeasonReviewCard review={pendingSeasonReview} onDismiss={clearSeasonReview} />
       )}
-      {!pendingSeasonReview && player.captaincy?.pendingStory && (
+      {!pendingSeasonReview && unreadStory && (
+        <StoryRevealCard moment={unreadStory} onDismiss={() => markStoryRead(unreadStory.id)} />
+      )}
+      {!pendingSeasonReview && !unreadStory && player.captaincy?.pendingStory && (
         <CaptaincyStoryCard story={player.captaincy.pendingStory} onDismiss={clearCaptaincyStory} />
       )}
-      {!pendingSeasonReview && !player.captaincy?.pendingStory && pendingArcVerdicts.length > 0 && (
-        <ArcVerdictCard queue={pendingArcVerdicts} onDismiss={() => clearArcVerdicts()} />
-      )}
-      {!pendingSeasonReview && !player.captaincy?.pendingStory && pendingArcVerdicts.length === 0 && pendingAchievements.length > 0 && (
+      {!pendingSeasonReview && !unreadStory && !player.captaincy?.pendingStory && pendingAchievements.length > 0 && (
         <AchievementCeremony queue={pendingAchievements} onDismiss={clearPendingAchievements} />
       )}
 

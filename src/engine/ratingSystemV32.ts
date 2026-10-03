@@ -28,15 +28,20 @@ export function calculatePlayerRating(args:{
 }):RatingBreakdown {
   const {position,stats}=args
   const minutes=Math.max(1,args.minutes)
-  const scale=clamp(minutes/90,.25,1)
   const base=6
 
   // Calibrated to the measured ~5 playable moments per match. Average quality
   // is used so FB's higher moment frequency cannot farm rating.
-  const decisions=args.ratedMoments ? clamp((args.decisionQuality-.50)*1.8,-.90,.90) : 0
+  // A merely available option is not automatically a positive. The player
+  // earns credit by consistently choosing near the best read for the exact
+  // situation; middling choices sit close to neutral.
+  const decisions=args.ratedMoments ? clamp((args.decisionQuality-.62)*1.45,-.85,.65) : 0
   const execution=args.ratedMoments ? clamp((args.executionQuality-.60)*1.0,-.45,.40) : 0
 
-  let attacking=Math.min(1.35,stats.goals*.45)+Math.min(.96,stats.assists*.32)
+  // Goals and assists happened while the player was on the pitch. Their raw
+  // counts already reflect a shorter appearance, so multiplying by minutes
+  // again made an excellent substitute cameo worth almost nothing.
+  let attacking=Math.min(3.40,stats.goals*.85)+Math.min(1.35,stats.assists*.45)
   let defending=0
   let background=0
   let cleanSheet=0
@@ -76,25 +81,25 @@ export function calculatePlayerRating(args:{
     defending-=Math.min(.65,(stats.goalsConceded-2)*.16)
   }
 
-  // Rare 9+ route: only exceptional combinations qualify.
+  // A hat-trick is an exceptional result. A 10 still needs strong choices,
+  // execution or all-round play; it is no longer mathematically out of reach.
   let exceptional=0
   const direct=stats.goals+stats.assists
-  if(stats.goals>=3) exceptional+=.55
-  else if(stats.goals>=2&&direct>=3) exceptional+=.35
-  else if(direct>=3) exceptional+=.22
+  if(stats.goals>=3) exceptional+=.80
+  else if(stats.goals>=2&&direct>=3) exceptional+=.45
+  else if(direct>=3) exceptional+=.30
 
   if(position==='GK'&&stats.saves>=7&&stats.goalsConceded===0) exceptional+=.45
   if((position==='CB'||position==='FB')&&stats.goalsConceded===0&&(stats.tacklesWon+stats.interceptions+stats.blocks+stats.headersWon)>=8){
-    exceptional+=.55
+    exceptional+=.85
   }
-  exceptional=Math.min(.65,exceptional)*scale
+  exceptional=Math.min(1.20,exceptional)
 
   const discipline=-(args.redCarded?.55:0)-Math.min(.24,(args.yellowCards??0)*.12)
 
-  background=clamp(background,-.25,.65)*scale
-  attacking*=scale
-  defending*=scale
-  cleanSheet*=scale
+  // Background and defensive statistics are generated for the actual minutes
+  // played, so another minutes multiplier would punish substitutes twice.
+  background=clamp(background,-.25,.65)
 
   const total=Number(clamp(base+decisions+execution+attacking+defending+background+cleanSheet+exceptional+discipline,1,10).toFixed(1))
   return {base,decisions,execution,attacking,defending,background,cleanSheet,exceptional,discipline,total}

@@ -39,7 +39,20 @@ export function optionChance(player: Player, o: MomentOption, tier: string): num
   const risk = 1 - o.baseCeiling
   const mentalMod = 1 + (player.confidence.value / 50) * (0.4 + risk * 0.6)
   const tierMod = tier === 'clear' ? 1.08 : tier === 'good' ? 1.0 : 0.90
-  return clamp(o.baseCeiling * attrMod * mentalMod * tierMod, 0.08, 0.96)
+  // A trained skill has to reward its matching action specifically. Averaging
+  // Shooting with Composure/Agility gave a ten-level gap only a small nudge,
+  // while safer passing options offered frequent assists. The youth baseline
+  // remains intact; developed skills above level 5 add to the relevant roll.
+  const specialistBonuses: Partial<Record<AnyAttribute, number>> = {
+    shooting: 0.18, tackling: 0.14, reflexes: 0.12,
+    passing: 0.10, dribbling: 0.10,
+  }
+  // One specialist benefit per choice, using its strongest trained skill.
+  // This rewards a practiced action without stacking passing+dribbling on
+  // the same option or penalising a new player's low starting attributes.
+  const specialistBonus = Math.max(0, ...o.keyAttributes.map(attr =>
+    clamp((attrValue(player, attr) - 5) / 10, 0, 1) * (specialistBonuses[attr] ?? 0)))
+  return clamp(o.baseCeiling * attrMod * mentalMod * tierMod + specialistBonus, 0.08, 0.96)
 }
 
 function chanceLabel(chance: number): string {
@@ -92,6 +105,17 @@ const DEF_POOL: MomentOption[] = [
   { label: 'slide tackle', hint: 'all or nothing', baseCeiling: 0.5, keyAttributes: ['tackling', 'agility'], reward: 3 },
   { label: 'jockey and delay', hint: 'buy time for cover', baseCeiling: 0.75, keyAttributes: ['positioning', 'concentration'], reward: 2 },
   { label: 'shepherd wide', hint: 'safe', baseCeiling: 0.82, keyAttributes: ['positioning', 'pace'], reward: 1 },
+]
+
+const ROUTINE_ATTACK: MomentOption[] = [
+  { label: 'keep possession', hint: 'find the simple pass', baseCeiling: .86, keyAttributes: ['passing', 'vision'], reward: 1 },
+  { label: 'carry into space', hint: 'move the defence', baseCeiling: .68, keyAttributes: ['dribbling', 'pace'], reward: 2 },
+  { label: 'switch the play', hint: 'move it forward', baseCeiling: .62, keyAttributes: ['passing', 'vision'], reward: 3 },
+]
+const ROUTINE_DEFEND: MomentOption[] = [
+  { label: 'hold your position', hint: 'block the passing lane', baseCeiling: .84, keyAttributes: ['positioning', 'concentration'], reward: 1 },
+  { label: 'press the ball', hint: 'close down quickly', baseCeiling: .68, keyAttributes: ['tackling', 'pace'], reward: 2 },
+  { label: 'step in early', hint: 'win possession', baseCeiling: .56, keyAttributes: ['tackling', 'positioning'], reward: 3 },
 ]
 
 const ATT_POOLS: Record<string, MomentOption[]> = {
@@ -152,6 +176,16 @@ export function momentToDecision(player: Player, moment: KeyMoment, meta: string
         ],
       },
       rewards: [1, 1], maxReward: 1, ceilings: [1, 1], keyAttributes: [[], []],
+    }
+  }
+
+  if (moment.isRoutine) {
+    const pool = moment.isDistribution ? GK_DISTRIBUTION_POOL : moment.isDefensive ? ROUTINE_DEFEND : ROUTINE_ATTACK
+    return {
+      decision: { id: id(), context: player.position === 'GK' ? 'gk' : 'match', situation: moment.situation, meta,
+        options: buildOptions(player, pool, 'half') },
+      rewards: pool.map(o => o.reward), maxReward: Math.max(...pool.map(o => o.reward)),
+      ceilings: pool.map(o => o.baseCeiling), keyAttributes: pool.map(o => o.keyAttributes),
     }
   }
 

@@ -1,3 +1,5 @@
+import { academyRecruitmentReport } from '../../engine/academyRecruitment'
+import { useCareerStore } from '../../store/careerStore'
 import type { Player } from '../../types/player'
 import { reputationLabel } from '../../engine/scouting'
 import { Panel, Bar, EmptyNote, Icon } from '../../components/ui'
@@ -13,6 +15,8 @@ const TIER_STYLE: Record<string, string> = {
 const OFFER_THRESHOLD = 78 // matches checkForOffers() in scouting.ts
 
 export default function ScoutsTab({ player, onOpenOffers }: { player: Player; onOpenOffers: () => void }) {
+  const calendar = useCareerStore(s => s.calendar)
+  const review = academyRecruitmentReport(player, calendar)
   const watchers = player.scoutWatchers ?? []
   const offers = player.contractOffers ?? []
   const isAcademy = player.careerClock.phase === 'academy'
@@ -20,6 +24,7 @@ export default function ScoutsTab({ player, onOpenOffers }: { player: Player; on
   return (
     <div className="scouting-centre flex flex-col gap-2.5">
       <section className="scout-hero"><div className="scout-radar"/><small>RECRUITMENT NETWORK</small><h2>SCOUTING CENTRE</h2><p>{watchers.length ? `${watchers.length} club${watchers.length===1?'':'s'} tracking your progress` : 'Your performances build your market'}</p><div className="scout-rep"><span>REPUTATION</span><b>{Math.round(player.reputation ?? 5)}</b><i>{reputationLabel(player.reputation ?? 5)}</i></div></section>
+      {!isAcademy && <Panel title="academy pathway"><p className="text-[11px] text-ks-ink">Scouting starts at 16. Invitations open each October, from your third year.</p><p className="text-[10px] text-ks-muted mt-2">Clubs review the previous two seasons and this year, then make repeated visits. A trial and scholarship talks follow a successful invitation.</p><p className="text-[10px] text-ks-gold mt-2">{review.appearances} matches reviewed · {review.average.toFixed(2)} average · {review.completedSeasons}/2 completed seasons with 10+ appearances</p><p className="text-[10px] text-ks-muted mt-2">{review.reasons[0] ?? 'Your record meets the October review standard. Individual clubs still need enough scouting visits and interest.'}</p></Panel>}
       {offers.length > 0 && (
         <button
           onClick={onOpenOffers}
@@ -46,7 +51,7 @@ export default function ScoutsTab({ player, onOpenOffers }: { player: Player; on
       <div className="home-section-label"><span>CLUB INTEREST</span><i/></div>
       <Panel title={`clubs watching — ${watchers.length}`}>
         {watchers.length === 0 ? (
-          <EmptyNote>No clubs watching you yet. Strong match ratings are what gets a scout in the stands.</EmptyNote>
+          <EmptyNote>{player.careerClock.ageYears < 16 ? 'Academy scouts begin watching at 16. Your school performances now build the record they will review later.' : 'No clubs watching yet. Keep building a consistent record.'}</EmptyNote>
         ) : (
           <div className="flex flex-col gap-2.5">
             {watchers.map((w) => (
@@ -69,7 +74,7 @@ export default function ScoutsTab({ player, onOpenOffers }: { player: Player; on
         )}
         {watchers.length > 0 && (
           <p className="text-[10px] text-ks-muted mt-2.5 pt-2 border-t border-ks-border/40">
-            A club makes an offer once its interest reaches {OFFER_THRESHOLD}.
+            {isAcademy ? `A club can offer a professional contract at 17 with interest of ${OFFER_THRESHOLD}.` : `Academy trials need ${OFFER_THRESHOLD} interest, at least 6 scouting visits in separate weeks, and a qualifying October review.`}
           </p>
         )}
       </Panel>
@@ -79,7 +84,7 @@ export default function ScoutsTab({ player, onOpenOffers }: { player: Player; on
         <EmptyNote>
           {isAcademy
             ? 'You\'re in an academy now — offers from here are genuine professional contracts. Signing one ends your youth career and turns you pro.'
-            : 'Offers at this stage are academy invitations, not pro contracts. Taking one moves you into an academy; holding out risks the offer expiring.'}
+            : 'An academy invitation earns a trial. Pass it, then agree a scholarship before moving clubs. Invitations expire if you leave them unanswered.'}
         </EmptyNote>
       </Panel>
     </div>

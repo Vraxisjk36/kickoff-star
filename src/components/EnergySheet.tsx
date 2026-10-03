@@ -33,7 +33,7 @@ export default function EnergySheet({ player, onClose }: { player: Player; onClo
       <div className="absolute inset-0 bg-black/70" />
       <div
         className="relative w-full max-w-md mx-auto bg-[#0f0f0d] border-t border-ks-border rounded-t-2xl px-4 pt-4"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
+        style={{ paddingBottom: 'calc(var(--safe-bottom) + 1rem)' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="w-10 h-1 rounded-full bg-ks-border mx-auto mb-4" />

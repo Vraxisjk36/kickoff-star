@@ -10,13 +10,14 @@ function zonesFor(tier: number, isAcademy: boolean): { promo: number; rel: numbe
   return { promo: tier > 1 ? 2 : 0, rel: tier < 3 ? 2 : 0 }
 }
 
-export default function StandingsTable({ division, playerTeamId, isAcademy = false }: {
+export default function StandingsTable({ division, playerTeamId, isAcademy = false, hideZones = false }: {
   division: Division
   playerTeamId: string
   isAcademy?: boolean
+  hideZones?: boolean
 }) {
   const sorted = sortStandings(division.standings)
-  const { promo, rel } = zonesFor(division.tier, isAcademy)
+  const { promo, rel } = hideZones ? { promo: 0, rel: 0 } : zonesFor(division.tier, isAcademy)
 
   return (
     <>

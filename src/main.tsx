@@ -6,6 +6,9 @@ import './ui-refresh.css'
 import './visual-overhaul.css'
 import App from './App.tsx'
 import ErrorBoundary from './components/ErrorBoundary'
+import { Capacitor } from '@capacitor/core'
+
+if (Capacitor.getPlatform() === 'android') document.documentElement.classList.add('native-android')
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

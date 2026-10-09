@@ -3,9 +3,9 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/kickoff_logo"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@drawable/kickoff_logo"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
@@ -36,20 +36,10 @@
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
 
-        <!-- P64 — AdMob requires this exact meta-data tag with a real,
-             APP-SPECIFIC Application ID (format ca-app-pub-XXXXXXXXXX~YYYYYYYYYY)
-             — this is DIFFERENT from the account-level Publisher ID
-             (pub-5886721718793058) already confirmed. Joel needs to
-             register this specific app in the AdMob dashboard to get the
-             real one. Using Google's official public TEST Application ID
-             here for now — documented safe placeholder, ads will show as
-             clearly-labeled test ads until this is swapped for the real
-             ID, never swap this for a real ID without also using real ad
-             unit IDs (mixing test/real IDs can get an AdMob account
-             flagged). -->
+        <!-- App-specific AdMob ID; rewarded ad units are in src/engine/ads.ts. -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+            android:value="ca-app-pub-5886721718793058~3518024822" />
     </application>
 
     <!-- Permissions -->

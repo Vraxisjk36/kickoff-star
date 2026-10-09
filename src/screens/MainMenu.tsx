@@ -51,10 +51,7 @@ export default function MainMenu({ onNewCareer, onContinue, onLoadCareer, onOpen
       <div className="relative z-10 min-h-screen flex flex-col justify-between px-6 md:px-16 py-8 max-w-2xl main-stage-content">
         <div>
           <div className="text-[11px] tracking-[0.3em] text-ks-muted uppercase mb-5">the journey starts here</div>
-          <div style={{ filter: 'drop-shadow(0 0 30px rgba(212,175,55,0.3))' }} className="mb-5 main-stage-title">
-            <div className="font-display font-black text-5xl md:text-6xl tracking-wide leading-none text-ks-gold">KICKOFF</div>
-            <div className="font-display font-black text-5xl md:text-6xl tracking-wide leading-none text-ks-ink">STAR</div>
-          </div>
+          <img src="./kickoff-logo.jpg" alt="Kickoff Star" className="mb-5 w-[min(48vw,220px)] aspect-square object-contain main-stage-title" />
           <div className="text-[11px] text-ks-muted uppercase tracking-[0.15em]">from school football to a pro contract</div>
         </div>
 
@@ -83,7 +80,7 @@ export default function MainMenu({ onNewCareer, onContinue, onLoadCareer, onOpen
           <div className="max-w-xs mb-6 text-ks-ink italic">“Every legend started somewhere.”</div>
           <div className="flex items-center justify-between pt-4 border-t border-ks-border/40 max-w-md">
             <span className="text-ks-muted text-[10px] tracking-wider">PHASE 1 COMPLETE</span>
-            <span className="text-ks-muted text-[10px] tracking-wider">V5.6 · RELEASE</span>
+            <span className="text-ks-muted text-[10px] tracking-wider">V5.7 · RELEASE</span>
           </div>
         </div>
       </div>

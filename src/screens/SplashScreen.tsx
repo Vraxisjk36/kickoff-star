@@ -29,10 +29,7 @@ export default function SplashScreen({ onDone }: { onDone: () => void }) {
         style={{ background: 'radial-gradient(ellipse at center, rgba(212,175,55,0.12), transparent 60%)' }}
       />
 
-      <div className="relative flex flex-col items-center animate-[fadeInUp_1s_ease-out]" style={{ filter: 'drop-shadow(0 0 40px rgba(212,175,55,0.35))' }}>
-        <div className="font-display font-black text-5xl md:text-6xl tracking-wide leading-none text-ks-gold">KICKOFF</div>
-        <div className="font-display font-black text-5xl md:text-6xl tracking-wide leading-none text-ks-ink">STAR</div>
-      </div>
+      <img src="./kickoff-logo.jpg" alt="Kickoff Star" className="relative w-[min(72vw,320px)] aspect-square object-contain animate-[fadeInUp_1s_ease-out]" />
 
       <div className="relative mt-10 w-48 h-1 rounded-full bg-[#1a1a17] overflow-hidden">
         <div

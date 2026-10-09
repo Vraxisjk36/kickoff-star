@@ -11,13 +11,8 @@
 //   - cash: alongside existing odd-jobs/allowance
 //   - xp: a small post-session/post-match boost
 //
-// AD UNIT IDs BELOW ARE GOOGLE'S OFFICIAL PUBLIC TEST IDS — safe, documented
-// placeholders (https://developers.google.com/admob/android/test-ads).
-// Every real ad currently shown is clearly labeled "Test Ad" by Google.
-// Swap AD_UNIT_IDS for the 3 real ones once they exist in the AdMob
-// dashboard — do NOT flip isTesting to false without doing that first, a
-// live App ID paired with test ad unit IDs (or vice versa) can get an
-// AdMob account flagged.
+// Production placements provisioned for this app. Use registered test devices
+// in AdMob when personally testing ads on a Play release.
 import { AdMob, RewardAdPluginEvents, type AdMobRewardItem } from '@capacitor-community/admob'
 import { Capacitor } from '@capacitor/core'
 
@@ -29,15 +24,12 @@ export function rewardedAdsAvailable(): boolean {
 }
 
 const AD_UNIT_IDS: Record<AdPlacement, string> = {
-  // TESTING PHASE: using Google's official test ad unit IDs to avoid
-  // AdMob invalid-traffic flags from concentrated tester activity.
-  // Swap back to real IDs (see git history) before public launch.
-  energy: 'ca-app-pub-3940256099942544/5224354917',
-  cash: 'ca-app-pub-3940256099942544/5224354917',
-  xp: 'ca-app-pub-3940256099942544/5224354917',
+  energy: 'ca-app-pub-5886721718793058/3165887211',
+  cash: 'ca-app-pub-5886721718793058/4997989428',
+  xp: 'ca-app-pub-5886721718793058/8882032143',
 }
 
-const IS_TESTING = true // flip to false only once real ad unit IDs are wired in above
+const IS_TESTING = false
 
 const DAILY_CAP = 5
 const STORAGE_KEY = 'ks-ad-watch-log'
@@ -56,7 +48,8 @@ function readLog(): WatchLog {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw) as WatchLog
-      if (parsed.date === todayKey()) return parsed
+      if (parsed.date === todayKey() && parsed.counts &&
+          ['energy', 'cash', 'xp'].every((key) => Number.isFinite(parsed.counts[key as AdPlacement]))) return parsed
     }
   } catch {
     // corrupt/missing log — start fresh rather than block the player
@@ -96,10 +89,9 @@ export async function watchRewardedAd(placement: AdPlacement): Promise<AdMobRewa
   if (remainingToday(placement) <= 0) return null
   if (!Capacitor.isNativePlatform()) return null // no native ad SDK in a plain browser
 
-  await ensureInitialized()
-  const adId = AD_UNIT_IDS[placement]
-
   try {
+    await ensureInitialized()
+    const adId = AD_UNIT_IDS[placement]
     await AdMob.prepareRewardVideoAd({ adId, isTesting: IS_TESTING })
     const result: AdMobRewardItem = await new Promise((resolve, reject) => {
       let settled = false

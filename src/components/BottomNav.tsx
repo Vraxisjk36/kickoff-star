@@ -17,7 +17,7 @@ export default function BottomNav({ active, onSelect, badges }: {
 
   return (
     <nav aria-label="Career navigation"
-      className="fixed bottom-0 left-0 right-0 max-w-md mx-auto w-full z-30"
+      className="fixed bottom-0 left-0 right-0 max-w-md mx-auto w-full z-30 bg-[#0c0c0a]"
       style={{ paddingBottom: 'var(--safe-bottom)' }}
     >
       {/* fade so content scrolls out under the bar rather than hitting a hard edge */}

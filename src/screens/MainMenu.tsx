@@ -80,7 +80,7 @@ export default function MainMenu({ onNewCareer, onContinue, onLoadCareer, onOpen
           <div className="max-w-xs mb-6 text-ks-ink italic">“Every legend started somewhere.”</div>
           <div className="flex items-center justify-between pt-4 border-t border-ks-border/40 max-w-md">
             <span className="text-ks-muted text-[10px] tracking-wider">PHASE 1 COMPLETE</span>
-            <span className="text-ks-muted text-[10px] tracking-wider">V5.7 · RELEASE</span>
+            <span className="text-ks-muted text-[10px] tracking-wider">V5.8 · RELEASE</span>
           </div>
         </div>
       </div>

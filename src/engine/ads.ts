@@ -24,9 +24,9 @@ export function rewardedAdsAvailable(): boolean {
 }
 
 const AD_UNIT_IDS: Record<AdPlacement, string> = {
-  energy: 'ca-app-pub-5886721718793058/3165887211',
-  cash: 'ca-app-pub-5886721718793058/4997989428',
-  xp: 'ca-app-pub-5886721718793058/8882032143',
+  energy: 'ca-app-pub-5886721718793058/8562570543',
+  cash: 'ca-app-pub-5886721718793058/9192202496',
+  xp: 'ca-app-pub-5886721718793058/8065903214',
 }
 
 const IS_TESTING = false

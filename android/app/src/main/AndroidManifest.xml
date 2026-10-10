@@ -39,7 +39,7 @@
         <!-- App-specific AdMob ID; rewarded ad units are in src/engine/ads.ts. -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-5886721718793058~3518024822" />
+            android:value="ca-app-pub-5886721718793058~8196645592" />
     </application>
 
     <!-- Permissions -->

@@ -28,6 +28,7 @@ const AD_UNIT_IDS: Record<AdPlacement, string> = {
   cash: 'ca-app-pub-5886721718793058/9192202496',
   xp: 'ca-app-pub-5886721718793058/8065903214',
 }
+const SEASON_INTERSTITIAL_ID = 'ca-app-pub-5886721718793058/8649277016'
 
 const IS_TESTING = false
 
@@ -71,11 +72,32 @@ export function remainingToday(placement: AdPlacement): number {
   return Math.max(0, DAILY_CAP - log.counts[placement])
 }
 
-let initialized = false
+let initialization: Promise<void> | null = null
 async function ensureInitialized() {
-  if (initialized || !Capacitor.isNativePlatform()) return
-  await AdMob.initialize({ initializeForTesting: IS_TESTING })
-  initialized = true
+  if (!Capacitor.isNativePlatform()) return
+  if (!initialization) initialization = AdMob.initialize({ initializeForTesting: IS_TESTING }).then(() => {}).catch(error => {
+    initialization = null
+    throw error
+  })
+  await initialization
+}
+
+/** One non-rewarded ad at each season break, per career. Never interrupts a match. */
+export async function showSeasonInterstitial(playerId: string, season: number, breakPoint: 'mid' | 'end'): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return
+  const key = `ks-season-ad:${playerId}:${season}:${breakPoint}`
+  try {
+    if (localStorage.getItem(key)) return
+    // Claim before loading to avoid a second request on remount or rapid taps.
+    localStorage.setItem(key, '1')
+  } catch { return }
+  try {
+    await ensureInitialized()
+    await AdMob.prepareInterstitial({ adId: SEASON_INTERSTITIAL_ID, isTesting: IS_TESTING })
+    await AdMob.showInterstitial()
+  } catch (error) {
+    console.warn('[kickoff-star] season ad unavailable', error)
+  }
 }
 
 /**

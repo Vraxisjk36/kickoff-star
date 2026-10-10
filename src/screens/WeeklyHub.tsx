@@ -23,6 +23,7 @@ import InboxScreen from './InboxScreen'
 import StoryRevealCard from '../components/StoryRevealCard'
 import YearCalendarScreen from './YearCalendarScreen'
 import { useTranslate } from '../i18n'
+import { showSeasonInterstitial } from '../engine/ads'
 
 // Phase 10: WeeklyHub is now a shell that hosts six real, routed tabs.
 // Tab state is owned by Career so it survives event resolution (training,
@@ -64,6 +65,12 @@ export default function WeeklyHub({
   const latestGazette = player?.gazetteIssues?.at(-1) ?? null
   const latestHeadline = latestGazette && player ? presentGazetteIssue(latestGazette, player, league?.kind === 'school' ? league.divisions[league.playerDivision] : null).masthead : null
   const unreadStory = (player?.inbox ?? []).find((item) => !item.read) ?? null
+  useEffect(() => {
+    if (!player || !calendar || calendar.currentWeek.weekNumber !== 23 || pendingSeasonReview || unreadStory) return
+    // Week 23 is the first week after the 44-week season's halfway point.
+    const timer = window.setTimeout(() => { void showSeasonInterstitial(player.id, calendar.currentWeek.seasonYear, 'mid') }, 600)
+    return () => window.clearTimeout(timer)
+  }, [player?.id, calendar?.currentWeek.seasonYear, calendar?.currentWeek.weekNumber, pendingSeasonReview, unreadStory?.id])
   useEffect(() => {
     if (!latestGazette || window.localStorage.getItem(`gazette-seen:${latestGazette.id}`)) return
     setGazettePeekId(latestGazette.id)
@@ -140,7 +147,11 @@ export default function WeeklyHub({
 
       {/* the season review takes precedence — it's the biggest beat of the year */}
       {pendingSeasonReview && (
-        <SeasonReviewCard review={pendingSeasonReview} onDismiss={clearSeasonReview} />
+        <SeasonReviewCard review={pendingSeasonReview} onDismiss={() => {
+          const finishedSeason = calendar.currentWeek.seasonYear - 1
+          clearSeasonReview()
+          void showSeasonInterstitial(player.id, finishedSeason, 'end')
+        }} />
       )}
       {!pendingSeasonReview && unreadStory && (
         <StoryRevealCard moment={unreadStory} onDismiss={() => markStoryRead(unreadStory.id)} />

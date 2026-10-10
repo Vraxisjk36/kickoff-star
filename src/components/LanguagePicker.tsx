@@ -1,4 +1,5 @@
 import { LANGUAGES, setLanguage, useLanguage, useTranslate } from '../i18n'
+import { supportsLiveTranslation } from '../engine/liveTranslation'
 
 export default function LanguagePicker() {
   const language = useLanguage()
@@ -10,7 +11,7 @@ export default function LanguagePicker() {
       <select id="game-language" value={language} onChange={(event) => setLanguage(event.target.value as typeof language)} className="w-full min-h-12 rounded-xl border border-ks-border bg-[#191915] text-ks-ink px-4">
         {LANGUAGES.map(({ code, name }) => <option key={code} value={code}>{name}</option>)}
       </select>
-      {language !== 'en' && <p className="text-xs text-ks-muted mt-3">{t('Career events and Gazette stories are currently in English.')}</p>}
+      {language !== 'en' && !supportsLiveTranslation() && <p className="text-xs text-ks-muted mt-3">{t('Career events and Gazette stories are currently in English.')}</p>}
     </section>
   )
 }

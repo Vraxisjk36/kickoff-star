@@ -151,6 +151,16 @@ const translations: Record<Exclude<Language, 'en'>, Record<string, string>> = {
 export function translate(value: string): string {
   return language === 'en' ? value : (translations[language][value] ?? value)
 }
+export function isManualTranslation(value: string): boolean {
+  return language !== 'en' && Object.values(translations[language]).includes(value.trim())
+}
+export function englishSourceFor(value: string): string {
+  for (const dictionary of Object.values(translations)) {
+    const entry = Object.entries(dictionary).find(([, translated]) => translated === value.trim())
+    if (entry) return entry[0]
+  }
+  return value
+}
 export function useTranslate() {
   useLanguage()
   return translate

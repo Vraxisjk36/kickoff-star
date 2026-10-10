@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import SplashScreen from './screens/SplashScreen'
+import LanguageSelect from './screens/LanguageSelect'
 import MainMenu from './screens/MainMenu'
 import PlayerCreation from './screens/PlayerCreation'
 import StoryIntro from './screens/StoryIntro'
@@ -15,14 +16,17 @@ import { listSaves, type SaveSlotId } from './engine/save'
 import type { School } from './engine/schools'
 import type { SquadRole } from './engine/trials'
 import { installMusicLifecycle, pauseMusic } from './engine/music'
+import { useLanguage } from './i18n'
+import { observeTranslation, prepareTranslation, supportsLiveTranslation } from './engine/liveTranslation'
 
-type Screen = 'splash' | 'menu' | 'create' | 'story' | 'school' | 'trials' | 'career' | 'settings' | 'credits' | 'help' | 'load'
+type Screen = 'splash' | 'language' | 'menu' | 'create' | 'story' | 'school' | 'trials' | 'career' | 'settings' | 'credits' | 'help' | 'load'
 
 // Native-shell validation touch: navigation contract is intentionally centralized here.
-const SCREEN_VALUES: Screen[] = ['splash', 'menu', 'create', 'story', 'school', 'trials', 'career', 'settings', 'credits', 'help', 'load']
+const SCREEN_VALUES: Screen[] = ['splash', 'language', 'menu', 'create', 'story', 'school', 'trials', 'career', 'settings', 'credits', 'help', 'load']
 const isScreen = (value: unknown): value is Screen => typeof value === 'string' && SCREEN_VALUES.includes(value as Screen)
 
 export default function App() {
+  const language = useLanguage()
   const [screen, setScreen] = useState<Screen>('splash')
   const [chosenSchool, setChosenSchool] = useState<School | null>(null)
   const screenRef = useRef<Screen>(screen)
@@ -57,6 +61,16 @@ export default function App() {
       removeMusicLifecycle()
     }
   }, [])
+
+  useEffect(() => {
+    if (!supportsLiveTranslation() || language === 'en' || screen === 'splash' || screen === 'language') return
+    let stopped = false
+    let stopObserver: (() => void) | undefined
+    void prepareTranslation(language).then(() => {
+      if (!stopped) stopObserver = observeTranslation(document.getElementById('root')!, language)
+    }).catch(error => console.warn('[kickoff-star] language pack unavailable', error))
+    return () => { stopped = true; stopObserver?.() }
+  }, [language, screen])
 
   const navigate = (next: Screen) => {
     window.history.pushState({ screen: next }, '')
@@ -108,7 +122,8 @@ export default function App() {
     replace('career')
   }
 
-  if (screen === 'splash') return <SplashScreen onDone={() => replace('menu')} />
+  if (screen === 'splash') return <SplashScreen onDone={() => replace('language')} />
+  if (screen === 'language') return <LanguageSelect onContinue={() => replace('menu')} />
   if (screen === 'menu') {
     return (
       <MainMenu

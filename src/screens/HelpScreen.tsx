@@ -1,5 +1,7 @@
 interface Props { onBack: () => void }
 import { useTranslate } from '../i18n'
+import { useLanguage } from '../i18n'
+import { supportsLiveTranslation } from '../engine/liveTranslation'
 
 const tips = [
   ['Energy', 'Normal play should be sustainable. Rest before you are completely drained; recovery items are for emergencies, not mandatory progression.'],
@@ -10,6 +12,7 @@ const tips = [
 
 export default function HelpScreen({ onBack }: Props) {
   const t = useTranslate()
+  const language = useLanguage()
   return (
     <main className="min-h-screen bg-ks-black text-ks-ink px-5 py-6">
       <div className="max-w-xl mx-auto">
@@ -36,6 +39,10 @@ export default function HelpScreen({ onBack }: Props) {
             </section>
           ))}
         </div>
+        {supportsLiveTranslation() && language !== 'en' && <section className="mt-6 text-xs text-ks-muted leading-relaxed" data-no-translate>
+          <p>Career text is automatically translated by Google Translate. Translations may contain mistakes. <a className="text-ks-gold underline" href="https://translate.google.com/" target="_blank" rel="noopener noreferrer">Google Translate ↗</a></p>
+          <p className="mt-2">THIS SERVICE MAY CONTAIN TRANSLATIONS POWERED BY GOOGLE. GOOGLE DISCLAIMS ALL WARRANTIES RELATED TO THE TRANSLATIONS, EXPRESS OR IMPLIED, INCLUDING ANY WARRANTIES OF ACCURACY, RELIABILITY, AND ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.</p>
+        </section>}
       </div>
     </main>
   )

@@ -5,18 +5,20 @@
 // chunkier icons.
 
 import { NAV_ITEMS, type HubTab } from './navItems'
+import { useTranslate } from '../i18n'
 
 export default function BottomNav({ active, onSelect, badges }: {
   active: HubTab
   onSelect: (tab: HubTab) => void
   badges?: Partial<Record<HubTab, number>>
 }) {
+  const t = useTranslate()
   // 'scouts' and 'table' are routable destinations that live inside another
   // tab's screen — light up the tab that actually renders them.
   const activeTab: HubTab = active === 'scouts' ? 'player' : active === 'table' ? 'fixtures' : active
 
   return (
-    <nav aria-label="Career navigation"
+    <nav aria-label={t('Career navigation')}
       className="fixed bottom-0 left-0 right-0 max-w-md mx-auto w-full z-30 bg-[#0c0c0a]"
       style={{ paddingBottom: 'var(--safe-bottom)' }}
     >
@@ -44,7 +46,7 @@ export default function BottomNav({ active, onSelect, badges }: {
                 >
                   {item.icon}
                 </span>
-                <span className={`text-[8px] tracking-wide ${isActive ? 'font-display' : ''}`}>{item.label}</span>
+                <span className={`text-[8px] tracking-wide ${isActive ? 'font-display' : ''}`}>{t(item.label)}</span>
 
                 {/* active indicator */}
                 <span

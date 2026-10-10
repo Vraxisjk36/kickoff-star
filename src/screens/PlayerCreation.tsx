@@ -10,6 +10,7 @@ import { NATIONS } from '../engine/nations'
 import { regionsFor } from '../engine/regions'
 import { ARCHETYPES, archetypeAttributeDeltas, getArchetype } from '../engine/archetypes'
 import Avatar, { AVATAR_IMAGES } from '../components/Avatar'
+import { useTranslate } from '../i18n'
 
 const POSITIONS: { code: Position; name: string }[] = [
   { code: 'GK', name: 'Goalkeeper' },
@@ -79,6 +80,7 @@ function buildInitialCalendar(): CalendarState {
 }
 
 export default function PlayerCreation({ onComplete, onBack }: { onComplete: () => void; onBack: () => void }) {
+  const t = useTranslate()
   const [step, setStep] = useState(0)
   const [name, setName] = useState('')
   const [position, setPosition] = useState<Position | null>(null)
@@ -115,7 +117,7 @@ export default function PlayerCreation({ onComplete, onBack }: { onComplete: () 
 
       {/* top bar */}
       <div className="relative z-10 flex items-center justify-between px-6 pt-6">
-        <button onClick={() => (step === 0 ? onBack() : setStep(step - 1))} className="text-ks-muted text-sm">← back</button>
+        <button onClick={() => (step === 0 ? onBack() : setStep(step - 1))} className="text-ks-muted text-sm">← {t('back')}</button>
         <div className="flex gap-1.5">
           {[0, 1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className={`h-1 rounded-full transition-all ${i === step ? 'w-6 bg-ks-gold' : i < step ? 'w-3 bg-ks-gold/50' : 'w-3 bg-ks-border'}`} />
@@ -126,23 +128,23 @@ export default function PlayerCreation({ onComplete, onBack }: { onComplete: () 
 
       <div className="relative z-10 flex-1 flex flex-col px-6 py-8 max-w-md mx-auto w-full">
         <h1 className="font-display text-ks-ink text-2xl tracking-wide mb-1">
-          {step === 0 ? 'what\'s your name?' : step === 1 ? 'pick your position' : step === 2 ? 'preferred foot' : step === 3 ? 'pick your look' : step === 4 ? 'choose your country' : step === 5 ? 'choose your region' : 'what kind of player are you?'}
+          {t(step === 0 ? 'what\'s your name?' : step === 1 ? 'pick your position' : step === 2 ? 'preferred foot' : step === 3 ? 'pick your look' : step === 4 ? 'choose your country' : step === 5 ? 'choose your region' : 'what kind of player are you?')}
         </h1>
         <p className="text-ks-muted text-xs mb-8">
-          {step === 0 ? 'every legend needs a name.'
+          {t(step === 0 ? 'every legend needs a name.'
             : step === 1 ? 'where do you want to make your mark?'
             : step === 2 ? 'which foot do you trust?'
             : step === 3 ? 'this is the face of your career.'
             : step === 4 ? 'your nation — one day they might come calling.'
             : step === 5 ? 'your first schools and clubs come from here.'
-            : 'one defining trait. it shapes your attributes and how you play, permanently.'}
+            : 'one defining trait. it shapes your attributes and how you play, permanently.')}
         </p>
 
         {step === 0 && (
           <input
             autoFocus value={name} onChange={(e) => setName(e.target.value)}
             className="bg-[#0f0f0d] border border-ks-border rounded-xl px-4 py-4 text-ks-ink text-lg outline-none focus:border-ks-gold"
-            placeholder="your name"
+            placeholder={t('your name')}
           />
         )}
 
@@ -177,7 +179,7 @@ export default function PlayerCreation({ onComplete, onBack }: { onComplete: () 
           </div>
         )}
         {step === 1 && position && (
-          <p className="text-center text-[11px] text-ks-muted mt-2">{POSITIONS.find((p) => p.code === position)?.name}</p>
+          <p className="text-center text-[11px] text-ks-muted mt-2">{t(POSITIONS.find((p) => p.code === position)?.name ?? '')}</p>
         )}
 
         {step === 2 && (
@@ -186,7 +188,7 @@ export default function PlayerCreation({ onComplete, onBack }: { onComplete: () 
               <button key={f} onClick={() => setFoot(f)}
                 className={`border rounded-xl py-8 font-display text-xl tracking-widest capitalize transition-all ${
                   foot === f ? 'border-ks-gold bg-ks-gold/10 text-ks-gold' : 'border-ks-border bg-[#0f0f0d] text-ks-ink'
-                }`}>{f}</button>
+                }`}>{t(f)}</button>
             ))}
           </div>
         )}
@@ -253,7 +255,7 @@ export default function PlayerCreation({ onComplete, onBack }: { onComplete: () 
       <div className="relative z-10 px-6 pb-8 max-w-md mx-auto w-full">
         <button onClick={handleNext} disabled={!canProceed}
           className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-4 text-base disabled:opacity-25 shadow-[0_0_25px_rgba(212,175,55,0.2)]">
-          {step < LAST_STEP ? 'continue' : 'begin your career'}
+          {t(step < LAST_STEP ? 'continue' : 'begin your career')}
         </button>
       </div>
     </div>

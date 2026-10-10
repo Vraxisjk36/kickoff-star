@@ -22,6 +22,7 @@ import CaptaincyStoryCard from '../components/CaptaincyStoryCard'
 import InboxScreen from './InboxScreen'
 import StoryRevealCard from '../components/StoryRevealCard'
 import YearCalendarScreen from './YearCalendarScreen'
+import { useTranslate } from '../i18n'
 
 // Phase 10: WeeklyHub is now a shell that hosts six real, routed tabs.
 // Tab state is owned by Career so it survives event resolution (training,
@@ -39,6 +40,7 @@ export default function WeeklyHub({
   playerTeam: Team
   playerDivision: Division
 }) {
+  const t = useTranslate()
   const player = useCareerStore((s) => s.player)
   const calendar = useCareerStore((s) => s.calendar)
   const cups = useCareerStore((s) => s.cups)
@@ -58,7 +60,7 @@ export default function WeeklyHub({
 
   const isAcademy = player?.careerClock.phase === 'academy'
   const offerCount = (player?.contractOffers ?? []).length
-  const activeLabel = NAV_ITEMS.find((n) => n.tab === tab)?.label ?? ''
+  const activeLabel = t(NAV_ITEMS.find((n) => n.tab === tab)?.label ?? '')
   const latestGazette = player?.gazetteIssues?.at(-1) ?? null
   const latestHeadline = latestGazette && player ? presentGazetteIssue(latestGazette, player, league?.kind === 'school' ? league.divisions[league.playerDivision] : null).masthead : null
   const unreadStory = (player?.inbox ?? []).find((item) => !item.read) ?? null
@@ -71,7 +73,7 @@ export default function WeeklyHub({
     setGazettePeekId(null)
   }
   if (!player || !calendar) {
-    return <div className="min-h-screen bg-ks-black flex items-center justify-center text-ks-muted">no active career</div>
+    return <div className="min-h-screen bg-ks-black flex items-center justify-center text-ks-muted">{t('no active career')}</div>
   }
 
   return (
@@ -79,9 +81,9 @@ export default function WeeklyHub({
       {/* tab header — gives every destination a sense of place */}
       <div className="sticky top-0 z-20 bg-ks-black/95 backdrop-blur border-b border-ks-border/50">
         <div className="max-w-md mx-auto w-full px-3 py-2">
-          <div className="flex items-center justify-between gap-3"><span className="font-display tracking-widest text-[10px] text-ks-gold uppercase">{activeLabel}</span><button type="button" onClick={onExitToMenu} className="career-menu-button" aria-label="Return to Kickoff Star main menu">☰ <span>MENU</span></button></div>
+          <div className="flex items-center justify-between gap-3"><span className="font-display tracking-widest text-[10px] text-ks-gold uppercase">{activeLabel}</span><button type="button" onClick={onExitToMenu} className="career-menu-button" aria-label={t('Return to Kickoff Star main menu')}>☰ <span>{t('MENU')}</span></button></div>
           <button type="button" onClick={() => setEnergyOpen(true)} className="mt-2 flex w-full items-center gap-2 text-left" aria-label={`Energy ${Math.round(player.fitness.stamina)} percent. Open recovery details`}>
-            <span className="font-display text-[10px] tracking-wider text-ks-muted">ENERGY</span>
+            <span className="font-display text-[10px] tracking-wider text-ks-muted">{t('ENERGY')}</span>
             <span className="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden"><span className={`block h-full rounded-full transition-all ${player.fitness.stamina < 30 ? 'bg-red-500' : player.fitness.stamina < 50 ? 'bg-orange-400' : 'bg-ks-gold'}`} style={{ width: `${Math.max(0, Math.min(100, player.fitness.stamina))}%` }} /></span>
             <strong className="text-xs tabular-nums text-ks-ink">{Math.round(player.fitness.stamina)}%</strong>
           </button>

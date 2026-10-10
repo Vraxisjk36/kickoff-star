@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { listSaves } from '../engine/save'
+import LogoBadge from '../components/LogoBadge'
+import { useTranslate } from '../i18n'
 
 interface MainMenuProps {
   onNewCareer: () => void
@@ -23,6 +25,7 @@ const MENU_ITEMS = (hasSave: boolean) => [
 
 export default function MainMenu({ onNewCareer, onContinue, onLoadCareer, onOpenSettings, onOpenCredits, onOpenHelp }: MainMenuProps) {
   const [hasSave, setHasSave] = useState(false)
+  const t = useTranslate()
 
   useEffect(() => {
     listSaves().then((saves) => setHasSave(saves.some(Boolean)))
@@ -50,9 +53,12 @@ export default function MainMenu({ onNewCareer, onContinue, onLoadCareer, onOpen
 
       <div className="relative z-10 min-h-screen flex flex-col justify-between px-6 md:px-16 py-8 max-w-2xl main-stage-content">
         <div>
-          <div className="text-[11px] tracking-[0.3em] text-ks-muted uppercase mb-5">the journey starts here</div>
-          <img src="./kickoff-logo.jpg" alt="Kickoff Star" className="mb-5 w-[min(48vw,220px)] aspect-square object-contain main-stage-title" />
-          <div className="text-[11px] text-ks-muted uppercase tracking-[0.15em]">from school football to a pro contract</div>
+          <div className="text-[11px] tracking-[0.3em] text-ks-muted uppercase mb-5">{t('the journey starts here')}</div>
+          <div className="main-stage-title flex items-center gap-4 mb-5">
+            <div className="w-[clamp(64px,19vw,100px)] shrink-0"><LogoBadge /></div>
+            <h1 className="font-display font-black leading-[0.82] text-[clamp(46px,14vw,86px)] tracking-[0.02em] text-ks-gold drop-shadow-[0_5px_26px_rgba(212,175,55,0.22)]">KICKOFF<br/><span className="text-ks-ink">STAR</span></h1>
+          </div>
+          <div className="text-[11px] text-ks-muted uppercase tracking-[0.15em]">{t('from school football to a pro contract')}</div>
         </div>
 
         <div className="flex flex-col gap-2 my-6 max-w-md main-stage-actions">
@@ -68,8 +74,8 @@ export default function MainMenu({ onNewCareer, onContinue, onLoadCareer, onOpen
               >
                 <span className={`text-lg w-5 ${primary ? '' : 'text-ks-muted group-hover:text-ks-gold'}`}>{item.icon}</span>
                 <span className="flex flex-col">
-                  <span className="font-display tracking-wide text-base leading-tight">{item.label}</span>
-                  <span className={`text-[11px] ${primary ? 'opacity-70' : 'text-ks-muted'}`}>{item.sub}</span>
+                  <span className="font-display tracking-wide text-base leading-tight">{t(item.label)}</span>
+                  <span className={`text-[11px] ${primary ? 'opacity-70' : 'text-ks-muted'}`}>{t(item.sub)}</span>
                 </span>
               </button>
             )
@@ -77,10 +83,10 @@ export default function MainMenu({ onNewCareer, onContinue, onLoadCareer, onOpen
         </div>
 
         <div>
-          <div className="max-w-xs mb-6 text-ks-ink italic">“Every legend started somewhere.”</div>
+          <div className="max-w-xs mb-6 text-ks-ink italic">“{t('Every legend started somewhere.')}”</div>
           <div className="flex items-center justify-between pt-4 border-t border-ks-border/40 max-w-md">
-            <span className="text-ks-muted text-[10px] tracking-wider">PHASE 1 COMPLETE</span>
-            <span className="text-ks-muted text-[10px] tracking-wider">V5.8 · RELEASE</span>
+            <span className="text-ks-muted text-[10px] tracking-wider">{t('PHASE 1 COMPLETE')}</span>
+            <span className="text-ks-muted text-[10px] tracking-wider">V5.8 · {t('RELEASE')}</span>
           </div>
         </div>
       </div>

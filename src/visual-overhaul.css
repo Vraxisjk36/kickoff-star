@@ -12,6 +12,8 @@
 .main-stage-pitch span:last-child { position:absolute; left:0; right:0; top:50%; border-top:2px solid #cbbf7640; }
 .main-stage-content { text-shadow:0 2px 16px #000b; }
 .main-stage-title { animation:stageRise .8s cubic-bezier(.16,1,.3,1) both; }
+.logo-badge { position:relative; width:100%; aspect-ratio:1; border-radius:50%; overflow:hidden; isolation:isolate; box-shadow:0 16px 65px #000b,0 0 42px #d4af3722; }
+.logo-badge img { width:100%; height:100%; object-fit:cover; transform:scale(1.64); transform-origin:center; }
 .main-stage-title > div { font-size:clamp(64px,16vw,108px); line-height:.76; letter-spacing:.025em; }
 .main-stage-title > div:last-child { color:#f5f0dc; margin-left:12%; -webkit-text-stroke:1px #d4af3777; }
 .main-stage-actions { counter-reset:menu; }

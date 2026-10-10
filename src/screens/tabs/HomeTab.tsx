@@ -21,6 +21,7 @@ import { isLive, STAGE_LABEL } from '../../engine/negotiation'
 import { decideSelection, selectionAdvice } from '../../engine/selection'
 import { useCareerStore } from '../../store/careerStore'
 import { monthForWeek,pathwayNextStep } from '../../engine/pathway'
+import { useState } from 'react'
 
 function ordinal(n: number): string {
   const suffix = n % 100 >= 11 && n % 100 <= 13 ? 'th' : n % 10 === 1 ? 'st' : n % 10 === 2 ? 'nd' : n % 10 === 3 ? 'rd' : 'th'
@@ -46,6 +47,8 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
   const consumeItem = useCareerStore((s) => s.consumeItem)
   const chooseWeeklyFocus = useCareerStore((s) => s.chooseWeeklyFocus)
   const restoreEnergyFromAd = useCareerStore((s) => s.restoreEnergyFromAd)
+  const [energyAdBusy, setEnergyAdBusy] = useState(false)
+  const [energyAdError, setEnergyAdError] = useState(false)
   const economyNote = useCareerStore((s) => s.economyNote)
   const negotiationBeat = useCareerStore((s) => s.negotiationBeat)
   const clearNegotiationBeat = useCareerStore((s) => s.clearNegotiationBeat)
@@ -83,6 +86,19 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
           <div><span>LEAGUE</span><b>{leaguePos ?? '—'}</b></div>
         </div>
       </section>
+      {rewardedAdsAvailable() && player.fitness.stamina < 80 && remainingToday('energy') > 0 && <section className="rounded-xl border border-ks-gold/50 bg-gradient-to-r from-[#202017] to-[#11140f] px-4 py-3 flex items-center gap-3">
+        <div className="flex-1 min-w-0"><div className="font-display text-xs text-ks-gold">RECOVERY BOOST</div><p className="text-[11px] text-ks-muted mt-1">+20 energy for an optional rewarded ad</p></div>
+        <button type="button" disabled={energyAdBusy} onClick={async () => {
+          if (energyAdBusy) return
+          setEnergyAdBusy(true); setEnergyAdError(false)
+          try { const reward = await watchRewardedAd('energy'); if (reward) restoreEnergyFromAd(20); else setEnergyAdError(true) }
+          finally { setEnergyAdBusy(false) }
+        }} className="min-h-11 rounded-lg bg-ks-gold px-3 font-display text-xs text-ks-black disabled:opacity-50">{energyAdBusy ? 'LOADING…' : 'WATCH AD →'}</button>
+        {energyAdError && <span role="status" className="sr-only">Ad unavailable or not completed. No energy was spent.</span>}
+      </section>}
+      {rewardedAdsAvailable() && (player.money ?? 0) < 18 && remainingToday('cash') > 0 && <button type="button" onClick={() => onGoTo('shop')} className="rounded-xl border border-ks-border bg-[#171711] px-4 py-3 text-left flex items-center justify-between gap-3">
+        <span><strong className="block font-display text-xs text-ks-ink">SHORT ON CASH?</strong><small className="text-ks-muted">Earn £10 in the shop with an optional ad</small></span><span className="text-ks-gold text-xl">→</span>
+      </button>}
       {nextEvent && !nextEvent.resolved && (
         <section className={`week-headliner ${nextEvent.type === 'match' ? 'match' : ''}`}>
           <div><span>NEXT UP · {nextEvent.day.toUpperCase()}</span><h3>{nextEvent.title}</h3><p>{nextEvent.type === 'match' ? 'MATCHDAY · Your next competitive test' : nextEvent.type.replace(/-/g,' ').toUpperCase()}</p></div>
@@ -275,20 +291,6 @@ export default function HomeTab({ player, calendar, league, academyLeague, offer
             </button>
           )
         })()}
-        {/* P64 — free alternative for players without a drink (or who'd
-            rather not spend one) — same 20% restore, paid for by watching
-            a real rewarded ad instead of in-game money. */}
-        {rewardedAdsAvailable() && player.fitness.stamina < 100 && remainingToday('energy') > 0 && (
-          <button
-            onClick={async () => {
-              const reward = await watchRewardedAd('energy')
-              if (reward) restoreEnergyFromAd(20)
-            }}
-            className="mt-2 w-full rounded-lg border border-ks-border bg-[#0f0f0d] py-1.5 text-[10px] font-display uppercase tracking-widest text-ks-muted active:scale-[0.99]"
-          >
-            watch ad for +20% energy · {remainingToday('energy')} left today
-          </button>
-        )}
       </div>
 
       <div className="home-section-label"><span>SCHEDULE</span><i/></div>

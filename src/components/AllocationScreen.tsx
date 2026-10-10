@@ -60,6 +60,8 @@ export default function AllocationScreen({ title, subtitle, totalXp, attrs, valu
   const chunkSize = Math.max(1, Math.round(totalXp / CHUNK_COUNT))
   const [remaining, setRemaining] = useState(totalXp)
   const [adBoostUsed, setAdBoostUsed] = useState(false)
+  const [adBusy, setAdBusy] = useState(false)
+  const [adError, setAdError] = useState(false)
   const [display, setDisplay] = useState<Record<string, number>>(() => {
     const init: Record<string, number> = {}
     for (const a of attrs) init[a] = values[a] ?? 8
@@ -115,20 +117,26 @@ export default function AllocationScreen({ title, subtitle, totalXp, attrs, valu
               through the normal tap loop below, not a separate mechanic. */}
           {rewardedAdsAvailable() && !adBoostUsed && remainingToday('xp') > 0 && (
             <button
+              disabled={adBusy}
               onClick={async () => {
-                const reward = await watchRewardedAd('xp')
-                if (reward) {
-                  const bonus = 150
-                  remainingRef.current += bonus
-                  setRemaining(remainingRef.current)
-                  setAdBoostUsed(true)
-                }
+                if (adBusy) return
+                setAdBusy(true); setAdError(false)
+                try {
+                  const reward = await watchRewardedAd('xp')
+                  if (reward) {
+                    const bonus = 150
+                    remainingRef.current += bonus
+                    setRemaining(remainingRef.current)
+                    setAdBoostUsed(true)
+                  } else setAdError(true)
+                } finally { setAdBusy(false) }
               }}
-              className="block mx-auto mt-2 rounded-lg border border-ks-border bg-[#0f0f0d] px-3 py-1.5 text-[10px] font-display uppercase tracking-widest text-ks-muted"
+              className="block w-full mt-4 rounded-xl border border-ks-gold/60 bg-ks-gold/10 px-4 py-3 text-sm font-display tracking-wide text-ks-gold disabled:opacity-50"
             >
-              watch ad for +150 xp
+              {adBusy ? 'LOADING AD…' : 'WATCH AD · +150 XP →'}
             </button>
           )}
+          {adError && <p role="status" className="text-xs text-orange-300 mt-2">Ad unavailable or not completed. Your XP is unchanged.</p>}
         </div>
 
         <div className="flex flex-col gap-2 mb-6">

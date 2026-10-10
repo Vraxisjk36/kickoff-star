@@ -32,7 +32,9 @@ const SEASON_INTERSTITIAL_ID = 'ca-app-pub-5886721718793058/8649277016'
 
 const IS_TESTING = false
 
-const DAILY_CAP = 5
+// Energy ads are small emergency top-ups. Two a day cannot replace the
+// stronger 50% and full recovery items, even if both ads are watched.
+const DAILY_CAPS: Record<AdPlacement, number> = { energy: 2, cash: 5, xp: 5 }
 const STORAGE_KEY = 'ks-ad-watch-log'
 
 interface WatchLog {
@@ -41,7 +43,8 @@ interface WatchLog {
 }
 
 function todayKey(): string {
-  return new Date().toISOString().slice(0, 10)
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 }
 
 function readLog(): WatchLog {
@@ -69,7 +72,7 @@ function writeLog(log: WatchLog) {
 /** How many of this placement's ads are still available today. */
 export function remainingToday(placement: AdPlacement): number {
   const log = readLog()
-  return Math.max(0, DAILY_CAP - log.counts[placement])
+  return Math.max(0, DAILY_CAPS[placement] - log.counts[placement])
 }
 
 let initialization: Promise<void> | null = null

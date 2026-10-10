@@ -24,6 +24,8 @@ import StoryRevealCard from '../components/StoryRevealCard'
 import YearCalendarScreen from './YearCalendarScreen'
 import { useTranslate } from '../i18n'
 import { showSeasonInterstitial } from '../engine/ads'
+import { rewardedAdsAvailable } from '../engine/ads'
+import LowEnergyOffer from '../components/LowEnergyOffer'
 
 // Phase 10: WeeklyHub is now a shell that hosts six real, routed tabs.
 // Tab state is owned by Career so it survives event resolution (training,
@@ -46,6 +48,7 @@ export default function WeeklyHub({
   const calendar = useCareerStore((s) => s.calendar)
   const cups = useCareerStore((s) => s.cups)
   const [energyOpen, setEnergyOpen] = useState(false)
+  const [lowEnergyOpen, setLowEnergyOpen] = useState(false)
   const [gazetteOpen, setGazetteOpen] = useState(false)
   const [gazettePeekId, setGazettePeekId] = useState<string | null>(null)
   const [inboxOpen, setInboxOpen] = useState(false)
@@ -65,6 +68,16 @@ export default function WeeklyHub({
   const latestGazette = player?.gazetteIssues?.at(-1) ?? null
   const latestHeadline = latestGazette && player ? presentGazetteIssue(latestGazette, player, league?.kind === 'school' ? league.divisions[league.playerDivision] : null).masthead : null
   const unreadStory = (player?.inbox ?? []).find((item) => !item.read) ?? null
+  useEffect(() => {
+    if (!rewardedAdsAvailable() || !player || !calendar || tab !== 'home' || player.fitness.stamina >= 40 || pendingSeasonReview || unreadStory || pendingAchievements.length || player.captaincy?.pendingStory || energyOpen || gazetteOpen || inboxOpen) return
+    const key = `ks-low-energy-prompt:${player.id}:${calendar.currentWeek.seasonYear}:${calendar.currentWeek.weekNumber}`
+    try { if (localStorage.getItem(key)) return } catch { return }
+    const timer = window.setTimeout(() => {
+      try { if (localStorage.getItem(key)) return; localStorage.setItem(key, '1') } catch { return }
+      setLowEnergyOpen(true)
+    }, 700)
+    return () => window.clearTimeout(timer)
+  }, [player?.id, player?.fitness.stamina, calendar?.currentWeek.seasonYear, calendar?.currentWeek.weekNumber, tab, pendingSeasonReview, unreadStory?.id, pendingAchievements.length, player?.captaincy?.pendingStory, energyOpen, gazetteOpen, inboxOpen])
   useEffect(() => {
     if (!player || !calendar || calendar.currentWeek.weekNumber !== 23 || pendingSeasonReview || unreadStory) return
     // Week 23 is the first week after the 44-week season's halfway point.
@@ -136,6 +149,7 @@ export default function WeeklyHub({
       <BottomNav active={tab} onSelect={onTabChange} badges={{ scouts: offerCount }} />
 
       {energyOpen && <EnergySheet player={player} onClose={() => setEnergyOpen(false)} />}
+      {lowEnergyOpen && player.fitness.stamina < 40 && <LowEnergyOffer player={player} onClose={() => setLowEnergyOpen(false)} />}
       {gazetteOpen && latestGazette && <GazetteScreen issue={latestGazette} issues={player.gazetteIssues} onClose={() => setGazetteOpen(false)} />}
       {inboxOpen && <InboxScreen items={player.inbox ?? []} onRead={markStoryRead} onClose={() => setInboxOpen(false)} />}
       {yearCalendarOpen && <YearCalendarScreen player={player} calendar={calendar} cups={cups} onClose={() => setYearCalendarOpen(false)} />}

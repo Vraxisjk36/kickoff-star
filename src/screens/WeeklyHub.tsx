@@ -69,7 +69,7 @@ export default function WeeklyHub({
   const latestHeadline = latestGazette && player ? presentGazetteIssue(latestGazette, player, league?.kind === 'school' ? league.divisions[league.playerDivision] : null).masthead : null
   const unreadStory = (player?.inbox ?? []).find((item) => !item.read) ?? null
   useEffect(() => {
-    if (!rewardedAdsAvailable() || !player || !calendar || tab !== 'home' || player.fitness.stamina >= 40 || pendingSeasonReview || unreadStory || pendingAchievements.length || player.captaincy?.pendingStory || energyOpen || gazetteOpen || inboxOpen) return
+    if (!rewardedAdsAvailable() || !player || !calendar || tab !== 'home' || calendar.currentWeek.weekNumber === 1 || calendar.currentWeek.weekNumber === 23 || player.fitness.stamina >= 40 || pendingSeasonReview || unreadStory || pendingAchievements.length || player.captaincy?.pendingStory || energyOpen || gazetteOpen || inboxOpen) return
     const key = `ks-low-energy-prompt:${player.id}:${calendar.currentWeek.seasonYear}:${calendar.currentWeek.weekNumber}`
     try { if (localStorage.getItem(key)) return } catch { return }
     const timer = window.setTimeout(() => {

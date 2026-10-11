@@ -15,6 +15,7 @@ import {
   executionSpecFor, qualityOf, GRADE_LABEL, GRADE_COLOR, type ExecutionGrade,
 } from '../engine/execution'
 import type { TrainingSessionType } from '../types/training'
+import { useLanguage, useTranslate } from '../i18n'
 
 interface TrialsScreenProps {
   player: Player
@@ -45,6 +46,8 @@ const GK_SHOWCASE_PROMPT: typeof SHOWCASE_PROMPT = {
 }
 
 export default function TrialsScreen({ player, school, onComplete }: TrialsScreenProps) {
+  const french = useLanguage() === 'fr'
+  const t = useTranslate()
   const [trial, setTrial] = useState<TrialState>(() => initTrialState(school.id, generateRival(school)))
   const [weekIdx, setWeekIdx] = useState(0)
   const [phase, setPhase] = useState<Phase>('week-intro')
@@ -128,7 +131,7 @@ export default function TrialsScreen({ player, school, onComplete }: TrialsScree
   const ProgressStrip = () => (
     <div className="rounded-xl border border-ks-border bg-[#0f0f0d] px-3 py-2.5 mb-4">
       <div className="flex items-center justify-between mb-1.5">
-        <span className="font-display tracking-widest text-[9px] text-ks-muted uppercase">you</span>
+        <span className="font-display tracking-widest text-[9px] text-ks-muted uppercase">{french ? 'toi' : 'you'}</span>
         <span className="font-display tracking-widest text-[9px] text-ks-muted uppercase">{trial.rival.name}</span>
       </div>
       <div className="relative h-2 rounded-full bg-[#2a2a27] overflow-hidden mb-1.5">
@@ -137,8 +140,8 @@ export default function TrialsScreen({ player, school, onComplete }: TrialsScree
         <div className="absolute inset-y-0 w-px bg-ks-ink/70" style={{ left: `${Math.min(100, rivalScore * 100)}%` }} />
       </div>
       <div className="flex items-center justify-between text-[9px] text-ks-muted">
-        <span>starting xi needs {Math.round(xiBar * 100)}</span>
-        <span>{trial.drillsPlayed} / {TOTAL_TRIAL_MOMENTS} moments</span>
+        <span>{french ? 'titulaire : seuil de' : 'starting xi needs'} {Math.round(xiBar * 100)}</span>
+        <span>{trial.drillsPlayed} / {TOTAL_TRIAL_MOMENTS} {french ? 'actions' : 'moments'}</span>
       </div>
     </div>
   )
@@ -147,20 +150,19 @@ export default function TrialsScreen({ player, school, onComplete }: TrialsScree
   if (phase === 'week-intro') {
     return (
       <Shell>
-        <div className="font-display tracking-widest text-[11px] text-ks-gold uppercase mb-2">{school.name} · trials</div>
+        <div className="font-display tracking-widest text-[11px] text-ks-gold uppercase mb-2">{school.name} · {french ? 'détections' : 'trials'}</div>
         <div className="flex gap-1.5 mb-5">
           {TRIAL_WEEKS.map((w, i) => (
             <div key={w.week} className={`h-1 rounded-full flex-1 ${i < weekIdx ? 'bg-ks-gold/50' : i === weekIdx ? 'bg-ks-gold' : 'bg-ks-border'}`} />
           ))}
         </div>
-        <h1 className="font-display text-ks-ink text-3xl tracking-wide mb-2">{weekCfg.title}</h1>
-        <p className="text-ks-muted text-sm mb-4 leading-relaxed">{weekCfg.focus}</p>
+        <h1 className="font-display text-ks-ink text-3xl tracking-wide mb-2">{t(weekCfg.title)}</h1>
+        <p className="text-ks-muted text-sm mb-4 leading-relaxed">{t(weekCfg.focus)}</p>
 
         {weekIdx === 0 && (
           <div className="rounded-xl border border-ks-border bg-[#0f0f0d] px-3 py-2.5 mb-4">
             <p className="text-[11px] text-ks-muted leading-relaxed">
-              <span className="text-ks-ink">{trial.rival.name}</span> is trialling for the same position.
-              Only one of you is walking into that Starting XI.
+              <span className="text-ks-ink">{trial.rival.name}</span> {french ? 'postule au même poste. Un seul de vous sera titulaire.' : 'is trialling for the same position. Only one of you is walking into that Starting XI.'}
             </p>
           </div>
         )}
@@ -168,12 +170,12 @@ export default function TrialsScreen({ player, school, onComplete }: TrialsScree
 
         {/* progressive disclosure — one system per week, in the coach's voice */}
         <div className="rounded-xl border border-ks-gold/30 bg-ks-gold/5 px-3 py-2.5 mb-6">
-          <div className="font-display tracking-widest text-[9px] text-ks-gold uppercase mb-1">coach</div>
-          <p className="text-[12px] text-ks-ink leading-relaxed italic">"{weekCfg.coachTip}"</p>
+          <div className="font-display tracking-widest text-[9px] text-ks-gold uppercase mb-1">{french ? 'entraîneur' : 'coach'}</div>
+          <p className="text-[12px] text-ks-ink leading-relaxed italic">"{t(weekCfg.coachTip)}"</p>
         </div>
 
         <button onClick={startWeek} className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-3.5 text-sm shadow-[0_0_25px_rgba(212,175,55,0.25)]">
-          {weekCfg.isMatch ? 'walk out →' : `begin trial session ${weekCfg.week}`}
+          {french ? (weekCfg.isMatch ? 'entrer sur le terrain →' : `commencer la séance ${weekCfg.week}`) : (weekCfg.isMatch ? 'walk out →' : `begin trial session ${weekCfg.week}`)}
         </button>
       </Shell>
     )
@@ -205,7 +207,7 @@ export default function TrialsScreen({ player, school, onComplete }: TrialsScree
     const good = reaction.quality >= 0.6
     return (
       <Shell glow={good ? 0.1 : 0.04}>
-        <div className="font-display tracking-widest text-[11px] text-ks-muted uppercase mb-4">touchline</div>
+        <div className="font-display tracking-widest text-[11px] text-ks-muted uppercase mb-4">{french ? 'ligne de touche' : 'touchline'}</div>
         {reaction.grade && (
           <div className={`font-display tracking-widest text-sm uppercase mb-3 ${GRADE_COLOR[reaction.grade]}`}>
             {GRADE_LABEL[reaction.grade]}
@@ -214,11 +216,11 @@ export default function TrialsScreen({ player, school, onComplete }: TrialsScree
         <div className={`rounded-2xl border px-5 py-5 mb-6 ${
           good ? 'border-green-500/40 bg-green-500/5' : reaction.quality > 0 ? 'border-ks-border bg-[#0f0f0d]' : 'border-orange-500/40 bg-orange-500/5'
         }`}>
-          <p className="text-ks-ink text-base leading-relaxed">{reaction.text}</p>
+          <p className="text-ks-ink text-base leading-relaxed">{t(reaction.text)}</p>
         </div>
         <ProgressStrip />
         <button onClick={afterReaction} className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-3.5 text-sm">
-          continue →
+          {french ? 'continuer →' : 'continue →'}
         </button>
       </Shell>
     )

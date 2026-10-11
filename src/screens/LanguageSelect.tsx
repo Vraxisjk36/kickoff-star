@@ -31,6 +31,7 @@ export default function LanguageSelect({ onContinue }: { onContinue: () => void 
           ))}
         </div>
         {language !== 'en' && supportsLiveTranslation() && <p className="text-xs text-ks-muted mt-4 text-center">The first use downloads an on-device language pack (about 30 MB). Translation works offline after that. Career text is automatically translated with Google Translate and may contain mistakes. <a className="text-ks-gold underline" href="https://translate.google.com/" target="_blank" rel="noopener noreferrer">Google Translate ↗</a></p>}
+        {language !== 'en' && !supportsLiveTranslation() && <p className="text-xs text-ks-muted mt-4 text-center" role="note">{language === 'fr' ? 'Version web : la traduction française est encore partielle. Les récits, les matchs et certains écrans restent en anglais. La traduction automatique complète est disponible dans l’application Android.' : 'Web version: translation is partial. Career stories and some screens remain in English. Full automatic translation is available in the Android app.'}</p>}
         {error && <p role="alert" className="text-sm text-red-400 mt-4">{error}</p>}
         <button type="button" onClick={continueToGame} disabled={preparing} className="mt-6 w-full min-h-14 rounded-xl bg-ks-gold text-ks-black font-display text-lg disabled:opacity-50">{preparing ? 'Downloading language pack…' : language === 'es' ? 'CONTINUAR' : language === 'pt-BR' ? 'CONTINUAR' : language === 'hi' ? 'आगे बढ़ें' : language === 'fr' ? 'CONTINUER' : 'CONTINUE'} →</button>
       </div>

@@ -154,9 +154,9 @@ export default function WeeklyHub({
       {inboxOpen && <InboxScreen items={player.inbox ?? []} onRead={markStoryRead} onClose={() => setInboxOpen(false)} />}
       {yearCalendarOpen && <YearCalendarScreen player={player} calendar={calendar} cups={cups} onClose={() => setYearCalendarOpen(false)} />}
       {latestGazette && gazettePeekId === latestGazette.id && !gazetteOpen && !pendingSeasonReview && !unreadStory && <div className="fixed z-30 bottom-20 left-3 right-3 max-w-md mx-auto rounded-xl border border-ks-gold/60 bg-[#171407] shadow-2xl p-4" role="status">
-        <div className="flex justify-between items-center"><span className="text-ks-gold font-display text-[10px] tracking-widest">THE GAZETTE · WEEK {latestGazette.weekNumber}</span><button onClick={dismissGazettePeek} className="text-ks-muted text-xs" aria-label="Dismiss Gazette headline">✕</button></div>
-        <h2 className="text-ks-ink font-display text-base mt-2">{latestHeadline}</h2>
-        <button className="text-ks-gold text-xs mt-3" onClick={() => { dismissGazettePeek(); setGazetteOpen(true) }}>Read full issue →</button>
+        <div className="flex justify-between items-center"><span className="text-ks-gold font-display text-[10px] tracking-widest">THE GAZETTE · {t('WEEK')} {latestGazette.weekNumber}</span><button onClick={dismissGazettePeek} className="text-ks-muted text-xs" aria-label="Dismiss Gazette headline">✕</button></div>
+        <h2 className="text-ks-ink font-display text-base mt-2">{t(latestHeadline ?? '')}</h2>
+        <button className="text-ks-gold text-xs mt-3" onClick={() => { dismissGazettePeek(); setGazetteOpen(true) }}>{t('Read full issue →')}</button>
       </div>}
 
       {/* the season review takes precedence — it's the biggest beat of the year */}

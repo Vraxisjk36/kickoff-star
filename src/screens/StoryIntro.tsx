@@ -3,6 +3,7 @@ import type { Player } from '../types/player'
 import Avatar from '../components/Avatar'
 import { getNation } from '../engine/nations'
 import { useCareerStore } from '../store/careerStore'
+import { useLanguage } from '../i18n'
 
 // P65 — Joel: "a story thingy after onboarding, explain the entire game."
 // A player who's just built a character has no idea yet that there's a real
@@ -44,16 +45,24 @@ const SLIDES: Slide[] = [
     body: () => `Cup competitions run alongside your league season — knockout football, real underdog runs, silverware that isn't tied to your table position. Play well enough for long enough, and international recognition becomes a real possibility, not a fantasy.`,
   },
 ]
+const FRENCH_SLIDES: Slide[] = [
+  { eyebrow: 'ton histoire commence ici', title: 'bienvenue, {name}', body: p => `À ${p.careerClock.ageYears} ans, en ${getNation(p.nationality).name}, tu as une vraie chance de faire carrière dans le football — à toi de la saisir.` },
+  { eyebrow: 'ton objectif', title: 'six ans pour réussir', body: () => 'Tu as jusqu’à tes 20 ans pour passer des détections à un contrat professionnel. Chaque décision te rapproche de ce but ou te fait perdre du temps.' },
+  { eyebrow: 'ton parcours', title: 'école → académie → pro', body: () => 'Gagne ta place à l’école, brille en championnat et dans les sélections, puis attire une académie. Une première détection ratée ne met pas fin à ta carrière : entraîne-toi et retente ta chance.' },
+  { eyebrow: 'se faire remarquer', title: 'construis ton palmarès', body: () => 'Dès tes 16 ans, les recruteurs étudient tes performances dans la durée. Ils reviennent t’observer : quelques buts ne suffisent pas à brûler les étapes.' },
+  { eyebrow: 'au-delà du championnat', title: 'coupes et sélection nationale', body: () => 'Les coupes se jouent en parallèle du championnat. Si tes performances restent solides, tu pourrais même représenter ton pays.' },
+]
 
 export default function StoryIntro({ onComplete }: { onComplete: () => void }) {
   const [i, setI] = useState(0)
   const player = useCareerStore((s) => s.player)
+  const french = useLanguage() === 'fr'
   useEffect(() => {
     if (!player) onComplete()
   }, [player, onComplete])
   if (!player) return null
 
-  const slide = SLIDES[i]
+  const slide = (french ? FRENCH_SLIDES : SLIDES)[i]
   const isLast = i === SLIDES.length - 1
 
   return (
@@ -81,11 +90,11 @@ export default function StoryIntro({ onComplete }: { onComplete: () => void }) {
             onClick={() => (isLast ? onComplete() : setI(i + 1))}
             className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-3.5 text-sm shadow-[0_0_25px_rgba(212,175,55,0.25)]"
           >
-            {isLast ? "let's go →" : 'continue'}
+            {french ? (isLast ? 'c’est parti →' : 'continuer') : (isLast ? "let's go →" : 'continue')}
           </button>
           {!isLast && (
             <button onClick={onComplete} className="w-full text-center text-[11px] text-ks-muted underline underline-offset-2">
-              skip
+              {french ? 'passer' : 'skip'}
             </button>
           )}
         </div>

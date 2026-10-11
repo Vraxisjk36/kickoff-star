@@ -355,7 +355,7 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
   if ((mode.kind === 'matchday' || mode.kind === 'match') && !isInAcademy && (mode.competitionId === 'sundayLeague' || mode.competitionId === 'sundayCup') && !hasSundayContract(player, calendar.currentWeek.seasonYear, player.grassrootsPath === 'school' ? sundayWorld : league)) {
     return <div className="min-h-screen bg-ks-black flex items-center justify-center px-5"><div className="max-w-sm w-full rounded-xl border border-ks-border p-6 text-center"><h1 className="font-display text-xl text-ks-gold">SUNDAY REGISTRATION</h1><p className="text-sm text-ks-ink mt-3">You need a signed season contract to play for this club.</p><button className="w-full bg-ks-gold text-ks-black rounded-lg py-3 mt-4" onClick={() => setMode({ kind: 'offers' })}>review contracts</button><button className="w-full text-ks-muted py-3" onClick={() => { resolveCurrentEvent(); setMode({ kind: 'hub' }) }}>sit out this fixture</button></div></div>
   }
-  if ((mode.kind === 'matchday' || mode.kind === 'match') && !matchAvailability(player).canPlay) {
+  if (mode.kind === 'match' && !matchAvailability(player).canPlay) {
     return <div className="min-h-screen bg-ks-black flex items-center justify-center px-5"><div className="max-w-sm w-full rounded-2xl border border-ks-border p-6 text-center"><h1 className="font-display text-ks-gold text-2xl">RESTED FOR THIS MATCH</h1><p className="text-ks-ink mt-3">Your energy is {Math.round(player.fitness.stamina)}%. Below 30%, you cannot play.</p><p className="text-ks-muted text-sm mt-2">Your team will play without you. Recover to at least 50% to be considered for a starting place.</p><button className="w-full bg-ks-gold text-ks-black rounded-xl py-3 mt-5" onClick={() => { resolveCurrentEvent(); setMode({ kind: 'hub' }) }}>sit out this match →</button></div></div>
   }
   if (mode.kind === 'matchday') {
@@ -383,6 +383,8 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
         isHome={mode.isHome}
         competitionLabel={mode.competitionLabel}
         competitionId={mode.competitionId}
+        matchKey={`${player.id}:${calendar.currentWeek.seasonYear}:${calendar.currentWeek.weekNumber}:${mode.competitionId}:${mode.opponent.id}`}
+        onSitOut={() => { resolveCurrentEvent(); setMode({ kind: 'hub' }) }}
         onKickOff={() => { sfx.whistle(); setMode({ kind: 'match', opponent: mode.opponent, isHome: mode.isHome, competitionId: mode.competitionId, competitionLabel: mode.competitionLabel, isKnockout: mode.isKnockout }) }}
       />
     )

@@ -6,6 +6,8 @@ import { bandSpec, matchSharpnessFrom } from '../engine/energy'
 import { TeamCrest } from '../components/ui'
 import Avatar from '../components/Avatar'
 import { matchTeamSheet, matchVenue } from '../engine/matchPresentation'
+import { remainingToday, rewardedAdsAvailable, watchRewardedAd } from '../engine/ads'
+import { useCareerStore } from '../store/careerStore'
 
 // Phase 16: matches used to begin with no ceremony at all — you tapped "continue"
 // on the hub and were suddenly at 0'. This is the walk-out: who you're playing,
@@ -20,17 +22,40 @@ function formOf(player: Player): { letters: string[]; avg: number | null } {
   }
 }
 
-export default function MatchDayScreen({ player, playerTeam, opponent, isHome, onKickOff, competitionLabel, competitionId }: {
+export default function MatchDayScreen({ player, playerTeam, opponent, isHome, onKickOff, onSitOut, matchKey, competitionLabel, competitionId }: {
   player: Player
   playerTeam: Team
   opponent: Team
   isHome: boolean
   competitionLabel?: string
   competitionId: string
+  matchKey: string
+  onSitOut: () => void
   onKickOff: () => void
 }) {
   const [entered, setEntered] = useState(false)
   const [walkout, setWalkout] = useState(false)
+  const [adBusy, setAdBusy] = useState(false)
+  const [adError, setAdError] = useState('')
+  const restoreEnergyFromAd = useCareerStore(s => s.restoreEnergyFromAd)
+  const adKey = `ks-prematch-energy:${matchKey}`
+  const [usedPreMatchAd, setUsedPreMatchAd] = useState(() => {
+    try { return localStorage.getItem(adKey) === '1' } catch { return false }
+  })
+  const canOfferEnergy = rewardedAdsAvailable() && player.fitness.stamina < 50 && !usedPreMatchAd && remainingToday('energy') > 0
+  async function recoverBeforeMatch() {
+    if (adBusy || walkout || !canOfferEnergy) return
+    setAdBusy(true)
+    setAdError('')
+    try {
+      const reward = await watchRewardedAd('energy')
+      if (reward) {
+        try { localStorage.setItem(adKey, '1') } catch { /* current screen still tracks it */ }
+        setUsedPreMatchAd(true)
+        restoreEnergyFromAd(15)
+      } else setAdError('No ad was completed. You can keep playing or try again later.')
+    } finally { setAdBusy(false) }
+  }
   useEffect(() => { const t = window.setTimeout(() => setEntered(true), 40); return () => window.clearTimeout(t) }, [])
 
   const form = formOf(player)
@@ -158,13 +183,21 @@ export default function MatchDayScreen({ player, playerTeam, opponent, isHome, o
           </div>
         )}
 
+        {canOfferEnergy && <div className="rounded-xl border border-ks-gold/50 bg-[#1d1b11] p-3 mb-3">
+          <div className="flex items-center justify-between gap-3"><div><p className="font-display text-xs text-ks-gold">PRE-MATCH RECOVERY</p><p className="text-[11px] text-ks-muted mt-1">Watch one ad for +15 energy. Energy drinks are still available in your kit.</p></div><span className="font-display text-ks-gold">+15</span></div>
+          <button type="button" disabled={adBusy || walkout} onClick={() => void recoverBeforeMatch()} className="w-full mt-3 rounded-lg border border-ks-gold py-2.5 text-xs font-display text-ks-gold disabled:opacity-50">{adBusy ? 'LOADING AD…' : 'WATCH AD · +15 ENERGY'}</button>
+        </div>}
+        {adError && <p role="status" className="text-xs text-orange-300 mb-3">{adError}</p>}
+        {player.fitness.stamina < 30 && <p className="text-xs text-orange-300 mb-3">You need at least 30% energy to play this match. Recover or sit out.</p>}
+
         <button
           onClick={() => { if (walkout) return; setWalkout(true); window.setTimeout(onKickOff, 900) }}
-          disabled={walkout}
+          disabled={walkout || adBusy || player.fitness.stamina < 30}
           className="matchday-walkout disabled:opacity-60 disabled:pointer-events-none w-full bg-ks-gold text-ks-black font-display tracking-widest rounded-xl py-4 text-sm uppercase active:scale-[0.99]"
         >
           {walkout ? 'walking out…' : 'walk out'}
         </button>
+        {player.fitness.stamina < 30 && <button type="button" onClick={onSitOut} className="w-full py-3 mt-2 text-xs text-ks-muted">SIT OUT THIS MATCH</button>}
       </div>
     </div>
   )

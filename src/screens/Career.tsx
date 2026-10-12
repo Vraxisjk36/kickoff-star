@@ -39,6 +39,7 @@ import MatchSummary from './MatchSummary'
 import ImpactReveal, { type ImpactSnapshot } from '../components/ImpactReveal'
 import AllocationScreen from '../components/AllocationScreen'
 import { matchXpEarned } from '../engine/xp'
+import { maybeRequestInAppReview } from '../engine/inAppReview'
 import CareerEnd from './CareerEnd'
 import TurnedPro from './TurnedPro'
 import ContractOffers from './ContractOffers'
@@ -345,7 +346,19 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
         values={player.attributes.values as Record<string, number>}
         potential={player.potential}
         onSpend={(attr, amount) => spendAttributeXp(attr, amount)}
-        onDone={() => setMode({ kind: 'hub' })}
+        onDone={() => {
+          setMode({ kind: 'hub' })
+          const state = useCareerStore.getState()
+          if (!state.pendingSeasonReview && !state.pendingAchievements.length && !state.player?.captaincy?.pendingStory && !(state.player?.inbox ?? []).some(item => !item.read)) {
+            // The game is back on the hub; never interrupt the match or its rewards.
+            window.setTimeout(() => {
+              const current = useCareerStore.getState()
+              if (!current.pendingSeasonReview && !current.pendingAchievements.length && !current.player?.captaincy?.pendingStory && !(current.player?.inbox ?? []).some(item => !item.read)) {
+                void maybeRequestInAppReview(current.player?.career?.appearances ?? 0)
+              }
+            }, 1200)
+          }
+        }}
       />
     )
   }

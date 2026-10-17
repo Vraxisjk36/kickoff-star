@@ -31,7 +31,9 @@ export interface ProCareerState {
   news?: import('./proNews').ProNewsArticle[]
 }
 
-const CLUB_NAMES = ['North London Athletic', 'South London Blue', 'Mersey Red', 'West Midlands United', 'Brighton Coast', 'Yorkshire White', 'Severn City', 'East London Iron', 'Tyne Albion', 'Lancashire Rovers']
+const CLUB_NAMES = ['North London Athletic', 'South London Blue', 'Mersey Red', 'West Midlands United', 'Brighton Coast', 'Yorkshire White', 'Severn City', 'East London Iron', 'Tyne Albion', 'Lancashire Rovers',
+  'Manchester Sky', 'North London White', 'Mersey Blue', 'West London Cottage', 'South Coast Saints', 'Nottingham Forest Green', 'West London Bees', 'Crystal South', 'Suffolk Town', 'Lancashire Wanderers']
+const LEAGUE_WEEKS = Array.from({ length: 40 }, (_, index) => index + 3).filter(week => week !== 18 && week !== 29)
 
 export function proTrialClubs(points: number): Team[] {
   const base = points >= 5 ? 5 : points >= 3 ? 4 : 3
@@ -46,7 +48,7 @@ export function createProCareer(clubName: string, prestige = 4): ProCareerState 
   const own = generateTeam(Math.max(3, Math.min(6, prestige)))
   own.name = clubName
   own.short = clubName.split(' ').map(part => part[0]).join('').slice(0, 3).toUpperCase()
-  const others = CLUB_NAMES.filter(name => name !== clubName).slice(0, 9).map((name, index) => {
+  const others = CLUB_NAMES.filter(name => name !== clubName).slice(0, 19).map((name, index) => {
     const team = generateTeam(3 + index % 4)
     return { ...team, name, short: name.split(' ').map(part => part[0]).join('').slice(0, 3).toUpperCase() }
   })
@@ -69,12 +71,16 @@ export function createProCareer(clubName: string, prestige = 4): ProCareerState 
   return { world: { divisions: { 1: division, 2: { ...division, teams: [], standings: [], fixtures: [], matchRecords: [] }, 3: { ...division, teams: [], standings: [], fixtures: [], matchRecords: [] } }, playerDivision: 1, playerTeamId: own.id, kind: 'pro' }, season: 1, week: 1, welcomed: false }
 }
 
-export function proRound(week: number): number | null {
-  return week >= 4 && week <= 38 && (week - 4) % 2 === 0 ? (week - 4) / 2 + 1 : null
+export function proRound(week: number, teamCount = 20): number | null {
+  // Existing ten-club pro saves keep their original dates until a separate
+  // migration can preserve their played fixtures and historic match records.
+  if (teamCount === 10) return week >= 4 && week <= 38 && (week - 4) % 2 === 0 ? (week - 4) / 2 + 1 : null
+  const index = LEAGUE_WEEKS.indexOf(week)
+  return index < 0 ? null : index + 1
 }
 
 export function proFixture(state: ProCareerState): Fixture | undefined {
-  const round = proRound(state.week)
+  const round = proRound(state.week, state.world.divisions[1].teams.length)
   return round === null ? undefined : state.world.divisions[1].fixtures.find(fixture => fixture.week === round && !fixture.played && (fixture.homeTeamId === state.world.playerTeamId || fixture.awayTeamId === state.world.playerTeamId))
 }
 
@@ -90,7 +96,7 @@ export function resolveProMatch(state: ProCareerState, player: Player, result: {
 }
 
 export function advanceProWeek(state: ProCareerState, player: Player): { state: ProCareerState; player: Player } {
-  const round = proRound(state.week)
+  const round = proRound(state.week, state.world.divisions[1].teams.length)
   let world = state.world
   if (round !== null) {
     world = { ...world, divisions: { ...world.divisions, 1: batchSimDivisionRound(world.divisions[1], round, world.playerTeamId, true, 'proLeague', state.season, state.week) } }

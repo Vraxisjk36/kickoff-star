@@ -1,6 +1,7 @@
 import { PRO_LEAGUE_PLAN, type ProConfederation } from './proLeagueRegistry'
 import { proRoll } from './proWorldFactory'
 import type { IsoDate, ProCompetition, ProFixture, ProStandingRow, ProWorldState } from './proWorld'
+import { englandBerths, southAfricaBerths } from './proQualification'
 
 const DAY = 86_400_000
 const addDays = (date: IsoDate, days: number): IsoDate => new Date(Date.parse(`${date}T00:00:00Z`) + days * DAY).toISOString().slice(0, 10)
@@ -18,6 +19,7 @@ export function proCompetitionName(id: string): string {
   if (id === 'world-club') return 'World Club Championship'
   if (id.startsWith('top-')) return `${PRO_LEAGUE_PLAN.find(item => item.associationId === id.slice(4))?.associationName ?? 'Domestic'} Elite League`
   if (id === 'conference-uefa') return 'European Conference Series'
+  if (id === 'mtn8-rsa') return 'South African Top Eight Cup'
   if (id === 'nations-uefa') return 'European Nations League'
   if (id === 'nations-concacaf') return 'North American Nations League'
   if (id.startsWith('qualifiers-')) return `${({ uefa: 'European', caf: 'African', conmebol: 'South American', concacaf: 'North American', afc: 'Asian', ofc: 'Oceanian' } as Record<string, string>)[id.slice(11)] ?? 'World'} World Qualifiers`
@@ -161,8 +163,8 @@ export function beginDomesticSeason(world: ProWorldState, year: number): void {
   for (const league of PRO_LEAGUE_PLAN) {
     const id = league.associationId
     const entrants = leagueOrder(world, id)
-    createCompetition(world, `cup-${id}`, 'domestic-cup', year, entrants, 'knockout', `${year}-02-04`)
-    if (leagueCups.has(id)) createCompetition(world, `league-cup-${id}`, 'domestic-cup', year,
+    createCompetition(world, `cup-${id}`, 'domestic-cup', year, entrants, 'knockout', `${year}-${id === 'eng' ? '01-05' : id === 'rsa' ? '01-27' : '02-04'}`)
+    if (leagueCups.has(id) && id !== 'rsa') createCompetition(world, `league-cup-${id}`, 'domestic-cup', year,
       entrants, 'knockout', `${year}-04-09`)
     if (superCups.has(id)) {
       const leagueWinner = world.championHistory.filter(item => item.competitionId === `top-${id}`).at(-1)?.championId
@@ -173,12 +175,22 @@ export function beginDomesticSeason(world: ProWorldState, year: number): void {
     }
   }
 }
+/** The top eight are drawn after the completed May league season. */
+export function beginSouthAfricanTopEight(world: ProWorldState, year: number): void {
+  createCompetition(world, 'mtn8-rsa', 'domestic-cup', year,
+    leagueOrder(world, 'rsa').slice(0, 8), 'knockout', `${year}-08-08`)
+  createCompetition(world, 'league-cup-rsa', 'domestic-cup', year,
+    leagueOrder(world, 'rsa'), 'knockout', `${year}-10-24`)
+}
 export function beginContinentalSeason(world: ProWorldState, year: number): void {
   for (const confederation of confederations) {
     const slots = { uefa: 36, caf: 16, conmebol: 32, concacaf: 16, afc: 24, ofc: 8 }[confederation]
-    const top = tierEntrants(world, confederation, 0, slots)
-    const lower = tierEntrants(world, confederation, 1, slots * 2).filter(id => !top.includes(id)).slice(0, slots)
-    const third = confederation === 'uefa' ? tierEntrants(world, confederation, 3, 80).filter(id => !top.includes(id) && !lower.includes(id)).slice(0, 36) : []
+    const priority = confederation === 'uefa' ? englandBerths(world) : confederation === 'caf' ? southAfricaBerths(world) : null
+    const fill = (seed: string[], candidates: string[], excluded: string[], count: number) =>
+      [...new Set([...seed, ...candidates])].filter(id => !excluded.includes(id)).slice(0, count)
+    const top = fill(priority?.champions ?? [], tierEntrants(world, confederation, 0, slots * 3), [], slots)
+    const lower = fill(priority?.secondary ?? [], tierEntrants(world, confederation, 1, slots * 4), top, slots)
+    const third = confederation === 'uefa' ? fill(priority?.third ?? [], tierEntrants(world, confederation, 3, 100), [...top, ...lower], 36) : []
     for (const [id, entrants] of [...[[`continental-${confederation}`, top], [`union-${confederation}`, lower]],
       ...(confederation === 'uefa' ? [['conference-uefa', third]] : [])] as [string, string[]][])
       createCompetition(world, id, 'continental-club', year, entrants, confederation === 'uefa' ? 'league-phase' : 'groups', `${year}-09-10`)

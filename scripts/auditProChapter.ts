@@ -3,14 +3,24 @@ import { useCareerStore } from '../src/store/careerStore'
 import { readSave } from '../src/engine/save'
 import { OUTFIELD_ATTRIBUTES } from '../src/types/attributes'
 import { strict as assert } from 'node:assert'
-import { createProCareer, proFixture, advanceProWeek, resolveProMatch, proTrialClubs } from '../src/engine/proCareer'
+import { createProCareer, proFixture, proRound, advanceProWeek, resolveProMatch, proTrialClubs } from '../src/engine/proCareer'
 import { sortStandings } from '../src/engine/league'
 import type { Player } from '../src/types/player'
 
 const offers = proTrialClubs(7)
+assert.equal(proRound(4, 10), 1, 'old saves keep their ten-club match calendar')
+assert.equal(proRound(3, 10), null)
 assert.equal(offers.length, 4)
 assert.equal(new Set(offers.map(club => club.name)).size, 4)
 let state = createProCareer(offers[0].name, offers[0].prestige)
+assert.equal(state.world.divisions[1].teams.length, 20)
+assert.equal(state.world.divisions[1].fixtures.length, 380)
+for (const team of state.world.divisions[1].teams) {
+  const fixtures = state.world.divisions[1].fixtures.filter(f => f.homeTeamId === team.id || f.awayTeamId === team.id)
+  assert.equal(fixtures.length, 38)
+  assert.equal(fixtures.filter(f => f.homeTeamId === team.id).length, 19)
+  assert.equal(fixtures.filter(f => f.awayTeamId === team.id).length, 19)
+}
 const own = state.world.playerTeamId
 const player = { id: 'audit-pro', name: 'Test Player', position: 'ST', squadRole: 'bench', fitness: { stamina: 100 }, injury: null,
   contract: { terms: { weeklyWage: 1000, appearanceFee: 80, goalBonus: 120, years: 2, signingBonus: 1000 } }, money: 100, agentId: 'independent', careerEarnings: 0, careerClock: { ageYears: 18 }, seasonGoals: 0, seasonAssists: 0 } as Player
@@ -31,17 +41,17 @@ for (let week = 1; week <= 88; week++) {
   state = next.state; current = next.player
   const standings = state.world.divisions[1].standings
   assert.equal(standings.reduce((sum, row) => sum + row.played, 0) % 2, 0)
-  assert.equal(new Set(standings.map(row => row.teamId)).size, 10)
-  assert.equal(sortStandings(standings).length, 10)
+  assert.equal(new Set(standings.map(row => row.teamId)).size, 20)
+  assert.equal(sortStandings(standings).length, 20)
 }
-assert.equal(appearances, 35)
+assert.equal(appearances, 75)
 assert.equal(state.season, 3)
 assert.equal(state.week, 1)
 assert.equal(state.world.divisions[1].fixtures.filter(f => f.played).length, 0)
-assert.equal(state.world.matchHistory?.filter(record => record.lines.some(line => line.playerId === current.id)).length, 35)
+assert.equal(state.world.matchHistory?.filter(record => record.lines.some(line => line.playerId === current.id)).length, 75)
 assert.equal(current.careerClock.ageYears, 20)
 assert.equal(current.money, 100 + 88 * 950) // independent agent: 5% commission
-console.log('Pro chapter: 4 offers, two 18-match seasons, missed fixture, wages, history and rollover passed')
+console.log('Pro chapter: 4 offers, two 38-match seasons, missed fixture, wages, history and rollover passed')
 
 // Production store: direct entry, three trial decisions, signing, disk reload.
 const entrant = { id: 'trial-audit', name: 'New Entrant', position: 'ST', preferredFoot: 'right', heightCm: 181,

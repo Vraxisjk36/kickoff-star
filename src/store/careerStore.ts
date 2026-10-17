@@ -55,7 +55,7 @@ import { addStoryMoment, createStoryMoment, type StoryMoment } from '../engine/p
 import { academyEntryOpen, academyRecruitmentReport, academyTrialAvailable, academyTrialBase, academyOfferCleared, academyRegistrationOpen, migrateAcademyRecruitment, reviewAcademyShowcase } from '../engine/academyRecruitment'
 import { ageGroupFor, initYouthPathway, representativeSelection, selectionPassed } from '../engine/pathway'
 import { initOctoberLeague, recordOctoberResult, simulateOctoberWeek, octoberStandings } from '../engine/octoberLeague'
-import { createProCareer, advanceProWeek, resolveProMatch } from '../engine/proCareer'
+import { createProCareer, advanceProWeek, resolveProMatch, proRound } from '../engine/proCareer'
 import { attachProWorld, advanceLivingWorld, generateMarketOffers, finalizeProMove, resolveProCup } from '../engine/proIntegration'
 import { startProLoan, registrationOpen } from '../engine/proMovement'
 import { assessProDeal } from '../engine/proClubFinance'
@@ -531,7 +531,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   completeProMatch: (result) => {
     const { player } = getState()
     if (!player?.proCareer || player.proCareer.resolvedWeek === player.proCareer.week || !player.proCareer.world.divisions[1].teams.some(team => team.id === result.opponent.id)) return
-    const fixture = player.proCareer.world.divisions[1].fixtures.find(f => !f.played && f.week === ((player.proCareer!.week - 4) / 2 + 1) && f.homeTeamId === (result.home ? player.proCareer!.world.playerTeamId : result.opponent.id) && f.awayTeamId === (result.home ? result.opponent.id : player.proCareer!.world.playerTeamId))
+    const fixture = player.proCareer.world.divisions[1].fixtures.find(f => !f.played && f.week === proRound(player.proCareer!.week, player.proCareer!.world.divisions[1].teams.length) && f.homeTeamId === (result.home ? player.proCareer!.world.playerTeamId : result.opponent.id) && f.awayTeamId === (result.home ? result.opponent.id : player.proCareer!.world.playerTeamId))
     if (!fixture) return
     const resolved = resolveProMatch(player.proCareer, player, result)
     const earned = (player.contract?.terms.appearanceFee ?? 0) + result.goals * (player.contract?.terms.goalBonus ?? 0)

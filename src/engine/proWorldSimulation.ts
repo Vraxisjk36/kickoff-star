@@ -1,7 +1,7 @@
 import { PRO_LEAGUE_PLAN } from './proLeagueRegistry'
 import { createAcademyIntake, newProLeagueSeason, proRoll } from './proWorldFactory'
 import { ageOf, growOrDecline, nextShirtNumber, seasonalInjury, shouldRetire, signBackgroundReplacement } from './proLifecycle'
-import { advanceTournamentsTo, beginClubWorldSeason, beginContinentalSeason, beginNationsLeague, beginWorldQualifiers, beginDomesticSeason, beginNationalSeason, beginWorldSeason, invalidateTournamentCalendar } from './proTournaments'
+import { advanceTournamentsTo, beginClubWorldSeason, beginContinentalSeason, beginNationsLeague, beginWorldQualifiers, beginDomesticSeason, beginNationalSeason, beginWorldSeason, beginSouthAfricanTopEight, invalidateTournamentCalendar } from './proTournaments'
 import type { IsoDate, ProClub, ProFixture, ProPlayer, ProStandingRow, ProWorldState } from './proWorld'
 
 function ordered(rows: ProStandingRow[]): ProStandingRow[] {
@@ -169,9 +169,9 @@ export function advanceProWorldTo(source: ProWorldState, targetDate: IsoDate): P
   world.transferIntakeCount ??= 0
   world.retirementHistory ??= []
   world.loans ??= {}
-  const milestones: { date: IsoDate; kind: 'national' | 'continental' }[] = []
+  const milestones: { date: IsoDate; kind: 'national' | 'continental' | 'summer-cups' }[] = []
   for (let year = Number(source.currentDate.slice(0, 4)); year <= Number(targetDate.slice(0, 4)); year++) {
-    milestones.push({ date: `${year}-01-01`, kind: 'national' }, { date: `${year}-09-01`, kind: 'continental' })
+    milestones.push({ date: `${year}-01-01`, kind: 'national' }, { date: `${year}-07-01`, kind: 'summer-cups' }, { date: `${year}-09-01`, kind: 'continental' })
   }
   for (const milestone of milestones.filter(item => item.date >= source.currentDate && item.date <= targetDate)
     .sort((a, b) => a.date.localeCompare(b.date))) {
@@ -185,6 +185,8 @@ export function advanceProWorldTo(source: ProWorldState, targetDate: IsoDate): P
       beginWorldSeason(world, Number(milestone.date.slice(0, 4)))
       beginClubWorldSeason(world, Number(milestone.date.slice(0, 4)))
     }
+    if (milestone.kind === 'summer-cups' && world.competitions['mtn8-rsa']?.seasonId !== milestone.date.slice(0, 4))
+      beginSouthAfricanTopEight(world, Number(milestone.date.slice(0, 4)))
     if (milestone.kind === 'continental' && world.competitions['continental-uefa']?.seasonId !== milestone.date.slice(0, 4)) {
       beginContinentalSeason(world, Number(milestone.date.slice(0, 4)))
       beginNationsLeague(world, Number(milestone.date.slice(0, 4)))

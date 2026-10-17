@@ -3,6 +3,7 @@ import { createEmptyProWorld, type IsoDate, type ProAcademyProspect, type ProClu
   type ProPlayer, type ProWorldState } from './proWorld'
 import { isInPeriod, type SeasonCalendarProfile } from './proCalendar'
 import { PRO_SATELLITE_ASSOCIATIONS } from './proSatelliteRegistry'
+import { VERIFIED_PRO_RULES } from './proRulebook'
 
 const DAY = 86_400_000
 const utc = (date: IsoDate) => Date.parse(`${date}T00:00:00Z`)
@@ -45,6 +46,7 @@ const currencies = Object.fromEntries(Object.entries(currencyGroups).flatMap(([c
 // Phase 1 world capacity, not verified real-life club counts. Clubs and formats
 // are replaced by researched country editions before the public pro release.
 export function plannedClubCount(id: string): number {
+  if (id in VERIFIED_PRO_RULES) return VERIFIED_PRO_RULES[id as keyof typeof VERIFIED_PRO_RULES].topFlightClubs
   if (['eng','esp','ita','fra','bra','mex','nga','egy','usa'].includes(id)) return 20
   if (id === 'ger' || id === 'por' || id === 'ned' || id === 'tur') return 18
   if (id === 'sco' || id === 'aut' || id === 'nzl' || id === 'fji') return 12

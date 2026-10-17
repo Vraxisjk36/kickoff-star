@@ -7,8 +7,8 @@ android {
         applicationId "com.vraxis.kickoffstar"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 20
-        versionName "5.12.0"
+        versionCode 19
+        versionName "5.11.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -55,7 +55,6 @@ dependencies {
     implementation project(':capacitor-cordova-android-plugins')
     implementation 'com.google.mlkit:translate:17.0.3'
     implementation 'com.google.android.play:review:2.0.2'
-    implementation 'com.google.android.play:app-update:2.1.0'
 }
 
 apply from: 'capacitor.build.gradle'

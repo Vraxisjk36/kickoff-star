@@ -9,7 +9,6 @@ public class MainActivity extends BridgeActivity {
   protected void onCreate(Bundle savedInstanceState) {
     registerPlugin(KickoffTranslationPlugin.class);
     registerPlugin(KickoffReviewPlugin.class);
-    registerPlugin(KickoffUpdatePlugin.class);
     super.onCreate(savedInstanceState);
     // Backward-compatible edge-to-edge; Capacitor SystemBars exposes the
     // actual system-bar and cutout insets to the web UI.

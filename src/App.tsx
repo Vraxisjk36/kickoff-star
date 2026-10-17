@@ -96,9 +96,7 @@ export default function App() {
       replace('menu')
       return
     }
-    if (useCareerStore.getState().proCareer) {
-      ;(push ? navigate : replace)('career')
-    } else if (p.trialWeekCompleted < 3) {
+    if (p.trialWeekCompleted < 3) {
       setChosenSchool(null)
       ;(push ? navigate : replace)('school')
     } else {
@@ -142,7 +140,7 @@ export default function App() {
   if (screen === 'settings') return <SettingsScreen onBack={goBackToMenu} />
   if (screen === 'credits') return <CreditsScreen onBack={goBackToMenu} />
   if (screen === 'help') return <HelpScreen onBack={goBackToMenu} />
-  if (screen === 'create') return <PlayerCreation onComplete={(route) => replace(route === 'pro' ? 'career' : 'story')} onBack={goBackToMenu} />
+  if (screen === 'create') return <PlayerCreation onComplete={() => replace('story')} onBack={goBackToMenu} />
   if (screen === 'story') return <StoryIntro onComplete={() => replace('school')} />
   if (screen === 'school') return <SchoolSelection onChoose={handleSchoolChosen} />
   if (screen === 'trials' && player && chosenSchool) {

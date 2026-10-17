@@ -6,7 +6,6 @@
 // the context is created lazily on the first sfx call (which is always a tap).
 
 const MUTE_KEY = 'kickoff-star-muted'
-const EFFECTS_KEY = 'kickoff-star-effects-enabled'
 
 let ctx: AudioContext | null = null
 let master: GainNode | null = null
@@ -19,7 +18,7 @@ function ensureCtx(): AudioContext | null {
       if (!AC) return null
       ctx = new AC()
       master = ctx.createGain()
-      master.gain.value = isMuted() || !effectsEnabled() ? 0 : 0.5
+      master.gain.value = isMuted() ? 0 : 0.5
       master.connect(ctx.destination)
     }
     if (ctx.state === 'suspended') void ctx.resume()
@@ -35,15 +34,7 @@ export function isMuted(): boolean {
 
 export function setMuted(muted: boolean): void {
   try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0') } catch { /* private mode */ }
-  if (master) master.gain.value = muted || !effectsEnabled() ? 0 : 0.5
-}
-
-export function effectsEnabled(): boolean {
-  try { return localStorage.getItem(EFFECTS_KEY) !== '0' } catch { return true }
-}
-export function setEffectsEnabled(enabled: boolean): void {
-  try { localStorage.setItem(EFFECTS_KEY, enabled ? '1' : '0') } catch { /* unavailable storage */ }
-  if (master) master.gain.value = enabled && !isMuted() ? 0.5 : 0
+  if (master) master.gain.value = muted ? 0 : 0.5
 }
 
 export function toggleMuted(): boolean {

@@ -18,8 +18,6 @@ export interface CareerClock {
 export interface Player {
   id: string
   name: string
-  /** Existing careers default to Realistic. This never changes XP or OVR. */
-  difficulty?: 'casual' | 'realistic' | 'hardcore'
   position: Position
   preferredFoot: 'left' | 'right'
   heightCm: number

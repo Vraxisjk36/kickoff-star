@@ -1,6 +1,5 @@
 import type { Player } from '../types/player'
 import CareerRecord from '../components/CareerRecord'
-import { shareCareer } from '../engine/shareCareer'
 
 export default function CareerEnd({ player, onMenu }: { player: Player; onMenu: () => void }) {
   return (
@@ -14,7 +13,6 @@ export default function CareerEnd({ player, onMenu }: { player: Player; onMenu: 
         </p>
 
         <CareerRecord player={player} />
-        <button type="button" onClick={() => { void shareCareer(player).catch(() => {}) }} className="w-full border border-ks-gold text-ks-gold font-display tracking-wide rounded-xl py-3.5 text-sm mb-3">share your journey ↗</button>
 
         <button onClick={onMenu} className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-3.5 text-sm shadow-[0_0_25px_rgba(212,175,55,0.3)]">
           back to menu

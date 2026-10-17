@@ -7,17 +7,7 @@
 // navigator.vibrate is unsupported on iOS Safari entirely (no API at all)
 // and requires a user gesture on Android — every call here is wrapped so a
 // missing/blocked API is silently a no-op, never a thrown error.
-const HAPTICS_KEY = 'kickoff-star-haptics-enabled'
-export function hapticsEnabled(): boolean {
-  try { return localStorage.getItem(HAPTICS_KEY) !== '0' } catch { return true }
-}
-export function setHapticsEnabled(enabled: boolean): void {
-  try { localStorage.setItem(HAPTICS_KEY, enabled ? '1' : '0') } catch { /* unavailable storage */ }
-  if (!enabled) navigator.vibrate?.(0)
-}
-
 function buzz(pattern: number | number[]) {
-  if (!hapticsEnabled()) return
   try {
     navigator.vibrate?.(pattern)
   } catch {

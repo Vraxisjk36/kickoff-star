@@ -52,8 +52,7 @@ export function optionChance(player: Player, o: MomentOption, tier: string): num
   // the same option or penalising a new player's low starting attributes.
   const specialistBonus = Math.max(0, ...o.keyAttributes.map(attr =>
     clamp((attrValue(player, attr) - 5) / 10, 0, 1) * (specialistBonuses[attr] ?? 0)))
-  const difficultyOffset = player.difficulty === 'casual' ? 0.07 : player.difficulty === 'hardcore' ? -0.07 : 0
-  return clamp(o.baseCeiling * attrMod * mentalMod * tierMod + specialistBonus + difficultyOffset, 0.08, 0.96)
+  return clamp(o.baseCeiling * attrMod * mentalMod * tierMod + specialistBonus, 0.08, 0.96)
 }
 
 function chanceLabel(chance: number): string {

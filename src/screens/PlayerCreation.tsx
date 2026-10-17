@@ -38,7 +38,7 @@ function randomBetween(min: number, max: number) {
   return Math.round(min + rand() * (max - min))
 }
 
-function buildNewPlayer(name: string, position: Position, foot: 'left' | 'right', nationality: string, regionId: string, avatarId: number, archetypeId: string, difficulty: NonNullable<Player['difficulty']>): Player {
+function buildNewPlayer(name: string, position: Position, foot: 'left' | 'right', nationality: string, regionId: string, avatarId: number, archetypeId: string): Player {
   const isGK = isGoalkeeperPosition(position)
   const potential = randomBetween(8, 16)
   const attributes = isGK
@@ -57,7 +57,7 @@ function buildNewPlayer(name: string, position: Position, foot: 'left' | 'right'
   }
   return {
     id: crypto.randomUUID(),
-    name, position, preferredFoot: foot, difficulty,
+    name, position, preferredFoot: foot,
     heightCm: randomBetween(160, 190),
     attributes: attributes as Player['attributes'],
     potential,
@@ -79,7 +79,7 @@ function buildInitialCalendar(): CalendarState {
   }
 }
 
-export default function PlayerCreation({ onComplete, onBack }: { onComplete: (route: 'school' | 'pro') => void; onBack: () => void }) {
+export default function PlayerCreation({ onComplete, onBack }: { onComplete: () => void; onBack: () => void }) {
   const t = useTranslate()
   const [step, setStep] = useState(0)
   const [name, setName] = useState('')
@@ -89,12 +89,9 @@ export default function PlayerCreation({ onComplete, onBack }: { onComplete: (ro
   const [nation, setNation] = useState<string | null>(null)
   const [regionId, setRegionId] = useState<string | null>(null)
   const [archetype, setArchetype] = useState<string | null>(null)
-  const [difficulty, setDifficulty] = useState<NonNullable<Player['difficulty']>>('realistic')
-  const [route, setRoute] = useState<'school' | 'pro'>('school')
   const startNewCareer = useCareerStore((s) => s.startNewCareer)
-  const startDirectProCareer = useCareerStore((s) => s.startDirectProCareer)
 
-  const LAST_STEP = 8
+  const LAST_STEP = 6
   const canProceed =
     step === 0 ? name.trim().length > 0
     : step === 1 ? position !== null
@@ -102,15 +99,14 @@ export default function PlayerCreation({ onComplete, onBack }: { onComplete: (ro
     : step === 3 ? avatarId !== null
     : step === 4 ? nation !== null
     : step === 5 ? regionId !== null
-    : step === 6 ? archetype !== null : true
+    : archetype !== null
 
   const handleNext = async () => {
     if (step < LAST_STEP) { setStep(step + 1); return }
     if (!name.trim() || !position || !foot || avatarId === null || !nation || !regionId || !archetype) return
-    const player = buildNewPlayer(name.trim(), position, foot, nation, regionId, avatarId, archetype, difficulty)
-    if (route === 'pro') await startDirectProCareer({ ...player, careerClock: { ...player.careerClock, ageYears: 18 } }, buildInitialCalendar(), 0)
-    else await startNewCareer(player, buildInitialCalendar(), 0)
-    onComplete(route)
+    const player = buildNewPlayer(name.trim(), position, foot, nation, regionId, avatarId, archetype)
+    await startNewCareer(player, buildInitialCalendar(), 0)
+    onComplete()
   }
 
   return (
@@ -123,7 +119,7 @@ export default function PlayerCreation({ onComplete, onBack }: { onComplete: (ro
       <div className="relative z-10 flex items-center justify-between px-6 pt-6">
         <button onClick={() => (step === 0 ? onBack() : setStep(step - 1))} className="text-ks-muted text-sm">← {t('back')}</button>
         <div className="flex gap-1.5">
-          {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+          {[0, 1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className={`h-1 rounded-full transition-all ${i === step ? 'w-6 bg-ks-gold' : i < step ? 'w-3 bg-ks-gold/50' : 'w-3 bg-ks-border'}`} />
           ))}
         </div>
@@ -132,7 +128,7 @@ export default function PlayerCreation({ onComplete, onBack }: { onComplete: (ro
 
       <div className="relative z-10 flex-1 flex flex-col px-6 py-8 max-w-md mx-auto w-full">
         <h1 className="font-display text-ks-ink text-2xl tracking-wide mb-1">
-          {t(step === 0 ? 'what\'s your name?' : step === 1 ? 'pick your position' : step === 2 ? 'preferred foot' : step === 3 ? 'pick your look' : step === 4 ? 'choose your country' : step === 5 ? 'choose your region' : step === 6 ? 'what kind of player are you?' : step === 7 ? 'choose your challenge' : 'choose your starting path')}
+          {t(step === 0 ? 'what\'s your name?' : step === 1 ? 'pick your position' : step === 2 ? 'preferred foot' : step === 3 ? 'pick your look' : step === 4 ? 'choose your country' : step === 5 ? 'choose your region' : 'what kind of player are you?')}
         </h1>
         <p className="text-ks-muted text-xs mb-8">
           {t(step === 0 ? 'every legend needs a name.'
@@ -141,7 +137,7 @@ export default function PlayerCreation({ onComplete, onBack }: { onComplete: (ro
             : step === 3 ? 'this is the face of your career.'
             : step === 4 ? 'your nation — one day they might come calling.'
             : step === 5 ? 'your first schools and clubs come from here.'
-            : step === 6 ? 'one defining trait. it shapes your attributes and how you play, permanently.' : step === 7 ? 'this changes your match decisions, not your development speed.' : 'begin at school or earn four club offers in a three-week pro trial.')}
+            : 'one defining trait. it shapes your attributes and how you play, permanently.')}
         </p>
 
         {step === 0 && (
@@ -254,28 +250,6 @@ export default function PlayerCreation({ onComplete, onBack }: { onComplete: (ro
             ))}
           </div>
         )}
-        {step === 7 && (
-          <div className="space-y-3">
-            {([
-              ['casual', 'Casual', 'More forgiving match decisions. Your career still plays out normally.'],
-              ['realistic', 'Realistic', 'The original Kickoff Star balance. Recommended for your first career.'],
-              ['hardcore', 'Hardcore', 'Tougher match decisions. Every good choice matters.'],
-            ] as const).map(([id, label, description]) => (
-              <button key={id} type="button" onClick={() => setDifficulty(id)} aria-pressed={difficulty === id}
-                className={`w-full text-left rounded-xl border px-5 py-5 ${difficulty === id ? 'border-ks-gold bg-ks-gold/10' : 'border-ks-border bg-[#0f0f0d]'}`}>
-                <span className="block font-display text-ks-gold">{t(label)}</span>
-                <span className="block text-sm text-ks-muted mt-1">{t(description)}</span>
-              </button>
-            ))}
-          </div>
-        )}
-        {step === 8 && <div className="space-y-3">
-          {([['school', 'School football', 'Build your name through school and academy football.'],
-            ['pro', 'Direct pro trial', 'Start at 18. Three weeks of assessments lead to four realistic club offers.']] as const).map(([id, label, description]) =>
-            <button type="button" key={id} onClick={() => setRoute(id)} aria-pressed={route === id}
-              className={`w-full text-left rounded-xl border px-5 py-5 ${route === id ? 'border-ks-gold bg-ks-gold/10' : 'border-ks-border bg-[#0f0f0d]'}`}>
-              <span className="block font-display text-ks-gold">{t(label)}</span><span className="block text-sm text-ks-muted mt-1">{t(description)}</span>
-            </button>)}</div>}
       </div>
 
       <div className="relative z-10 px-6 pb-8 max-w-md mx-auto w-full">

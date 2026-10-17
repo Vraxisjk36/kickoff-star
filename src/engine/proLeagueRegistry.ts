@@ -46,6 +46,18 @@ export const PRO_LEAGUE_PLAN: readonly ProLeaguePlan[] = planned.flatMap(group =
   ...parseLeagues(group.simulated, 'simulated', group.confederation),
 ])
 
+/** Lower flights with a stable, distinct competition identity. */
+export const LOWER_DIVISIONS: Readonly<Record<string, { clubs: number; promoted: number; relegated: number }>> = {
+  eng: { clubs: 24, promoted: 3, relegated: 3 }, esp: { clubs: 22, promoted: 3, relegated: 3 },
+  ger: { clubs: 18, promoted: 2, relegated: 2 }, fra: { clubs: 18, promoted: 2, relegated: 2 },
+  ita: { clubs: 20, promoted: 3, relegated: 3 }, ned: { clubs: 20, promoted: 2, relegated: 2 },
+  por: { clubs: 18, promoted: 2, relegated: 2 }, bra: { clubs: 20, promoted: 4, relegated: 4 },
+  rsa: { clubs: 16, promoted: 1, relegated: 1 }, sco: { clubs: 10, promoted: 1, relegated: 1 },
+}
+export const PRO_LOWER_LEAGUE_PLAN: readonly ProLeaguePlan[] = PRO_LEAGUE_PLAN
+  .filter(league => league.associationId in LOWER_DIVISIONS)
+  .map(league => ({ ...league, id: `second-${league.associationId}`, mode: 'simulated' }))
+
 export function validateProLeaguePlan(leagues: readonly ProLeaguePlan[] = PRO_LEAGUE_PLAN): string[] {
   const issues: string[] = []
   if (leagues.length !== 75) issues.push(`Expected 75 leagues; found ${leagues.length}`)

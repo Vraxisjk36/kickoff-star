@@ -6,11 +6,12 @@ import { completeProTransfer } from '../src/engine/proTransfers'
 import { assessProDeal } from '../src/engine/proClubFinance'
 import { validateCalendarProfile } from '../src/engine/proCalendar'
 import { readSave, writeSave, SAVE_SCHEMA_VERSION, EMPTY_CUPS } from '../src/engine/save'
+import { PRO_LOWER_LEAGUE_PLAN } from '../src/engine/proLeagueRegistry'
 
 const world = createProWorld(2051, '2026-01-01')
 assert.ok(Object.keys(world.associations).length >= 200)
 assert.equal(Object.values(world.associations).filter(item => item.confederation === 'caf').length, 54)
-assert.equal(Object.keys(world.competitions).length, 75)
+assert.equal(Object.keys(world.competitions).length, 75 + PRO_LOWER_LEAGUE_PLAN.length)
 assert.ok(Object.keys(world.players).length > 25_000)
 const initial = JSON.stringify(world)
 assert.ok(initial.length < 32 * 1024 * 1024)
@@ -18,9 +19,10 @@ assert.ok(initial.length < 32 * 1024 * 1024)
 for (const competition of Object.values(world.competitions)) {
   const fixtures = Object.values(world.fixtures).filter(fixture => fixture.competitionId === competition.id)
   const n = competition.entrantIds.length
-  assert.equal(fixtures.length, n * (n - 1), `${competition.id} fixture count`)
+  assert.equal(fixtures.length, competition.id === 'top-sco' ? 198 : n * (n - 1), `${competition.id} fixture count`)
   const pairs = new Set(fixtures.map(fixture => `${fixture.homeId}:${fixture.awayId}`))
-  assert.equal(pairs.size, fixtures.length, `${competition.id} repeated home/away tie`)
+  assert.equal(pairs.size, competition.id === 'top-sco' ? 132 : fixtures.length,
+    `${competition.id} repeated home/away tie`)
   const clubDates = new Set<string>()
   for (const fixture of fixtures) for (const id of [fixture.homeId, fixture.awayId]) {
     assert.ok(competition.entrantIds.includes(id), 'fixture references entrant')
@@ -39,7 +41,7 @@ const youthShell = { schemaVersion: SAVE_SCHEMA_VERSION, slotId: 0 as const, sav
 await writeSave({ ...youthShell, player: youthShell.player as never, proWorld: world })
 const restored = await readSave(0)
 assert.equal(restored?.proWorld?.seed, 2051)
-assert.equal(restored?.proWorld?.fixtures['fixture-eng-2025-1-1']?.competitionId, 'top-eng')
+assert.equal(restored?.proWorld?.fixtures['fixture-top-eng-2025-1-1']?.competitionId, 'top-eng')
 assert.equal(restored?.player.id, 'youth')
 assert.equal(restored?.calendar.currentWeek.weekNumber, 1)
 
@@ -69,6 +71,8 @@ const twentyYears = advanceProWorldTo(tenYears, '2046-01-01')
 const elapsed = Math.round(performance.now() - start)
 assert.equal(twentyYears.championHistory.filter(record => record.competitionId.startsWith('top-')).length,
   75 * 20 + 18, 'every league season archived')
+assert.ok(twentyYears.championHistory.filter(record => record.competitionId.startsWith('second-')).length >=
+  PRO_LOWER_LEAGUE_PLAN.length * 20, 'every lower-division season archived')
 assert.ok(twentyYears.seasonHistory.length <= 170 * 9)
 assert.ok(twentyYears.recentEvents.length <= 240)
 assert.equal(Object.values(twentyYears.players).filter(candidate => candidate.clubId).length,

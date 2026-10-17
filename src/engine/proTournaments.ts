@@ -1,4 +1,4 @@
-import { PRO_LEAGUE_PLAN, type ProConfederation } from './proLeagueRegistry'
+import { LOWER_DIVISIONS, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN, type ProConfederation } from './proLeagueRegistry'
 import { proRoll } from './proWorldFactory'
 import type { IsoDate, ProCompetition, ProFixture, ProStandingRow, ProWorldState } from './proWorld'
 import { englandBerths, southAfricaBerths } from './proQualification'
@@ -18,6 +18,7 @@ export function proCompetitionName(id: string): string {
   if (id === 'world-national') return 'World Nations Championship'
   if (id === 'world-club') return 'World Club Championship'
   if (id.startsWith('top-')) return `${PRO_LEAGUE_PLAN.find(item => item.associationId === id.slice(4))?.associationName ?? 'Domestic'} Elite League`
+  if (id.startsWith('second-')) return `${PRO_LEAGUE_PLAN.find(item => item.associationId === id.slice(7))?.associationName ?? 'Domestic'} Second Division`
   if (id === 'conference-uefa') return 'European Conference Series'
   if (id === 'mtn8-rsa') return 'South African Top Eight Cup'
   if (id === 'nations-uefa') return 'European Nations League'
@@ -73,11 +74,15 @@ function shortRest(world: ProWorldState, entrantId: string, date: IsoDate): bool
   return [-2, -1, 1, 2].some(offset => occupied(world, entrantId, addDays(date, offset)))
 }
 function findDate(world: ProWorldState, comp: ProCompetition, a: string, b: string, desired: IsoDate): IsoDate {
-  for (let shift = 0; shift < 28; shift++) {
+  // Prefer a weekday with two rest days; crowded multi-competition calendars
+  // allow a weekend or one-day rest rather than deadlocking the save.
+  for (let pass = 0; pass < 3; pass++) for (let shift = 0; shift < 84; shift++) {
     const date = addDays(desired, shift)
-    if (!occupied(world, a, date) && !occupied(world, b, date) &&
-      (!isClubFixture(comp) || !shortRest(world, a, date) && !shortRest(world, b, date)) &&
-      (!isClubFixture(comp) || ![0, 6].includes(new Date(`${date}T00:00:00Z`).getUTCDay()))) return date
+    if (occupied(world, a, date) || occupied(world, b, date)) continue
+    if (pass === 0 && isClubFixture(comp) && (shortRest(world, a, date) || shortRest(world, b, date) ||
+      [0, 6].includes(new Date(`${date}T00:00:00Z`).getUTCDay()))) continue
+    if (pass === 1 && isClubFixture(comp) && (shortRest(world, a, date) || shortRest(world, b, date))) continue
+    return date
   }
   throw new Error(`No tournament date for ${a} and ${b} near ${desired}`)
 }
@@ -163,9 +168,12 @@ export function beginDomesticSeason(world: ProWorldState, year: number): void {
   for (const league of PRO_LEAGUE_PLAN) {
     const id = league.associationId
     const entrants = leagueOrder(world, id)
-    createCompetition(world, `cup-${id}`, 'domestic-cup', year, entrants, 'knockout', `${year}-${id === 'eng' ? '01-05' : id === 'rsa' ? '01-27' : '02-04'}`)
+    const lower = LOWER_DIVISIONS[id] ? [...(world.competitions[`second-${id}`]?.entrantIds ?? [])] : []
+    // Cup draws use the current top and second-tier membership, including promoted clubs.
+    const cupEntrants = [...new Set([...entrants, ...lower])]
+    createCompetition(world, `cup-${id}`, 'domestic-cup', year, cupEntrants, 'knockout', `${year}-${id === 'eng' ? '01-05' : id === 'rsa' ? '01-27' : '02-04'}`)
     if (leagueCups.has(id) && id !== 'rsa') createCompetition(world, `league-cup-${id}`, 'domestic-cup', year,
-      entrants, 'knockout', `${year}-04-09`)
+      PRO_LOWER_LEAGUE_PLAN.some(item => item.associationId === id) ? cupEntrants : entrants, 'knockout', `${year}-04-09`)
     if (superCups.has(id)) {
       const leagueWinner = world.championHistory.filter(item => item.competitionId === `top-${id}`).at(-1)?.championId
       const cupWinner = world.championHistory.filter(item => item.competitionId === `cup-${id}`).at(-1)?.championId

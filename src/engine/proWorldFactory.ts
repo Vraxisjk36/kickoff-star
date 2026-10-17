@@ -1,4 +1,4 @@
-import { PRO_LEAGUE_PLAN, type ProLeaguePlan } from './proLeagueRegistry'
+import { LOWER_DIVISIONS, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN, type ProLeaguePlan } from './proLeagueRegistry'
 import { createEmptyProWorld, type IsoDate, type ProAcademyProspect, type ProClub, type ProCompetition, type ProFixture,
   type ProPlayer, type ProWorldState } from './proWorld'
 import { isInPeriod, type SeasonCalendarProfile } from './proCalendar'
@@ -47,7 +47,8 @@ const currencies = Object.fromEntries(Object.entries(currencyGroups).flatMap(([c
 // are replaced by researched country editions before the public pro release.
 export function plannedClubCount(id: string): number {
   if (id in VERIFIED_PRO_RULES) return VERIFIED_PRO_RULES[id as keyof typeof VERIFIED_PRO_RULES].topFlightClubs
-  if (['eng','esp','ita','fra','bra','mex','nga','egy','usa'].includes(id)) return 20
+  if (['eng','esp','ita','bra','mex','nga','egy','usa'].includes(id)) return 20
+  if (id === 'fra') return 18
   if (id === 'ger' || id === 'por' || id === 'ned' || id === 'tur') return 18
   if (id === 'sco' || id === 'aut' || id === 'nzl' || id === 'fji') return 12
   return 16
@@ -103,11 +104,14 @@ export function createAcademyIntake(club: ProClub, seed: number, year: number): 
 }
 
 export function newProLeagueSeason(world: ProWorldState, league: ProLeaguePlan, startYear: number): ProFixture[] {
-  const clubIds = Object.values(world.clubs).filter(club => club.associationId === league.associationId).map(club => club.id).sort()
+  const lower = league.id.startsWith('second-')
+  const clubIds = Object.values(world.clubs).filter(club => club.associationId === league.associationId &&
+    (lower ? club.tier === 2 : club.tier !== 2)).map(club => club.id).sort()
   const competitionId = league.id
-  const rounds = (clubIds.length - 1) * 2
+  const scottishSplit = !lower && league.associationId === 'sco' && clubIds.length === 12
+  const rounds = scottishSplit ? 33 : (clubIds.length - 1) * 2
   const competition: ProCompetition = { id: competitionId, associationId: league.associationId, kind: 'league',
-    seasonId: String(startYear), entrantIds: clubIds, format: { legs: 2, scheduledRounds: rounds } }
+    seasonId: String(startYear), entrantIds: clubIds, format: { legs: 2, scheduledRounds: scottishSplit ? 38 : rounds } }
   world.competitions[competitionId] = competition
   world.standings[competitionId] = clubIds.map(clubId => ({ clubId, played: 0, won: 0, drawn: 0, lost: 0,
     goalsFor: 0, goalsAgainst: 0, points: 0 }))
@@ -120,14 +124,14 @@ export function newProLeagueSeason(world: ProWorldState, league: ProLeaguePlan, 
   let previousKickoff = 0
   const fixtures: ProFixture[] = []
   for (let round = 0; round < rounds; round++) {
-    const firstLeg = round < clubIds.length - 1
+    const firstLeg = round % ((clubIds.length - 1) * 2) < clubIds.length - 1
     const week = round % (clubIds.length - 1)
     const arr = [...rotating]
     for (let turn = 0; turn < week; turn++) arr.splice(1, 0, arr.pop()!)
     let kickoff = start + Math.round(round * (end - start) / (rounds - 1) / DAY) * DAY
-    // Prefer a weekend; winter breaks push the round, never erase it.
-    kickoff += ((6 - new Date(kickoff).getUTCDay() + 7) % 7) * DAY
-    while (isInPeriod(iso(kickoff), profile.breaks) || kickoff <= previousKickoff) kickoff += 7 * DAY
+    if (rounds <= 40) kickoff += ((6 - new Date(kickoff).getUTCDay() + 7) % 7) * DAY
+    // Crowded second divisions need midweek rounds; leave at least three days between rounds.
+    while (isInPeriod(iso(kickoff), profile.breaks) || kickoff <= previousKickoff + 2 * DAY) kickoff += DAY
     previousKickoff = kickoff
     for (let pair = 0; pair < half; pair++) {
       const home = arr[pair]
@@ -135,7 +139,7 @@ export function newProLeagueSeason(world: ProWorldState, league: ProLeaguePlan, 
       const [h, a] = (week + pair) % 2 === 0 ? [home, away] : [away, home]
       const homeId = firstLeg ? h : a
       const awayId = firstLeg ? a : h
-      const id = `fixture-${league.associationId}-${startYear}-${round + 1}-${pair + 1}`
+      const id = `fixture-${league.id}-${startYear}-${round + 1}-${pair + 1}`
       const fixture = { id, competitionId, kickoffDate: iso(kickoff), homeId, awayId } satisfies ProFixture
       world.fixtures[id] = fixture
       fixtures.push(fixture)
@@ -153,11 +157,12 @@ export function createProWorld(seed: number, currentDate: IsoDate): ProWorldStat
     if (!currency) throw new Error(`No currency for ${league.associationId}`)
     world.associations[league.associationId] = { id: league.associationId, name: league.associationName,
       confederation: league.confederation, currency, domesticMode: 'full' }
-    const clubCount = plannedClubCount(league.associationId)
+    const clubCount = plannedClubCount(league.associationId) + (LOWER_DIVISIONS[league.associationId]?.clubs ?? 0)
     for (let i = 0; i < clubCount; i++) {
       const id = `club-${league.associationId}-${padded(i + 1)}`
       const identity = clubName(league, i)
-      const reputation = Math.max(35, Math.min(89, leagueStrength[league.confederation] + 13 - i * 1.25
+      const lower = i >= plannedClubCount(league.associationId)
+      const reputation = Math.max(35, Math.min(89, leagueStrength[league.confederation] + (lower ? -7 : 13) - (lower ? i - plannedClubCount(league.associationId) : i) * 1.25
         + Math.floor(proRoll(seed, `${id}:rep`) * 7) - 3))
       const revenue = Math.round((11_000_000 + reputation * 2_300_000) * (league.mode === 'playable' ? 1.1 : .8))
       const annualSquadCostLimit = Math.floor(revenue * .58)
@@ -170,7 +175,7 @@ export function createProWorld(seed: number, currentDate: IsoDate): ProWorldStat
         reservedAnnualSquadCosts: Math.floor(annualSquadCostLimit * .04),
         committedTransferPayments: Math.floor(revenue * .03), topPlayerAnnualWage: 0,
         roleWageMultiplier: { prospect: .24, rotation: .65, starter: 1, star: 1.45 } }
-      const club: ProClub = { id, associationId: league.associationId, name: identity.name,
+      const club: ProClub = { id, associationId: league.associationId, tier: lower ? 2 : 1, name: identity.name,
         homeCity: identity.city, stadiumId: `stadium-${id}`, reputation, finances }
       world.clubs[id] = club
       world.stadiums[club.stadiumId] = { id: club.stadiumId, name: `${identity.city} Ground ${padded(i + 1)}`,
@@ -187,6 +192,39 @@ export function createProWorld(seed: number, currentDate: IsoDate): ProWorldStat
     const startMonth = proCalendarProfile(league.associationId, currentYear).startMonth
     const startYear = Number(currentDate.slice(5, 7)) >= startMonth ? currentYear : currentYear - 1
     newProLeagueSeason(world, league, startYear)
+    const second = PRO_LOWER_LEAGUE_PLAN.find(item => item.associationId === league.associationId)
+    if (second) newProLeagueSeason(world, second, startYear)
   }
   return world
+}
+
+/** Add lower flights to pre-upgrade saves without replacing their existing clubs or records. */
+export function hydrateLowerDivisions(world: ProWorldState): void {
+  const missing = PRO_LOWER_LEAGUE_PLAN.filter(league => !world.competitions[league.id])
+  if (!missing.length) return
+  const generated = createProWorld(world.seed, world.currentDate)
+  for (const league of missing) {
+    const id = league.associationId
+    const templates = Object.values(generated.clubs).filter(club => club.associationId === id && club.tier === 2)
+    let serial = Math.max(...Object.values(world.clubs).filter(club => club.associationId === id)
+      .map(club => Number(club.id.split('-').at(-1)) || 0), plannedClubCount(id) + templates.length)
+    for (const template of templates) {
+      const clubId = world.clubs[template.id] ? `club-${id}-${padded(++serial)}` : template.id
+      const stadiumId = `stadium-${clubId}`
+      const club = { ...structuredClone(template), id: clubId, stadiumId,
+        finances: { ...structuredClone(template.finances), clubId } }
+      world.clubs[clubId] = club
+      world.stadiums[stadiumId] = { ...generated.stadiums[template.stadiumId], id: stadiumId }
+      world.managers[`manager-${clubId}`] = { ...generated.managers[`manager-${template.id}`], id: `manager-${clubId}`, clubId }
+      for (const player of Object.values(generated.players).filter(player => player.clubId === template.id)) {
+        const playerId = player.id.replace(template.id, clubId)
+        world.players[playerId] = { ...player, id: playerId, clubId }
+      }
+      for (const prospect of Object.values(generated.academyProspects).filter(player => player.clubId === template.id)) {
+        const prospectId = prospect.id.replace(template.id, clubId)
+        world.academyProspects[prospectId] = { ...prospect, id: prospectId, clubId }
+      }
+    }
+    newProLeagueSeason(world, league, Number(world.competitions[`top-${id}`].seasonId))
+  }
 }

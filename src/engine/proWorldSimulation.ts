@@ -1,5 +1,5 @@
-import { PRO_LEAGUE_PLAN } from './proLeagueRegistry'
-import { createAcademyIntake, newProLeagueSeason, proRoll } from './proWorldFactory'
+import { LOWER_DIVISIONS, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN } from './proLeagueRegistry'
+import { createAcademyIntake, hydrateLowerDivisions, newProLeagueSeason, proRoll } from './proWorldFactory'
 import { ageOf, growOrDecline, nextShirtNumber, seasonalInjury, shouldRetire, signBackgroundReplacement } from './proLifecycle'
 import { advanceTournamentsTo, beginClubWorldSeason, beginContinentalSeason, beginNationsLeague, beginWorldQualifiers, beginDomesticSeason, beginNationalSeason, beginWorldSeason, beginSouthAfricanTopEight, invalidateTournamentCalendar } from './proTournaments'
 import type { IsoDate, ProClub, ProFixture, ProPlayer, ProStandingRow, ProWorldState } from './proWorld'
@@ -101,7 +101,7 @@ function seasonFinances(world: ProWorldState, club: ProClub, roster: ProPlayer[]
   return active
 }
 
-function archive(world: ProWorldState, competitionId: string, fixtures: ProFixture[], rosters: Map<string, ProPlayer[]>, prospects: Map<string, string[]>): ProFixture[] {
+function archive(world: ProWorldState, competitionId: string, fixtures: ProFixture[], rosters: Map<string, ProPlayer[]>, prospects: Map<string, string[]>): void {
   const competition = world.competitions[competitionId]
   const table = ordered(world.standings[competitionId])
   const championId = table[0].clubId
@@ -118,8 +118,45 @@ function archive(world: ProWorldState, competitionId: string, fixtures: ProFixtu
     date: archiveDate,
     kind: 'award', subjectIds: [championId], details: { competitionId, seasonId: competition.seasonId } })
   for (const fixture of fixtures) delete world.fixtures[fixture.id]
-  const league = PRO_LEAGUE_PLAN.find(row => row.id === competitionId)!
-  return newProLeagueSeason(world, league, nextYear)
+  void nextYear
+}
+
+function exchangeDivisions(world: ProWorldState, associationId: string): void {
+  const rule = LOWER_DIVISIONS[associationId]
+  const top = ordered(world.seasonHistory.filter(row => row.competitionId === `top-${associationId}`).at(-1)!.table)
+  const second = ordered(world.seasonHistory.filter(row => row.competitionId === `second-${associationId}`).at(-1)!.table)
+  // The playoff berth is decided deterministically by the teams' season performance.
+  const relegated = top.slice(-rule.relegated).map(row => row.clubId)
+  const promoted = second.slice(0, rule.promoted).map(row => row.clubId)
+  for (const id of relegated) world.clubs[id].tier = 2
+  for (const id of promoted) world.clubs[id].tier = 1
+  world.recentEvents.push({ id: `event-promotion-${associationId}-${world.seasonHistory.at(-1)!.seasonId}`,
+    date: world.currentDate, kind: 'award', subjectIds: [...promoted, ...relegated],
+    details: { action: 'promotion-relegation', associationId, promoted: promoted.length, relegated: relegated.length } })
+}
+
+function scheduleScottishSplit(world: ProWorldState, fixtures: ProFixture[]): ProFixture[] {
+  const competition = world.competitions['top-sco']
+  if (competition.splitScheduled || fixtures.length !== 198 || !fixtures.every(fixture => fixture.result)) return fixtures
+  const groups = [ordered(world.standings['top-sco']).slice(0, 6), ordered(world.standings['top-sco']).slice(6)]
+  const finalDate = fixtures.reduce((latest, fixture) => fixture.kickoffDate > latest ? fixture.kickoffDate : latest, '0000-01-01')
+  const extra: ProFixture[] = []
+  groups.forEach((group, half) => {
+    const teams = group.map(row => row.clubId)
+    for (let round = 0; round < 5; round++) {
+      const rotated = [teams[0], ...teams.slice(1 + round), ...teams.slice(1, 1 + round)]
+      for (let pair = 0; pair < 3; pair++) {
+        const homeId = (round + pair) % 2 ? rotated[pair] : rotated[5 - pair]
+        const awayId = (round + pair) % 2 ? rotated[5 - pair] : rotated[pair]
+        const id = `fixture-top-sco-${competition.seasonId}-split-${half}-${round}-${pair}`
+        const kickoffDate = new Date(Date.parse(`${finalDate}T00:00:00Z`) + (round + 1) * 7 * 86_400_000).toISOString().slice(0, 10)
+        world.fixtures[id] = { id, competitionId: 'top-sco', kickoffDate, homeId, awayId }
+        extra.push(world.fixtures[id])
+      }
+    }
+  })
+  competition.splitScheduled = true
+  return [...fixtures, ...extra]
 }
 
 function advanceLeaguesTo(world: ProWorldState, targetDate: IsoDate): void {
@@ -143,14 +180,23 @@ function advanceLeaguesTo(world: ProWorldState, targetDate: IsoDate): void {
     fixtureIndex.set(fixture.competitionId, group)
   }
   for (const league of PRO_LEAGUE_PLAN) {
+    const lower = PRO_LOWER_LEAGUE_PLAN.find(item => item.associationId === league.associationId)
+    const divisions = lower ? [league, lower] : [league]
     for (let season = 0; season < 60; season++) {
-      const competitionId = league.id
-      const fixtures = (fixtureIndex.get(competitionId) ?? [])
-        .sort((a, b) => a.kickoffDate.localeCompare(b.kickoffDate) || a.id.localeCompare(b.id))
-      if (!fixtures.length) throw new Error(`Missing fixtures for ${competitionId}`)
-      for (const fixture of fixtures) if (!fixture.result && fixture.kickoffDate < targetDate) play(world, fixture)
-      if (fixtures.every(fixture => !!fixture.result)) fixtureIndex.set(competitionId, archive(world, competitionId, fixtures, rosters, prospects))
-      else break
+      const batches = divisions.map(item => (fixtureIndex.get(item.id) ?? [])
+        .sort((a, b) => a.kickoffDate.localeCompare(b.kickoffDate) || a.id.localeCompare(b.id)))
+      if (batches.some(fixtures => !fixtures.length)) throw new Error(`Missing fixtures for ${league.associationId}`)
+      for (const fixtures of batches) for (const fixture of fixtures)
+        if (!fixture.result && fixture.kickoffDate < targetDate) play(world, fixture)
+      if (league.associationId === 'sco' && batches[0].every(fixture => fixture.result)) {
+        const extended = scheduleScottishSplit(world, batches[0])
+        if (extended !== batches[0]) { fixtureIndex.set('top-sco', extended); continue }
+      }
+      if (!batches.every(fixtures => fixtures.every(fixture => !!fixture.result))) break
+      const nextYear = Number(world.competitions[league.id].seasonId) + 1
+      divisions.forEach((item, index) => archive(world, item.id, batches[index], rosters, prospects))
+      if (lower) exchangeDivisions(world, league.associationId)
+      divisions.forEach(item => fixtureIndex.set(item.id, newProLeagueSeason(world, item, nextYear)))
     }
   }
 }
@@ -169,6 +215,7 @@ export function advanceProWorldTo(source: ProWorldState, targetDate: IsoDate): P
   world.transferIntakeCount ??= 0
   world.retirementHistory ??= []
   world.loans ??= {}
+  hydrateLowerDivisions(world)
   const milestones: { date: IsoDate; kind: 'national' | 'continental' | 'summer-cups' }[] = []
   for (let year = Number(source.currentDate.slice(0, 4)); year <= Number(targetDate.slice(0, 4)); year++) {
     milestones.push({ date: `${year}-01-01`, kind: 'national' }, { date: `${year}-07-01`, kind: 'summer-cups' }, { date: `${year}-09-01`, kind: 'continental' })

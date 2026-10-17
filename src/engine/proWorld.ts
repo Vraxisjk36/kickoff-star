@@ -16,6 +16,8 @@ export interface ProAssociation {
 export interface ProClub {
   id: ProWorldId
   associationId: ProWorldId
+  /** Missing on older saves and therefore interpreted as the top division. */
+  tier?: 1 | 2
   name: string
   homeCity: string
   stadiumId: ProWorldId
@@ -90,6 +92,7 @@ export interface ProCompetition {
   entrantIds: ProWorldId[]
   /** League format is frozen for this edition; later editions can change. */
   format: { legs: 1 | 2; scheduledRounds: number }
+  splitScheduled?: boolean
   /** Frozen fictional rules edition; the real association rules remain research pending. */
   tournament?: {
     stage: 'league-phase' | 'groups' | 'knockout'

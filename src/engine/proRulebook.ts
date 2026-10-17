@@ -15,7 +15,7 @@ export interface ProRuleProfile {
   implementation: 'partial'
   sources: readonly string[]
 }
-export const VERIFIED_PRO_RULES: Record<'eng' | 'rsa', ProRuleProfile> = {
+export const VERIFIED_PRO_RULES: Record<'eng' | 'rsa' | 'esp' | 'ger' | 'fra' | 'ita' | 'ned', ProRuleProfile> = {
   eng: { associationId: 'eng', edition: '2026/27', topFlightClubs: 20, topFlightMatches: 38,
     directRelegation: 3, relegationPlayoff: 0, lowerTierClubs: 24, lowerTierMatches: 46,
     domesticCups: ['cup-eng', 'league-cup-eng'], implementation: 'partial',
@@ -29,4 +29,24 @@ export const VERIFIED_PRO_RULES: Record<'eng' | 'rsa', ProRuleProfile> = {
       'https://www.psl.co.za/news/article/5615294-psl-confirms-the-202627-season-calend',
       'https://www.psl.co.za/news/article/5613244-nedbank-cup-2026-participating-clubs',
       'https://www.cafonline.com/caf-champions-league/news/top-clubs-on-the-continent-set-to-represent-southern-africa-in-caf-interclub-competitions/'] },
+  esp: { associationId: 'esp', edition: '2026/27', topFlightClubs: 20, topFlightMatches: 38,
+    directRelegation: 3, relegationPlayoff: 0, lowerTierClubs: 22, lowerTierMatches: 42,
+    domesticCups: ['cup-esp', 'super-cup-esp'], implementation: 'partial',
+    sources: ['https://www.laliga.com/en-GB/laliga-easports', 'https://www.laliga.com/en-GB/laliga-hypermotion'] },
+  ger: { associationId: 'ger', edition: '2026/27', topFlightClubs: 18, topFlightMatches: 34,
+    directRelegation: 2, relegationPlayoff: 1, lowerTierClubs: 18, lowerTierMatches: 34,
+    domesticCups: ['cup-ger', 'super-cup-ger'], implementation: 'partial',
+    sources: ['https://www.bundesliga.com/en/bundesliga/news/how-does-promotion-relegation-work-bundesliga-2-bundesliga-play-offs-17824'] },
+  fra: { associationId: 'fra', edition: '2026/27', topFlightClubs: 18, topFlightMatches: 34,
+    directRelegation: 2, relegationPlayoff: 1, lowerTierClubs: 18, lowerTierMatches: 34,
+    domesticCups: ['cup-fra', 'super-cup-fra'], implementation: 'partial',
+    sources: ['https://ligue1.com/en/articles/l1_article_3070-the-2025-26-ligue-1-mc-donald-s-season-calendar', 'https://ligue1.com/en/articles/l1_article_1668-promotions-relegations-ligue-1-ligue-2'] },
+  ita: { associationId: 'ita', edition: '2026/27', topFlightClubs: 20, topFlightMatches: 38,
+    directRelegation: 3, relegationPlayoff: 0, lowerTierClubs: 20, lowerTierMatches: 38,
+    domesticCups: ['cup-ita', 'super-cup-ita'], implementation: 'partial',
+    sources: ['https://www.legaseriea.it/en'] },
+  ned: { associationId: 'ned', edition: '2026/27', topFlightClubs: 18, topFlightMatches: 34,
+    directRelegation: 2, relegationPlayoff: 1, lowerTierClubs: 20, lowerTierMatches: 38,
+    domesticCups: ['cup-ned', 'super-cup-ned'], implementation: 'partial',
+    sources: ['https://eredivisie.nl/competitie/'] },
 }

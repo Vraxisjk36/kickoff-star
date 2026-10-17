@@ -3,6 +3,7 @@ import { createProWorld, plannedClubCount } from '../src/engine/proWorldFactory'
 import { advanceProWorldTo } from '../src/engine/proWorldSimulation'
 import { englandBerths, southAfricaBerths } from '../src/engine/proQualification'
 import { VERIFIED_PRO_RULES } from '../src/engine/proRulebook'
+import { LOWER_DIVISIONS } from '../src/engine/proLeagueRegistry'
 
 const world = createProWorld(17, '2026-08-01')
 for (const [id, profile] of Object.entries(VERIFIED_PRO_RULES)) {
@@ -18,6 +19,10 @@ for (const [id, profile] of Object.entries(VERIFIED_PRO_RULES)) {
     assert.equal(home, profile.topFlightMatches / 2)
     assert.equal(away, profile.topFlightMatches / 2)
   }
+  const second = world.competitions[`second-${id}`]
+  assert.equal(second.entrantIds.length, profile.lowerTierClubs)
+  assert.equal(second.format.scheduledRounds, profile.lowerTierMatches)
+  assert.equal(LOWER_DIVISIONS[id].clubs, profile.lowerTierClubs)
 }
 
 // A cup winner already in Europe passes the berth to the next available club.
@@ -40,6 +45,39 @@ assert.deepEqual(southAfrica.champions, rsa.slice(0, 2))
 assert.deepEqual(southAfrica.secondary, [rsa[2], rsa[3]])
 
 const next = advanceProWorldTo(createProWorld(17, '2026-08-01'), '2027-09-02')
+for (const id of Object.keys(LOWER_DIVISIONS)) {
+  const top = next.competitions[`top-${id}`]
+  const lower = next.competitions[`second-${id}`]
+  assert.equal(new Set([...top.entrantIds, ...lower.entrantIds]).size, top.entrantIds.length + lower.entrantIds.length)
+  assert.ok(next.championHistory.some(row => row.competitionId === `second-${id}`), `${id} lower title recorded`)
+  const first = world.competitions[`top-${id}`].entrantIds
+  assert.ok(top.entrantIds.some(clubId => !first.includes(clubId)), `${id} promotion took effect`)
+}
+assert.equal(next.seasonHistory.filter(record => record.competitionId === 'top-sco').at(-1)?.table[0].played, 38,
+  'Scottish top flight has 33 games before the split and five after')
+assert.equal(next.competitions['cup-eng'].entrantIds.length, 44)
+assert.equal(next.competitions['cup-rsa'].entrantIds.length, 32)
+const legacy = createProWorld(31, '2026-08-01')
+for (const [clubId, club] of Object.entries(legacy.clubs)) if (club.tier === 2) {
+  delete legacy.clubs[clubId]
+  for (const [playerId, player] of Object.entries(legacy.players)) if (player.clubId === clubId) delete legacy.players[playerId]
+  for (const [prospectId, prospect] of Object.entries(legacy.academyProspects)) if (prospect.clubId === clubId) delete legacy.academyProspects[prospectId]
+  delete legacy.managers[`manager-${clubId}`]
+  delete legacy.stadiums[club.stadiumId]
+}
+for (const id of Object.keys(LOWER_DIVISIONS)) {
+  delete legacy.competitions[`second-${id}`]
+  delete legacy.standings[`second-${id}`]
+}
+for (const [fixtureId, fixture] of Object.entries(legacy.fixtures)) if (fixture.competitionId.startsWith('second-')) delete legacy.fixtures[fixtureId]
+const savedTitle = { competitionId: 'cup-eng', seasonId: '2025', championId: legacy.competitions['top-eng'].entrantIds[0] }
+legacy.championHistory.push(savedTitle)
+const migrated = advanceProWorldTo(legacy, '2026-08-02')
+assert.deepEqual(migrated.championHistory[0], savedTitle)
+for (const [id, profile] of Object.entries(LOWER_DIVISIONS)) {
+  assert.equal(migrated.competitions[`second-${id}`].entrantIds.length, profile.clubs)
+  assert.equal(migrated.competitions[`top-${id}`].entrantIds.length, legacy.competitions[`top-${id}`].entrantIds.length)
+}
 assert.equal(next.competitions['mtn8-rsa'].entrantIds.length, 8)
 assert.equal(next.competitions['league-cup-rsa'].entrantIds.length, 16)
 assert.equal(next.competitions['continental-uefa'].entrantIds.length, 36)

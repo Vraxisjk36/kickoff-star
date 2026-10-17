@@ -1,35 +1,26 @@
-# Professional league format audit (2026/27)
+# Professional league structure audit (2026/27)
 
-This records **implemented behavior**, not a promise that every competition mirrors its real-world edition. Fictional club and competition identities remain separate from rule structure.
+The existing school game and playable pro UI remain in place. This page describes the simulated world. The 35 “playable” labels in the registry remain planned destinations; full match interaction currently exists for the English pro chapter only.
 
-| Area | Real-world edition | Current game |
+| Area | Implemented | Remaining rules work |
 | --- | --- | --- |
-| England top flight | 20 clubs, 38 home-and-away matches, 380 fixtures; bottom three go down | New playable pro seasons and simulated world use 20/38/380. Relegation is **not implemented**. Older ten-club saves retain their original schedule. |
-| English second tier | 24 clubs, 46 matches; top two promoted, 2026/27 play-offs expanded to six clubs | Not yet simulated as a separate division. |
-| England continental berths | Four league berths in Champions tier; league and FA Cup Europa routes; League Cup Conference route; pass-down on overlaps; conditional performance spot and titleholder routes | Basic four/two/one routes and domestic cup pass-down implemented for the simulated world. Performance spot, titleholder adjustments, licensing and the user's playable league table feeding the wider European draw remain outstanding. |
-| England cups | FA Cup includes lower pyramid; EFL Cup includes Football League | Current two cups are top-flight-only simulations. Entrants and round calendar need expansion. |
-| South African top flight | 16 clubs, 30 matches; 16th relegated, 15th in three-club promotion playoff | World uses 16/30. Promotion and relegation are **not implemented**. |
-| South African second tier | 16 clubs, 30 matches; champion promoted; second and third join the top-flight 15th in a home-and-away playoff league | Not yet separately simulated. |
-| South African cups | Top eight from preceding completed league season; 16-team top-flight knockout; 32-club national cup including lower divisions | Top-eight selection is made after the preceding league season, and 16-club league cup is scheduled. National cup currently contains only top-flight clubs, so its 32-team format is pending. |
-| South Africa in CAF | League champion and runner-up in Champions tier; domestic cup route and another eligible representative in Confederation tier | Two/two domestic routes and cup overlap fallback implemented for simulated entries; eligibility and final association confirmation are pending. |
-| Other 73 top flights | Each needs its own season edition, split/playoff phases, promotion pool, cup entrants and continental allocation | Double round-robin **provisional simulation**. Some actual leagues use other structures, so these are not labelled verified. |
+| World leagues | 75 top divisions with persistent fixtures, tables, title archives, finances and squads | Most association formats are provisional double round robins; exact calendars and tiebreakers need federation review. |
+| Second divisions | England 24/46, Spain 22/42, Germany 18/34, France 18/34, Italy 20/38, Netherlands 20/38, Portugal 18/34, Brazil 20/38, South Africa 16/30, Scotland 10/18 | Third tiers, second-tier relegation, playoffs and lower-tier splits are not simulated. |
+| Promotion/relegation | Top and second divisions exchange stable clubs between completed seasons, retaining squads, shirt numbers and title records. England, Spain and Italy exchange three; Brazil four; Germany, France, Netherlands and Portugal two; South Africa and Scotland one. | Real playoff places are not decided on the pitch. Germany, France, Netherlands, Scotland, South Africa and England Championship 2026/27 playoff routes remain pending. |
+| Scottish Premiership | Twelve clubs play 33 games, split top/bottom six and play five more each, for 38 total. | Venue balancing after the split and league-specific tiebreakers are provisional. |
+| Domestic cups | Lower-tier clubs enter national cups where a second division exists. England has a 44-club simulated national cup and league cup; South Africa has a 32-club national cup, plus top-eight and league cups. Cup winners are archived without a history cutoff. | The actual English FA Cup has many more pyramid entrants; qualifying rounds and specific calendars are not modelled. South Africa's amateur entrants are not represented. |
+| Continental routes | Existing English and South African league/cup pass-downs work in the simulated world. | UEFA coefficient spots, titleholder slots, other association allocations and playable-club results feeding the world draw are provisional. |
+| Existing saves | New lower tiers are added on the next world advance without replacing existing clubs, players, current fixtures or title history. | Old saves with a prior fictional top-flight size retain it until a future migration. |
+| Trophy history | League and cup winners persist and can be inspected by association in World Football. | Historical pre-game trophies are not invented; records begin when the simulation completes. |
 
-## Next engine work before claiming real-world parity
-
-1. A versioned association ruleset with effective seasons, clubs, regular and split phases, point rules, tie-breaks, calendar windows, registration rules and explicit promotion pools.
-2. Lower divisions with persistent club IDs and rosters. Season-end play-offs must be scheduled and resolved as matches; movement must alter the next season's actual entrants while old save histories remain intact.
-3. Federation cup rules: England lower-league entrants, South Africa's 32-club cup, top-eight eligibility and complete draws.
-4. Continental allocation based on finalized domestic and cup results, association slots and titleholders; calculate performance spots from recorded coefficients and handle pass-down without double entries. The playable pro league and wider world must use the same table before this route is shown as earned in the UI.
-5. Research and test every other association against current organizer publications. Formats change across years, including the English Championship's six-team playoff from 2026/27.
+Fictional clubs and names are not real fixtures or a licensed database. Do not advertise all 75 as faithfully modelled until governing-body rules, cup entrants and continental allocations are verified per edition.
 
 ## Organizer references
 
 - Premier League 2026/27 fixtures: https://www.premierleague.com/en/news/4675097/all-380-fixtures-for-202627-premier-league-season
-- Premier League relegation: https://www.premierleague.com/en/news/4657245/202526-premier-league-relegation-faq
+- EFL Championship playoff change: https://www.efl.com/news/2026/march/05/efl-statement--sky-bet-championship-play-off-format/
 - Premier League European qualification: https://www.premierleague.com/en/european-qualification-explained
-- EFL 2026/27 Championship play-off change: https://www.efl.com/news/2026/march/05/efl-statement--sky-bet-championship-play-off-format/
-- PSL top-flight format: https://psl.co.za/content/125534
-- PSL 2026/27 dates: https://www.psl.co.za/news/article/5615294-psl-confirms-the-202627-season-calend
-- PSL promotion play-off calendar: https://psl.co.za/news/article/5614854-promotion-play-off-draw-on-thursday
+- PSL league/cup calendar: https://www.psl.co.za/news/article/5615294-psl-confirms-the-202627-season-calend
 - PSL national cup field: https://www.psl.co.za/news/article/5613244-nedbank-cup-2026-participating-clubs
-- CAF South African qualification example: https://www.cafonline.com/caf-champions-league/news/top-clubs-on-the-continent-set-to-represent-southern-africa-in-caf-interclub-competitions/
+- Bundesliga promotion/relegation: https://www.bundesliga.com/en/bundesliga/news/how-does-promotion-relegation-work-bundesliga-2-bundesliga-play-offs-17824
+- Scottish split: https://spfl.co.uk/pages/premiership

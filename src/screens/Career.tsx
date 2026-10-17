@@ -125,8 +125,8 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
   // Grassroots league world is created lazily post-trials (never during Academy —
   // that world is created directly by respondToOffer when an academy offer is accepted).
   useEffect(() => {
-    if (player && !player.turnedPro && !player.careerEnded && !isInAcademy && !league) ensureLeagueWorld()
-  }, [player, league, isInAcademy, ensureLeagueWorld])
+    if (player && !proCareer && !player.turnedPro && !player.careerEnded && !isInAcademy && !league) ensureLeagueWorld()
+  }, [player, proCareer, league, isInAcademy, ensureLeagueWorld])
 
   if (!calendar || !player) return null
 

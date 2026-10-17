@@ -96,7 +96,9 @@ export default function App() {
       replace('menu')
       return
     }
-    if (p.trialWeekCompleted < 3) {
+    if (useCareerStore.getState().proCareer) {
+      ;(push ? navigate : replace)('career')
+    } else if (p.trialWeekCompleted < 3) {
       setChosenSchool(null)
       ;(push ? navigate : replace)('school')
     } else {

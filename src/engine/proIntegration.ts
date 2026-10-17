@@ -1,0 +1,160 @@
+import type { Player } from '../types/player'
+import type { ProCareerState, ProMarketOffer, ProPayStatement } from './proCareer'
+import { createProWorld } from './proWorldFactory'
+import { advanceProWorldTo } from './proWorldSimulation'
+import { gameWithholdingBps } from './proContracts'
+import { getAgent } from './agents'
+import { assessProDeal } from './proClubFinance'
+import { completeProTransfer } from './proTransfers'
+import { registrationOpen } from './proMovement'
+import { returnProLoan } from './proMovement'
+import { nextShirtNumber } from './proLifecycle'
+import { gatherProNews } from './proNews'
+import { computeCurrentAbility, toOvr } from './rating'
+import { recordTournamentResult, proCompetitionName } from './proTournaments'
+import type { ProFixture } from './proWorld'
+import type { MatchRecord } from './matchLedger'
+
+const addDays = (date: string, days: number): string => new Date(Date.parse(`${date}T00:00:00Z`) + days * 86400000).toISOString().slice(0, 10)
+const monthIndex = (date: string) => Number(date.slice(0, 4)) * 12 + Number(date.slice(5, 7)) - 1
+function housingFor(player: Player): number { return Math.max(260, Math.round((player.contract?.terms.weeklyWage ?? 1000) * 52 / 12 * .22)) }
+
+/** Attach the recorded club to the living world without touching the youth save. */
+export function attachProWorld(state: ProCareerState, player: Player): ProCareerState {
+  if (state.backgroundWorld) return state
+  const date = addDays('2026-08-01', (state.season - 1) * 364 + (state.week - 1) * 7)
+  const world = createProWorld(player.id.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) + 17, date)
+  const playable = state.world.divisions[1].teams
+  const global = Object.values(world.clubs).filter(club => club.associationId === 'eng').sort((a, b) => a.id.localeCompare(b.id))
+  const clubWorldIds = Object.fromEntries(playable.map((team, index) => {
+    global[index].name = team.name
+    return [team.id, global[index].id]
+  }))
+  const ownClubId = clubWorldIds[state.world.playerTeamId]
+  const club = world.clubs[ownClubId]
+  const annualWage = Math.round((player.contract?.terms.weeklyWage ?? 1200) * 52)
+  const playerId = `career-${player.id}`
+  const shirtNumber = nextShirtNumber(Object.values(world.players), club.id, state.shirtNumber)
+  world.players[playerId] = { id: playerId, name: player.name, birthDate: `${Number(date.slice(0, 4)) - player.careerClock.ageYears}-06-15`,
+    nationalityIds: [player.nationality ?? 'eng'], position: player.position, overall: toOvr(computeCurrentAbility(player)),
+    potential: Math.max(45, Math.min(94, Math.round(player.potential * 4.4))), clubId: club.id, annualWage, shirtNumber, origin: 'senior' }
+  club.finances.committedAnnualWages += annualWage
+  const residence = state.residence ?? { countryId: club.associationId, city: club.homeCity, monthlyRent: housingFor(player), hotelUntil: addDays(date, 21) }
+  return { ...state, backgroundWorld: world, clubWorldIds, date, shirtNumber, residence, payStatements: state.payStatements ?? [], pendingBonus: state.pendingBonus ?? 0, news: state.news ?? [] }
+}
+
+/** The next dated cup tie for the player's club, before the next weekly tick. */
+export function pendingProCup(state: ProCareerState): ProFixture | null {
+  if (!state.backgroundWorld || !state.date || !state.clubWorldIds) return null
+  const clubId = state.clubWorldIds[state.world.playerTeamId]
+  const until = addDays(state.date, 7)
+  return Object.values(state.backgroundWorld.fixtures)
+    .filter(fixture => !fixture.result && fixture.kickoffDate >= state.date! && fixture.kickoffDate < until &&
+      (fixture.homeId === clubId || fixture.awayId === clubId) && !!state.backgroundWorld!.competitions[fixture.competitionId]?.tournament)
+    .sort((a, b) => a.kickoffDate.localeCompare(b.kickoffDate) || a.id.localeCompare(b.id))[0] ?? null
+}
+
+export function resolveProCup(state: ProCareerState, player: Player, fixtureId: string, result: {
+  scored: number; conceded: number; goals: number; assists: number; rating: number; energy: number; minutes: number;
+  yellowCards: number; redCarded: boolean; injury?: { severity: string; weeksOut: number; description: string } | null
+}): { state: ProCareerState; record: MatchRecord } | null {
+  const due = pendingProCup(state)
+  if (!due || due.id !== fixtureId || !state.backgroundWorld || !state.clubWorldIds) return null
+  const home = due.homeId === state.clubWorldIds[state.world.playerTeamId]
+  const world = { ...state.backgroundWorld,
+    fixtures: { ...state.backgroundWorld.fixtures, [due.id]: { ...due } },
+    standings: { ...state.backgroundWorld.standings, [due.competitionId]: state.backgroundWorld.standings[due.competitionId].map(row => ({ ...row })) },
+    recentEvents: [...state.backgroundWorld.recentEvents] }
+  if (!recordTournamentResult(world, due.id, home ? result.scored : result.conceded, home ? result.conceded : result.scored)) return null
+  const fixture = world.fixtures[due.id]
+  const record: MatchRecord = { id: due.id, competitionId: due.competitionId, season: state.season, week: state.week,
+    homeTeamId: due.homeId, awayTeamId: due.awayId,
+    homeTeamName: world.clubs[due.homeId]?.name ?? due.homeId, awayTeamName: world.clubs[due.awayId]?.name ?? due.awayId,
+    homeGoals: fixture.result!.homeGoals, awayGoals: fixture.result!.awayGoals,
+    lines: [{ playerId: player.id, name: player.name, position: player.position, teamId: state.world.playerTeamId,
+      minutes: result.minutes, started: player.squadRole === 'starting-xi', rating: result.rating, goals: result.goals, assists: result.assists,
+      saves: 0, tackles: 0, interceptions: 0, keyPasses: 0, yellowCards: result.yellowCards, redCards: result.redCarded ? 1 : 0 }] }
+  return { state: { ...state, backgroundWorld: world }, record }
+}
+
+export function cupLabel(fixture: ProFixture): string { return proCompetitionName(fixture.competitionId) }
+
+export function advanceLivingWorld(previous: ProCareerState, next: ProCareerState, player: Player): { state: ProCareerState; player: Player } {
+  if (!previous.backgroundWorld || !previous.date) return { state: next, player }
+  // The youth calendar has 44 playable weeks. Eight off-season weeks pass at
+  // rollover, so the professional season begins in August again.
+  const date = addDays(previous.date, next.season > previous.season ? 63 : 7)
+  let world = advanceProWorldTo(previous.backgroundWorld, date)
+  const residence = previous.residence
+  let money = player.money ?? 0
+  let grossEarnings = player.careerEarnings ?? 0
+  let feesPaid = player.agentFeesPaid ?? 0
+  let bonus = previous.pendingBonus ?? 0
+  const payStatements = [...(previous.payStatements ?? [])]
+  for (let month = monthIndex(previous.date) + 1; month <= monthIndex(date); month++) {
+    const year = Math.floor(month / 12), monthNumber = month % 12 + 1
+    const gross = Math.round((player.contract?.terms.weeklyWage ?? 1200) * 52 / 12)
+    const withholding = Math.round((gross + bonus) * gameWithholdingBps(residence?.countryId ?? 'eng') / 10000)
+    const agentFee = Math.round((gross + bonus) * (getAgent(player.agentId)?.commission ?? 0) / 100)
+    const housing = residence?.monthlyRent ?? housingFor(player)
+    const statement: ProPayStatement = { season: previous.season, month: `${year}-${String(monthNumber).padStart(2, '0')}`, gross, bonus,
+      estimatedWithholding: withholding, agentFee, housing, net: gross + bonus - withholding - agentFee - housing }
+    payStatements.push(statement)
+    money += statement.net; grossEarnings += gross + bonus; feesPaid += agentFee
+    bonus = 0
+  }
+  let worldTeamId = next.world.playerTeamId
+  let loan = previous.loan
+  if (loan && next.season >= loan.returnSeason) {
+    worldTeamId = loan.parentTeamId
+    world = returnProLoan(world, `career-${player.id}`, { parentClubId: loan.parentWorldClubId, borrowingClubId: loan.borrowingClubId, ends: loan.ends, originalWage: loan.originalWage })
+    loan = null
+  }
+  const news = gatherProNews(world, player, previous.season, previous.week, previous.news ?? [])
+  return { state: { ...next, world: { ...next.world, playerTeamId: worldTeamId }, backgroundWorld: world, date,
+    payStatements: payStatements.slice(-36), pendingBonus: bonus, loan, news,
+    marketOffers: (previous.marketOffers ?? []).filter(offer => offer.expiresWeek > (player.totalWeeksElapsed ?? 0)),
+    talks: previous.talks },
+    player: { ...player, money, careerEarnings: grossEarnings, agentFeesPaid: feesPaid,
+      contract: worldTeamId !== next.world.playerTeamId && player.contract
+        ? { ...player.contract, clubName: next.world.divisions[1].teams.find(team => team.id === worldTeamId)?.name ?? player.contract.clubName }
+        : player.contract } }
+}
+
+export function generateMarketOffers(state: ProCareerState, player: Player): ProMarketOffer[] {
+  const world = state.backgroundWorld
+  if (!world || !state.clubWorldIds || !state.date || !registrationOpen('eng', state.date)) return []
+  const base = player.contract?.terms.weeklyWage ?? 1200
+  return state.world.divisions[1].teams.filter(team => team.id !== state.world.playerTeamId)
+    .map(team => {
+      const worldClubId = state.clubWorldIds![team.id]
+      const club = world.clubs[worldClubId]
+      const weeklyWage = Math.round(base * (1 + (team.prestige - 4) * .055))
+      const annualWage = weeklyWage * 52
+      const affordable = assessProDeal(club.finances, { annualWage, probableAnnualBonuses: Math.round(annualWage * .1),
+        annualTransferCost: 0, annualAgentFee: Math.round(annualWage * .05), upfrontTransferPayment: annualWage * 2,
+        signingBonus: weeklyWage, role: 'rotation' }).affordable
+      return affordable ? { teamId: team.id, worldClubId, weeklyWage, expiresWeek: (player.totalWeeksElapsed ?? 0) + 5 } : null
+    }).filter((offer): offer is ProMarketOffer => offer !== null).slice(0, 3)
+}
+
+export function finalizeProMove(state: ProCareerState, player: Player): { state: ProCareerState; player: Player } | null {
+  const talks = state.talks
+  if (!talks || talks.readyWeek > (player.totalWeeksElapsed ?? 0) || !state.backgroundWorld || !state.date) return null
+  const offer = talks.offer
+  const annualWage = offer.weeklyWage * 52
+  const result = completeProTransfer(state.backgroundWorld, `career-${player.id}`, offer.worldClubId, {
+    annualWage, probableAnnualBonuses: Math.round(annualWage * .1), annualTransferCost: 0, annualAgentFee: Math.round(annualWage * .05),
+    upfrontTransferPayment: annualWage * 2, signingBonus: offer.weeklyWage, role: 'rotation' }, state.date)
+  if (!result.ok) return null
+  const club = result.world.clubs[offer.worldClubId]
+  const team = state.world.divisions[1].teams.find(candidate => candidate.id === offer.teamId)!
+  const nextPlayer = { ...player, squadRole: 'bench' as const, contract: player.contract
+    ? { ...player.contract, clubName: team.name, terms: { ...player.contract.terms, weeklyWage: offer.weeklyWage }, signedWeek: player.totalWeeksElapsed ?? 0,
+      expiresWeek: (player.totalWeeksElapsed ?? 0) + 88 } : player.contract,
+    turnedPro: player.turnedPro ? { ...player.turnedPro, clubName: team.name } : player.turnedPro }
+  return { state: { ...state, world: { ...state.world, playerTeamId: team.id }, backgroundWorld: result.world,
+    shirtNumber: result.world.players[`career-${player.id}`].shirtNumber,
+    residence: { countryId: club.associationId, city: club.homeCity, monthlyRent: housingFor(nextPlayer), hotelUntil: addDays(state.date, 21) },
+    talks: null, marketOffers: [] }, player: nextPlayer }
+}

@@ -56,6 +56,9 @@ import { academyEntryOpen, academyRecruitmentReport, academyTrialAvailable, acad
 import { ageGroupFor, initYouthPathway, representativeSelection, selectionPassed } from '../engine/pathway'
 import { initOctoberLeague, recordOctoberResult, simulateOctoberWeek, octoberStandings } from '../engine/octoberLeague'
 import { createProCareer, advanceProWeek, resolveProMatch } from '../engine/proCareer'
+import { attachProWorld, advanceLivingWorld, generateMarketOffers, finalizeProMove, resolveProCup } from '../engine/proIntegration'
+import { startProLoan, registrationOpen } from '../engine/proMovement'
+import { assessProDeal } from '../engine/proClubFinance'
 
 // UI actions can save several snapshots in one tick. Keep their disk writes in
 // action order so an older snapshot cannot finish after a newer one.
@@ -142,8 +145,15 @@ interface CareerStore {
   advanceProCareer: () => void
   trainProCareer: () => void
   completeProMatch: (result: Parameters<typeof resolveProMatch>[2]) => void
+  completeProCupMatch: (fixtureId: string, result: Parameters<typeof resolveProMatch>[2]) => void
   completeProTrialWeek: (points: number) => void
   signOpeningProClub: (clubName: string, prestige: number) => void
+  ensureLivingWorld: () => void
+  requestProOffers: () => void
+  openProTransferTalks: (teamId: string) => void
+  counterProTransferTalks: () => void
+  signProTransfer: () => boolean
+  acceptProLoan: (teamId: string) => boolean
   negotiationBeat: string | null
   clearNegotiationBeat: () => void
   /** P40: sit out a match due to suspension — resolves the event and decrements the ban by one match. */
@@ -507,7 +517,8 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const { player } = getState()
     if (!player?.proCareer) return
     const result = advanceProWeek(player.proCareer, player)
-    setState({ player: { ...result.player, proCareer: result.state } })
+    const living = advanceLivingWorld(player.proCareer, result.state, result.player)
+    setState({ player: { ...living.player, proCareer: living.state } })
     void getState().saveCurrent()
   },
   trainProCareer: () => {
@@ -525,17 +536,102 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const resolved = resolveProMatch(player.proCareer, player, result)
     const earned = (player.contract?.terms.appearanceFee ?? 0) + result.goals * (player.contract?.terms.goalBonus ?? 0)
     const career = player.career
-    setState({ player: { ...player, proCareer: resolved.state, money: (player.money ?? 0) + netWage(earned, player.agentId),
-      careerEarnings: (player.careerEarnings ?? 0) + earned, fitness: { stamina: Math.max(0, result.energy) },
+    setState({ player: { ...player, proCareer: { ...resolved.state, pendingBonus: player.proCareer.backgroundWorld ? (player.proCareer.pendingBonus ?? 0) + earned : undefined },
+      money: (player.money ?? 0) + (player.proCareer.backgroundWorld ? 0 : netWage(earned, player.agentId)),
+      careerEarnings: (player.careerEarnings ?? 0) + (player.proCareer.backgroundWorld ? 0 : earned), fitness: { stamina: Math.max(0, result.energy) },
       injury: result.injury?.weeksOut ? { severity: result.injury.severity, weeksRemaining: result.injury.weeksOut, description: result.injury.description } : player.injury,
       suspensionMatches: result.redCarded ? 2 : player.suspensionMatches,
       seasonAppearances: (player.seasonAppearances ?? 0) + (result.minutes > 0 ? 1 : 0), seasonGoals: player.seasonGoals + result.goals,
       seasonAssists: player.seasonAssists + result.assists, matchRatings: [...player.matchRatings, result.rating].slice(-10),
       matchLedger: [...(player.matchLedger ?? []), resolved.record],
+      lastMatchResult: { opponentName: result.opponent.name, playerScore: result.scored, opponentScore: result.conceded,
+        playerGoals: result.goals, playerAssists: result.assists, playerRating: result.rating },
       career: career ? { ...career, appearances: career.appearances + (result.minutes > 0 ? 1 : 0), goals: career.goals + result.goals,
         assists: career.assists + result.assists, wins: career.wins + (result.scored > result.conceded ? 1 : 0),
         cleanSheets: career.cleanSheets + (result.conceded === 0 ? 1 : 0), bestRating: Math.max(career.bestRating, result.rating) } : career } })
     void getState().saveCurrent()
+  },
+  completeProCupMatch: (fixtureId, result) => {
+    const { player } = getState()
+    if (!player?.proCareer?.backgroundWorld) return
+    const resolved = resolveProCup(player.proCareer, player, fixtureId, result)
+    if (!resolved) return
+    const earned = (player.contract?.terms.appearanceFee ?? 0) + result.goals * (player.contract?.terms.goalBonus ?? 0)
+    const career = player.career
+    setState({ player: { ...player, proCareer: { ...resolved.state, pendingBonus: (player.proCareer.pendingBonus ?? 0) + earned },
+      fitness: { stamina: Math.max(0, result.energy) },
+      injury: result.injury?.weeksOut ? { severity: result.injury.severity, weeksRemaining: result.injury.weeksOut, description: result.injury.description } : player.injury,
+      suspensionMatches: result.redCarded ? 2 : player.suspensionMatches,
+      seasonAppearances: (player.seasonAppearances ?? 0) + (result.minutes > 0 ? 1 : 0), seasonGoals: player.seasonGoals + result.goals,
+      seasonAssists: player.seasonAssists + result.assists, matchRatings: [...player.matchRatings, result.rating].slice(-10),
+      matchLedger: [...(player.matchLedger ?? []), resolved.record],
+      lastMatchResult: { opponentName: result.opponent.name, playerScore: result.scored, opponentScore: result.conceded,
+        playerGoals: result.goals, playerAssists: result.assists, playerRating: result.rating },
+      career: career ? { ...career, appearances: career.appearances + (result.minutes > 0 ? 1 : 0), goals: career.goals + result.goals,
+        assists: career.assists + result.assists, wins: career.wins + (result.scored > result.conceded ? 1 : 0),
+        cleanSheets: career.cleanSheets + (result.conceded === 0 ? 1 : 0), bestRating: Math.max(career.bestRating, result.rating) } : career } })
+    void getState().saveCurrent()
+  },
+  ensureLivingWorld: () => {
+    const { player } = getState()
+    if (!player?.proCareer || player.proCareer.backgroundWorld) return
+    setState({ player: { ...player, proCareer: attachProWorld(player.proCareer, player) } })
+    void getState().saveCurrent()
+  },
+  requestProOffers: () => {
+    const { player } = getState()
+    if (!player?.proCareer || player.proCareer.talks) return
+    const offers = generateMarketOffers(player.proCareer, player)
+    setState({ player: { ...player, proCareer: { ...player.proCareer, marketOffers: offers } } })
+    void getState().saveCurrent()
+  },
+  openProTransferTalks: (teamId) => {
+    const { player } = getState()
+    const pro = player?.proCareer
+    if (!player || !pro || pro.talks) return
+    const offer = pro.marketOffers?.find(item => item.teamId === teamId && item.expiresWeek > player.totalWeeksElapsed)
+    if (!offer || !pro.date || !registrationOpen('eng', pro.date)) return
+    setState({ player: { ...player, proCareer: { ...pro, talks: { offer, readyWeek: player.totalWeeksElapsed + 2, countered: false }, marketOffers: [] } } })
+    void getState().saveCurrent()
+  },
+  counterProTransferTalks: () => {
+    const { player } = getState()
+    const pro = player?.proCareer
+    if (!player || !pro?.talks || pro.talks.readyWeek > player.totalWeeksElapsed || pro.talks.countered) return
+    const proposed = { ...pro.talks.offer, weeklyWage: Math.round(pro.talks.offer.weeklyWage * 1.05) }
+    const club = pro.backgroundWorld?.clubs[proposed.worldClubId]
+    const annualWage = proposed.weeklyWage * 52
+    if (!club || !assessProDeal(club.finances, { annualWage, probableAnnualBonuses: Math.round(annualWage * .1), annualTransferCost: 0,
+      annualAgentFee: Math.round(annualWage * .05), upfrontTransferPayment: annualWage * 2, signingBonus: proposed.weeklyWage, role: 'rotation' }).affordable) return
+    setState({ player: { ...player, proCareer: { ...pro, talks: { offer: proposed, readyWeek: player.totalWeeksElapsed + 1, countered: true } } } })
+    void getState().saveCurrent()
+  },
+  signProTransfer: () => {
+    const { player } = getState()
+    if (!player?.proCareer) return false
+    const move = finalizeProMove(player.proCareer, player)
+    if (!move) return false
+    setState({ player: { ...move.player, proCareer: move.state } })
+    void getState().saveCurrent()
+    return true
+  },
+  acceptProLoan: (teamId) => {
+    const { player } = getState()
+    const pro = player?.proCareer
+    if (!player || !pro?.backgroundWorld || !pro.date || !pro.clubWorldIds || pro.loan || player.squadRole === 'starting-xi' || !registrationOpen('eng', pro.date)) return false
+    const borrower = pro.clubWorldIds[teamId]
+    if (!borrower || teamId === pro.world.playerTeamId) return false
+    try {
+      const end = new Date(Date.parse(`${pro.date}T00:00:00Z`) + 140 * 86400000).toISOString().slice(0, 10)
+      const loan = startProLoan(pro.backgroundWorld, `career-${player.id}`, borrower, end)
+      setState({ player: { ...player, proCareer: { ...pro, backgroundWorld: loan.world, world: { ...pro.world, playerTeamId: teamId },
+        shirtNumber: loan.world.players[`career-${player.id}`].shirtNumber,
+        loan: { parentTeamId: pro.world.playerTeamId, parentWorldClubId: loan.loan.parentClubId, borrowingClubId: loan.loan.borrowingClubId,
+          ends: loan.loan.ends, originalWage: loan.loan.originalWage, returnSeason: pro.season + 1 } },
+        squadRole: 'bench' } })
+      void getState().saveCurrent()
+      return true
+    } catch { return false }
   },
   completeProTrialWeek: (points) => {
     const { player } = getState()

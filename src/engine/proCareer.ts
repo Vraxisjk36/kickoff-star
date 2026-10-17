@@ -4,6 +4,10 @@ import { batchSimDivisionRound, recordPlayerMatchResult, resetSchoolLeagueSeason
 import { generateTeam, type Team } from './teams'
 import type { MatchLine, MatchRecord } from './matchLedger'
 import { netWage } from './agents'
+import type { ProWorldState } from './proWorld'
+
+export interface ProPayStatement { season: number; month: string; gross: number; bonus: number; estimatedWithholding: number; agentFee: number; housing: number; net: number }
+export interface ProMarketOffer { teamId: string; worldClubId: string; weeklyWage: number; expiresWeek: number }
 
 export interface ProCareerState {
   world: LeagueWorld
@@ -13,6 +17,18 @@ export interface ProCareerState {
   trainedWeek?: number
   /** Matchday resolution is persisted before advancing so a reload cannot replay a result. */
   resolvedWeek?: number
+  /** The original 75-association simulation, only allocated after reaching pro. */
+  backgroundWorld?: ProWorldState
+  clubWorldIds?: Record<string, string>
+  date?: string
+  shirtNumber?: number
+  residence?: { countryId: string; city: string; monthlyRent: number; hotelUntil: string }
+  payStatements?: ProPayStatement[]
+  pendingBonus?: number
+  marketOffers?: ProMarketOffer[]
+  talks?: { offer: ProMarketOffer; readyWeek: number; countered: boolean } | null
+  loan?: { parentTeamId: string; parentWorldClubId: string; borrowingClubId: string; ends: string; originalWage: number; returnSeason: number } | null
+  news?: import('./proNews').ProNewsArticle[]
 }
 
 const CLUB_NAMES = ['North London Athletic', 'South London Blue', 'Mersey Red', 'West Midlands United', 'Brighton Coast', 'Yorkshire White', 'Severn City', 'East London Iron', 'Tyne Albion', 'Lancashire Rovers']
@@ -84,7 +100,7 @@ export function advanceProWeek(state: ProCareerState, player: Player): { state: 
   if (seasonEnd) world = resetSchoolLeagueSeason(world)
   world.kind = 'pro'
   const wage = player.contract?.terms.weeklyWage ?? 1200
-  const pay = netWage(wage, player.agentId)
+  const pay = state.backgroundWorld ? 0 : netWage(wage, player.agentId)
   const injury = player.injury && player.injury.weeksRemaining > 1 ? { ...player.injury, weeksRemaining: player.injury.weeksRemaining - 1 } : null
   return {
     state: { ...state, world, season: seasonEnd ? state.season + 1 : state.season, week: seasonEnd ? 1 : nextWeek, resolvedWeek: undefined, trainedWeek: undefined },

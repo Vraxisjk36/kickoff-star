@@ -66,8 +66,57 @@ await useCareerStore.getState().loadFromSlot(2)
 assert.equal(useCareerStore.getState().player?.proCareer?.world.kind, 'pro')
 assert.equal(useCareerStore.getState().player?.trialWeekCompleted, 3)
 console.log('Direct-start trial, contract, same-slot save and reload passed')
+useCareerStore.getState().ensureLivingWorld()
+const linked = useCareerStore.getState().player!.proCareer!
+assert.equal(Object.keys(linked.backgroundWorld!.clubs).length, 1228)
+assert.equal(linked.backgroundWorld!.players[`career-${entrant.id}`].clubId, linked.clubWorldIds![linked.world.playerTeamId])
+// Interactive cup fixture must update the tournament table and match ledger once.
+const ownWorldClub = linked.clubWorldIds![linked.world.playerTeamId]
+const otherWorldClub = linked.clubWorldIds![linked.world.divisions[1].teams.find(team => team.id !== linked.world.playerTeamId)!.id]
+linked.backgroundWorld!.competitions['audit-cup'] = { id: 'audit-cup', associationId: 'eng', kind: 'domestic-cup', seasonId: '2026',
+  entrantIds: [ownWorldClub, otherWorldClub], format: { legs: 1, scheduledRounds: 1 }, tournament: { stage: 'knockout', round: 1 } }
+linked.backgroundWorld!.standings['audit-cup'] = [ownWorldClub, otherWorldClub].map(clubId => ({ clubId, played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, points: 0 }))
+linked.backgroundWorld!.fixtures['audit-cup-fixture'] = { id: 'audit-cup-fixture', competitionId: 'audit-cup', kickoffDate: linked.date!, homeId: ownWorldClub, awayId: otherWorldClub }
+const cupOpponent = linked.world.divisions[1].teams.find(team => team.id !== linked.world.playerTeamId)!
+useCareerStore.getState().completeProCupMatch('audit-cup-fixture', { opponent: cupOpponent, home: true, scored: 2, conceded: 1, goals: 1, assists: 0, rating: 8,
+  energy: 70, minutes: 90, yellowCards: 0, redCarded: false })
+assert.deepEqual(useCareerStore.getState().player!.proCareer!.backgroundWorld!.fixtures['audit-cup-fixture'].result, { homeGoals: 2, awayGoals: 1 })
+assert.equal(useCareerStore.getState().player!.matchLedger.at(-1)?.competitionId, 'audit-cup')
+const matchCount = useCareerStore.getState().player!.matchLedger.length
+useCareerStore.getState().completeProCupMatch('audit-cup-fixture', { opponent: cupOpponent, home: true, scored: 2, conceded: 1, goals: 1, assists: 0, rating: 8,
+  energy: 70, minutes: 90, yellowCards: 0, redCarded: false })
+assert.equal(useCareerStore.getState().player!.matchLedger.length, matchCount)
+useCareerStore.getState().requestProOffers()
+const firstOffer = useCareerStore.getState().player!.proCareer!.marketOffers![0]
+assert.ok(firstOffer)
+useCareerStore.getState().openProTransferTalks(firstOffer.teamId)
+assert.equal(useCareerStore.getState().player?.proCareer?.talks?.readyWeek, 2)
+const startDate = linked.date
+for (let i = 0; i < 2; i++) useCareerStore.getState().advanceProCareer()
+assert.equal(useCareerStore.getState().signProTransfer(), true)
+assert.equal(useCareerStore.getState().player?.proCareer?.world.playerTeamId, firstOffer.teamId)
+for (let i = 0; i < 4; i++) useCareerStore.getState().advanceProCareer()
+const advanced = useCareerStore.getState().player!
+assert.ok(advanced.proCareer!.date! > startDate!)
+assert.ok(advanced.proCareer!.payStatements!.length >= 1)
+assert.ok(advanced.proCareer!.backgroundWorld!.standings['top-eng'].some(row => row.played > 0))
+await useCareerStore.getState().saveCurrent()
+await useCareerStore.getState().loadFromSlot(2)
+assert.equal(useCareerStore.getState().player?.proCareer?.date, advanced.proCareer!.date)
+assert.equal(useCareerStore.getState().player?.proCareer?.payStatements?.length, advanced.proCareer!.payStatements!.length)
+console.log('Living world, dated league fixtures, monthly pay and save reload passed')
 useCareerStore.setState({ player: { ...entrant, proTrial: undefined, trialWeekCompleted: 3, turnedPro: { clubName: 'Legacy Club', weekSigned: 180 } } })
 useCareerStore.getState().ensureProCareer()
 assert.equal(useCareerStore.getState().player?.proCareer?.world.divisions[1].teams[0].name, 'Legacy Club')
 assert.equal(useCareerStore.getState().player?.proCareer?.welcomed, false)
 console.log('Existing V19 pro signing resumes at the celebration without replacing the old career')
+useCareerStore.getState().ensureLivingWorld()
+const beforeLoan = useCareerStore.getState().player!.proCareer!
+const borrowingTeam = beforeLoan.world.divisions[1].teams.find(team => team.id !== beforeLoan.world.playerTeamId)!
+const parentTeamId = beforeLoan.world.playerTeamId
+assert.equal(useCareerStore.getState().acceptProLoan(borrowingTeam.id), true)
+assert.equal(useCareerStore.getState().player?.proCareer?.loan?.parentTeamId, parentTeamId)
+for (let i = 0; i < 44; i++) useCareerStore.getState().advanceProCareer()
+assert.equal(useCareerStore.getState().player?.proCareer?.world.playerTeamId, parentTeamId)
+assert.equal(useCareerStore.getState().player?.proCareer?.loan, null)
+console.log('Bench loan, dated return and long-running world rollover passed')

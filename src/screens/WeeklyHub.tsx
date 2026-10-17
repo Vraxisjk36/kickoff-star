@@ -26,13 +26,15 @@ import { useTranslate } from '../i18n'
 import { showSeasonInterstitial } from '../engine/ads'
 import { rewardedAdsAvailable } from '../engine/ads'
 import LowEnergyOffer from '../components/LowEnergyOffer'
+import ProTabs from './tabs/ProTabs'
+import type { CalendarState } from '../types/calendar'
 
 // Phase 10: WeeklyHub is now a shell that hosts six real, routed tabs.
 // Tab state is owned by Career so it survives event resolution (training,
 // matches, decisions) and returns the player to where they were.
 
 export default function WeeklyHub({
-  tab, onTabChange, onOpenOffers, onExitToMenu, league, academyLeague, playerTeam, playerDivision,
+  tab, onTabChange, onOpenOffers, onExitToMenu, league, academyLeague, playerTeam, playerDivision, proCalendar,
 }: {
   tab: HubTab
   onTabChange: (tab: HubTab) => void
@@ -42,10 +44,12 @@ export default function WeeklyHub({
   academyLeague: AcademyWorld | null
   playerTeam: Team
   playerDivision: Division
+  proCalendar?: CalendarState
 }) {
   const t = useTranslate()
   const player = useCareerStore((s) => s.player)
-  const calendar = useCareerStore((s) => s.calendar)
+  const savedCalendar = useCareerStore((s) => s.calendar)
+  const calendar = proCalendar ?? savedCalendar
   const cups = useCareerStore((s) => s.cups)
   const [energyOpen, setEnergyOpen] = useState(false)
   const [lowEnergyOpen, setLowEnergyOpen] = useState(false)
@@ -69,7 +73,7 @@ export default function WeeklyHub({
   const latestHeadline = latestGazette && player ? presentGazetteIssue(latestGazette, player, league?.kind === 'school' ? league.divisions[league.playerDivision] : null).masthead : null
   const unreadStory = (player?.inbox ?? []).find((item) => !item.read) ?? null
   useEffect(() => {
-    if (!rewardedAdsAvailable() || !player || !calendar || tab !== 'home' || calendar.currentWeek.weekNumber === 1 || calendar.currentWeek.weekNumber === 23 || player.fitness.stamina >= 40 || pendingSeasonReview || unreadStory || pendingAchievements.length || player.captaincy?.pendingStory || energyOpen || gazetteOpen || inboxOpen) return
+    if (proCalendar || !rewardedAdsAvailable() || !player || !calendar || tab !== 'home' || calendar.currentWeek.weekNumber === 1 || calendar.currentWeek.weekNumber === 23 || player.fitness.stamina >= 40 || pendingSeasonReview || unreadStory || pendingAchievements.length || player.captaincy?.pendingStory || energyOpen || gazetteOpen || inboxOpen) return
     const key = `ks-low-energy-prompt:${player.id}:${calendar.currentWeek.seasonYear}:${calendar.currentWeek.weekNumber}`
     try { if (localStorage.getItem(key)) return } catch { return }
     const timer = window.setTimeout(() => {
@@ -77,13 +81,13 @@ export default function WeeklyHub({
       setLowEnergyOpen(true)
     }, 700)
     return () => window.clearTimeout(timer)
-  }, [player?.id, player?.fitness.stamina, calendar?.currentWeek.seasonYear, calendar?.currentWeek.weekNumber, tab, pendingSeasonReview, unreadStory?.id, pendingAchievements.length, player?.captaincy?.pendingStory, energyOpen, gazetteOpen, inboxOpen])
+  }, [player?.id, player?.fitness.stamina, calendar?.currentWeek.seasonYear, calendar?.currentWeek.weekNumber, tab, pendingSeasonReview, unreadStory?.id, pendingAchievements.length, player?.captaincy?.pendingStory, energyOpen, gazetteOpen, inboxOpen, proCalendar])
   useEffect(() => {
-    if (!player || !calendar || calendar.currentWeek.weekNumber !== 23 || pendingSeasonReview || unreadStory) return
+    if (proCalendar || !player || !calendar || calendar.currentWeek.weekNumber !== 23 || pendingSeasonReview || unreadStory) return
     // Week 23 is the first week after the 44-week season's halfway point.
     const timer = window.setTimeout(() => { void showSeasonInterstitial(player.id, calendar.currentWeek.seasonYear, 'mid') }, 600)
     return () => window.clearTimeout(timer)
-  }, [player?.id, calendar?.currentWeek.seasonYear, calendar?.currentWeek.weekNumber, pendingSeasonReview, unreadStory?.id])
+  }, [player?.id, calendar?.currentWeek.seasonYear, calendar?.currentWeek.weekNumber, pendingSeasonReview, unreadStory?.id, proCalendar])
   useEffect(() => {
     if (!latestGazette || window.localStorage.getItem(`gazette-seen:${latestGazette.id}`)) return
     setGazettePeekId(latestGazette.id)
@@ -112,6 +116,7 @@ export default function WeeklyHub({
 
       <div key={tab} className="hub-content flex-1 px-3 pt-3 pb-40 flex flex-col gap-2.5 max-w-md mx-auto w-full">
         <BroadcastHeader tab={tab} player={player} team={playerTeam} division={playerDivision} week={calendar.currentWeek.weekNumber} />
+        {player.turnedPro && player.proCareer ? <ProTabs player={player} tab={tab} onGoTo={onTabChange} /> : <>
         {tab === 'home' && (
           <HomeTab
             player={player}
@@ -144,6 +149,7 @@ export default function WeeklyHub({
           />
         )}
         {tab === 'shop' && <ShopTab player={player} />}
+        </>}
       </div>
 
       <BottomNav active={tab} onSelect={onTabChange} badges={{ scouts: offerCount }} />
@@ -153,7 +159,7 @@ export default function WeeklyHub({
       {gazetteOpen && latestGazette && <GazetteScreen issue={latestGazette} issues={player.gazetteIssues} onClose={() => setGazetteOpen(false)} />}
       {inboxOpen && <InboxScreen items={player.inbox ?? []} onRead={markStoryRead} onClose={() => setInboxOpen(false)} />}
       {yearCalendarOpen && <YearCalendarScreen player={player} calendar={calendar} cups={cups} onClose={() => setYearCalendarOpen(false)} />}
-      {latestGazette && gazettePeekId === latestGazette.id && !gazetteOpen && !pendingSeasonReview && !unreadStory && <div className="fixed z-30 bottom-20 left-3 right-3 max-w-md mx-auto rounded-xl border border-ks-gold/60 bg-[#171407] shadow-2xl p-4" role="status">
+      {!player.turnedPro && latestGazette && gazettePeekId === latestGazette.id && !gazetteOpen && !pendingSeasonReview && !unreadStory && <div className="fixed z-30 bottom-20 left-3 right-3 max-w-md mx-auto rounded-xl border border-ks-gold/60 bg-[#171407] shadow-2xl p-4" role="status">
         <div className="flex justify-between items-center"><span className="text-ks-gold font-display text-[10px] tracking-widest">THE GAZETTE · {t('WEEK')} {latestGazette.weekNumber}</span><button onClick={dismissGazettePeek} className="text-ks-muted text-xs" aria-label="Dismiss Gazette headline">✕</button></div>
         <h2 className="text-ks-ink font-display text-base mt-2">{t(latestHeadline ?? '')}</h2>
         <button className="text-ks-gold text-xs mt-3" onClick={() => { dismissGazettePeek(); setGazetteOpen(true) }}>{t('Read full issue →')}</button>

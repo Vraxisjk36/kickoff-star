@@ -55,6 +55,7 @@ import { addStoryMoment, createStoryMoment, type StoryMoment } from '../engine/p
 import { academyEntryOpen, academyRecruitmentReport, academyTrialAvailable, academyTrialBase, academyOfferCleared, academyRegistrationOpen, migrateAcademyRecruitment, reviewAcademyShowcase } from '../engine/academyRecruitment'
 import { ageGroupFor, initYouthPathway, representativeSelection, selectionPassed } from '../engine/pathway'
 import { initOctoberLeague, recordOctoberResult, simulateOctoberWeek, octoberStandings } from '../engine/octoberLeague'
+import { createProCareer, advanceProWeek, resolveProMatch } from '../engine/proCareer'
 
 // UI actions can save several snapshots in one tick. Keep their disk writes in
 // action order so an older snapshot cannot finish after a newer one.
@@ -136,6 +137,13 @@ interface CareerStore {
   signAgent: (agentId: string) => void
   beginNegotiation: (offerId: string) => void
   makeNegotiationChoice: (choiceId: string) => void
+  ensureProCareer: () => void
+  acknowledgeProSigning: () => void
+  advanceProCareer: () => void
+  trainProCareer: () => void
+  completeProMatch: (result: Parameters<typeof resolveProMatch>[2]) => void
+  completeProTrialWeek: (points: number) => void
+  signOpeningProClub: (clubName: string, prestige: number) => void
   negotiationBeat: string | null
   clearNegotiationBeat: () => void
   /** P40: sit out a match due to suspension — resolves the event and decrements the ban by one match. */
@@ -339,11 +347,11 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     if (player.squadRoleSetAppearances === undefined) player = { ...player, squadRoleSetAppearances: player.career?.appearances ?? 0 }
     const originalCalendar = player.trialWeekCompleted >= 3 && save.calendar.currentWeek.seasonYear === 1 && save.calendar.currentWeek.weekNumber < 4
       ? { ...save.calendar, currentWeek: generateWeek(4, 1, 'grassroots-season', false, 'school') } : save.calendar
-    const loadedCalendar = alignOctoberDevelopment(alignMatchDays(originalCalendar, player.careerClock.phase, player.grassrootsPath ?? 'school', player.pathway?.sundayStatus === 'registered'), player.careerClock.ageYears, player.careerClock.phase, player.grassrootsPath ?? 'school', player.pathway?.showcaseInvited === true)
+    const loadedCalendar = player.turnedPro ? originalCalendar : alignOctoberDevelopment(alignMatchDays(originalCalendar, player.careerClock.phase, player.grassrootsPath ?? 'school', player.pathway?.sundayStatus === 'registered'), player.careerClock.ageYears, player.careerClock.phase, player.grassrootsPath ?? 'school', player.pathway?.showcaseInvited === true)
     let league = save.league ?? null
     // Preserve legacy Sunday match and financial history, but move the live
     // career onto the school pathway. Never rewrite previously played results.
-    if (player.grassrootsPath === 'sunday' && player.careerClock.phase !== 'academy') {
+    if (!player.turnedPro && player.grassrootsPath === 'sunday' && player.careerClock.phase !== 'academy') {
       const school = schoolsForRegion(player.regionId)[1] ?? schoolsForRegion(player.regionId)[0]
       player = { ...player, youthRoute: 'school', grassrootsPath: 'school', schoolId: player.schoolId ?? school?.id ?? null,
         squadRole: 'reserves', squadRoleSetWeek: player.totalWeeksElapsed ?? 0,
@@ -373,7 +381,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       academyKnockoutCup: cups.academyKnockoutCup ? { ...cups.academyKnockoutCup, teams: cups.academyKnockoutCup.teams.map(rebalanceAcademyTeam) } : null,
       academyChampionsCup: cups.academyChampionsCup ? { ...cups.academyChampionsCup, teams: cups.academyChampionsCup.teams.map(rebalanceAcademyTeam) } : null,
     }
-    if (league && player.careerClock.phase !== 'academy' && player.grassrootsPath === 'school') {
+    if (league && !player.turnedPro && player.careerClock.phase !== 'academy' && player.grassrootsPath === 'school') {
       const schoolName = (player.schoolId ? getSchool(player.schoolId)?.name : null) ?? 'Your School'
       league = migrateToSchoolLeagueWorld(league, schoolName, player.regionId)
       const teams = Object.values(league.divisions).flatMap((division) => division.teams)
@@ -415,7 +423,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
         player = { ...player, gazetteIssues: oldIssues.map((issue, index) => index === firstIndex ? { ...refreshed, id: issue.id } : issue) }
       }
     }
-    setState({ player, calendar: alignContinentalQualifier(alignSchoolPostseason(alignMatchDays(
+    setState({ player, calendar: player.turnedPro ? loadedCalendar : alignContinentalQualifier(alignSchoolPostseason(alignMatchDays(
       alignInternationalDuty(loadedCalendar, internationalDutyForWeek(save.international ?? null, player, loadedCalendar.currentWeek.weekNumber)),
       player.careerClock.phase, 'school', false), player.careerClock.phase, 'school', Boolean(cups.schoolDevelopment)),
       !!cups.academyChampionsCup?.qualifier && cups.academyChampionsCup.stage === 'qualifying' && CONTINENTAL_QUALIFIER_WEEKS[cups.academyChampionsCup.qualifier.round] === loadedCalendar.currentWeek.weekNumber && !!playerCupFixture(cups.academyChampionsCup)),
@@ -481,6 +489,70 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const { player, calendar, league, academyLeague, cups, international, activeSlot, pendingTraining } = getState()
     if (!player || !calendar || activeSlot === null) return
     await queueSave({ schemaVersion: SAVE_SCHEMA_VERSION, slotId: activeSlot, savedAt: new Date().toISOString(), player, calendar, league, academyLeague, cups, international, pendingTraining: pendingTraining ?? null })
+  },
+
+  ensureProCareer: () => {
+    const { player } = getState()
+    if (!player?.turnedPro || player.proCareer) return
+    setState({ player: { ...player, proCareer: createProCareer(player.turnedPro.clubName, player.contract ? Math.min(6, Math.max(3, Math.round(player.contract.terms.weeklyWage / 500))) : 4) } })
+    void getState().saveCurrent()
+  },
+  acknowledgeProSigning: () => {
+    const { player } = getState()
+    if (!player?.proCareer || player.proCareer.welcomed) return
+    setState({ player: { ...player, proCareer: { ...player.proCareer, welcomed: true } } })
+    void getState().saveCurrent()
+  },
+  advanceProCareer: () => {
+    const { player } = getState()
+    if (!player?.proCareer) return
+    const result = advanceProWeek(player.proCareer, player)
+    setState({ player: { ...result.player, proCareer: result.state } })
+    void getState().saveCurrent()
+  },
+  trainProCareer: () => {
+    const { player } = getState()
+    if (!player?.proCareer || player.proCareer.trainedWeek === player.proCareer.week || player.fitness.stamina < 12) return
+    setState({ player: { ...player, proCareer: { ...player.proCareer, trainedWeek: player.proCareer.week },
+      fitness: { stamina: player.fitness.stamina - 12 }, coachTrust: Math.min(100, player.coachTrust + 1), trainingMomentum: Math.min(3, player.trainingMomentum + 1) } })
+    void getState().saveCurrent()
+  },
+  completeProMatch: (result) => {
+    const { player } = getState()
+    if (!player?.proCareer || player.proCareer.resolvedWeek === player.proCareer.week || !player.proCareer.world.divisions[1].teams.some(team => team.id === result.opponent.id)) return
+    const fixture = player.proCareer.world.divisions[1].fixtures.find(f => !f.played && f.week === ((player.proCareer!.week - 4) / 2 + 1) && f.homeTeamId === (result.home ? player.proCareer!.world.playerTeamId : result.opponent.id) && f.awayTeamId === (result.home ? result.opponent.id : player.proCareer!.world.playerTeamId))
+    if (!fixture) return
+    const resolved = resolveProMatch(player.proCareer, player, result)
+    const earned = (player.contract?.terms.appearanceFee ?? 0) + result.goals * (player.contract?.terms.goalBonus ?? 0)
+    const career = player.career
+    setState({ player: { ...player, proCareer: resolved.state, money: (player.money ?? 0) + netWage(earned, player.agentId),
+      careerEarnings: (player.careerEarnings ?? 0) + earned, fitness: { stamina: Math.max(0, result.energy) },
+      injury: result.injury?.weeksOut ? { severity: result.injury.severity, weeksRemaining: result.injury.weeksOut, description: result.injury.description } : player.injury,
+      suspensionMatches: result.redCarded ? 2 : player.suspensionMatches,
+      seasonAppearances: (player.seasonAppearances ?? 0) + (result.minutes > 0 ? 1 : 0), seasonGoals: player.seasonGoals + result.goals,
+      seasonAssists: player.seasonAssists + result.assists, matchRatings: [...player.matchRatings, result.rating].slice(-10),
+      matchLedger: [...(player.matchLedger ?? []), resolved.record],
+      career: career ? { ...career, appearances: career.appearances + (result.minutes > 0 ? 1 : 0), goals: career.goals + result.goals,
+        assists: career.assists + result.assists, wins: career.wins + (result.scored > result.conceded ? 1 : 0),
+        cleanSheets: career.cleanSheets + (result.conceded === 0 ? 1 : 0), bestRating: Math.max(career.bestRating, result.rating) } : career } })
+    void getState().saveCurrent()
+  },
+  completeProTrialWeek: (points) => {
+    const { player } = getState()
+    if (!player?.proTrial || player.proTrial.week >= 3) return
+    setState({ player: { ...player, proTrial: { week: player.proTrial.week + 1, points: player.proTrial.points + Math.max(0, Math.min(3, points)) } } })
+    void getState().saveCurrent()
+  },
+  signOpeningProClub: (clubName, prestige) => {
+    const { player } = getState()
+    if (!player?.proTrial || player.proTrial.week !== 3) return
+    const wage = 350 + prestige * 175 + player.proTrial.points * 45
+    const terms = { weeklyWage: wage, years: 2, appearanceFee: Math.round(wage * .08), goalBonus: Math.round(wage * .12), signingBonus: wage * 2 }
+    setState({ player: { ...player, proTrial: undefined, trialWeekCompleted: 3, squadRole: player.proTrial.points >= 6 ? 'starting-xi' : 'bench', squad: generateSquad(prestige),
+      careerClock: { ...player.careerClock, ageYears: 18, phase: 'academy' }, agentId: player.agentId ?? 'independent',
+      contract: { clubName, terms, signedWeek: 0, expiresWeek: 88 }, turnedPro: { clubName, weekSigned: 0 },
+      proCareer: createProCareer(clubName, prestige), money: (player.money ?? 0) + terms.signingBonus } })
+    void getState().saveCurrent()
   },
 
   setPendingTraining: (snapshot) => {
@@ -903,7 +975,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
         // The win state, now earned through the same five stages as everything
         // else rather than a single tap.
         setState({
-          player: { ...signed, turnedPro: { clubName, weekSigned: week }, contractOffers: [] },
+          player: { ...signed, turnedPro: { clubName, weekSigned: week }, proCareer: createProCareer(clubName, prestige), squadRole: 'bench', squad: generateSquad(Math.min(8, prestige)), contractOffers: [] },
           negotiationBeat: outcome.beat,
         })
         getState().runAchievementCheck()

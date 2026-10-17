@@ -51,7 +51,7 @@ export interface LeagueWorld {
   playerTeamId: string
   /** School and Sunday football are separate pathways, even though they share
    * the same standings/fixture engine. Optional only for legacy saves. */
-  kind?: 'school' | 'sunday'
+  kind?: 'school' | 'sunday' | 'pro'
   regionId?: string
   /** Completed-season match lines survive the annual table reset. */
   matchHistory?: MatchRecord[]
@@ -271,7 +271,7 @@ export function recordPlayerMatchResult(world: LeagueWorld, opponentId: string, 
   const standings = updateStandingsFromResult(division.standings, homeId, awayId, hg, ag)
   const teams = division.teams.map(t => t.id === world.playerTeamId ? attributeGoals(t, Math.max(0, playerScored - personalGoals)) : t.id === opponentId ? attributeGoals(t, opponentScored) : t)
   const fixture = division.fixtures.find(f => !f.played && f.homeTeamId === homeId && f.awayTeamId === awayId)
-  const matchRecords = fixture ? [...(division.matchRecords ?? []), fixtureRecord(fixture, division.teams, teams, hg, ag, world.kind === 'school' ? 'schoolLeague' : 'sundayLeague', season, calendarWeek, playerLine)] : division.matchRecords
+  const matchRecords = fixture ? [...(division.matchRecords ?? []), fixtureRecord(fixture, division.teams, teams, hg, ag, world.kind === 'pro' ? 'proLeague' : world.kind === 'school' ? 'schoolLeague' : 'sundayLeague', season, calendarWeek, playerLine)] : division.matchRecords
   return { ...world, divisions: { ...world.divisions, [world.playerDivision]: { ...division, fixtures, standings, teams, matchRecords } } }
 }
 

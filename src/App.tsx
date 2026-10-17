@@ -7,6 +7,7 @@ import StoryIntro from './screens/StoryIntro'
 import SchoolSelection from './screens/SchoolSelection'
 import TrialsScreen from './screens/TrialsScreen'
 import Career from './screens/Career'
+import ProTrialScreen from './screens/ProTrialScreen'
 import SettingsScreen from './screens/SettingsScreen'
 import CreditsScreen from './screens/CreditsScreen'
 import HelpScreen from './screens/HelpScreen'
@@ -19,10 +20,10 @@ import { installMusicLifecycle, pauseMusic } from './engine/music'
 import { useLanguage } from './i18n'
 import { observeTranslation, prepareTranslation, supportsLiveTranslation } from './engine/liveTranslation'
 
-type Screen = 'splash' | 'language' | 'menu' | 'create' | 'story' | 'school' | 'trials' | 'career' | 'settings' | 'credits' | 'help' | 'load'
+type Screen = 'splash' | 'language' | 'menu' | 'create' | 'story' | 'school' | 'trials' | 'pro-trial' | 'career' | 'settings' | 'credits' | 'help' | 'load'
 
 // Native-shell validation touch: navigation contract is intentionally centralized here.
-const SCREEN_VALUES: Screen[] = ['splash', 'language', 'menu', 'create', 'story', 'school', 'trials', 'career', 'settings', 'credits', 'help', 'load']
+const SCREEN_VALUES: Screen[] = ['splash', 'language', 'menu', 'create', 'story', 'school', 'trials', 'pro-trial', 'career', 'settings', 'credits', 'help', 'load']
 const isScreen = (value: unknown): value is Screen => typeof value === 'string' && SCREEN_VALUES.includes(value as Screen)
 
 export default function App() {
@@ -96,7 +97,9 @@ export default function App() {
       replace('menu')
       return
     }
-    if (p.trialWeekCompleted < 3) {
+    if (p.proTrial) {
+      ;(push ? navigate : replace)('pro-trial')
+    } else if (p.trialWeekCompleted < 3) {
       setChosenSchool(null)
       ;(push ? navigate : replace)('school')
     } else {
@@ -140,7 +143,8 @@ export default function App() {
   if (screen === 'settings') return <SettingsScreen onBack={goBackToMenu} />
   if (screen === 'credits') return <CreditsScreen onBack={goBackToMenu} />
   if (screen === 'help') return <HelpScreen onBack={goBackToMenu} />
-  if (screen === 'create') return <PlayerCreation onComplete={() => replace('story')} onBack={goBackToMenu} />
+  if (screen === 'create') return <PlayerCreation onComplete={route => replace(route === 'pro' ? 'pro-trial' : 'story')} onBack={goBackToMenu} />
+  if (screen === 'pro-trial') return <ProTrialScreen onComplete={() => replace('career')} onExitToMenu={goBackToMenu} />
   if (screen === 'story') return <StoryIntro onComplete={() => replace('school')} />
   if (screen === 'school') return <SchoolSelection onChoose={handleSchoolChosen} />
   if (screen === 'trials' && player && chosenSchool) {

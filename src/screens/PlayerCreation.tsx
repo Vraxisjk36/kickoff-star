@@ -79,9 +79,10 @@ function buildInitialCalendar(): CalendarState {
   }
 }
 
-export default function PlayerCreation({ onComplete, onBack }: { onComplete: () => void; onBack: () => void }) {
+export default function PlayerCreation({ onComplete, onBack }: { onComplete: (route: 'school' | 'pro') => void; onBack: () => void }) {
   const t = useTranslate()
   const [step, setStep] = useState(0)
+  const [route, setRoute] = useState<'school' | 'pro'>('school')
   const [name, setName] = useState('')
   const [position, setPosition] = useState<Position | null>(null)
   const [foot, setFoot] = useState<'left' | 'right' | null>(null)
@@ -105,8 +106,9 @@ export default function PlayerCreation({ onComplete, onBack }: { onComplete: () 
     if (step < LAST_STEP) { setStep(step + 1); return }
     if (!name.trim() || !position || !foot || avatarId === null || !nation || !regionId || !archetype) return
     const player = buildNewPlayer(name.trim(), position, foot, nation, regionId, avatarId, archetype)
+    if (route === 'pro') player.proTrial = { week: 0, points: 0 }
     await startNewCareer(player, buildInitialCalendar(), 0)
-    onComplete()
+    onComplete(route)
   }
 
   return (
@@ -141,11 +143,11 @@ export default function PlayerCreation({ onComplete, onBack }: { onComplete: () 
         </p>
 
         {step === 0 && (
-          <input
+          <><div className="grid grid-cols-2 gap-2 mb-4">{(['school', 'pro'] as const).map(option => <button key={option} type="button" onClick={() => setRoute(option)} className={`rounded-xl border p-3 text-left text-sm ${route === option ? 'border-ks-gold bg-ks-gold/10 text-ks-gold' : 'border-ks-border text-ks-ink'}`}><b>{option === 'school' ? 'SCHOOL CAREER' : 'PRO TRIAL'}</b><small className="block mt-1 text-ks-muted">{option === 'school' ? 'The original journey from age 14' : 'Start at 18 · earn a first-team deal'}</small></button>)}</div><input
             autoFocus value={name} onChange={(e) => setName(e.target.value)}
             className="bg-[#0f0f0d] border border-ks-border rounded-xl px-4 py-4 text-ks-ink text-lg outline-none focus:border-ks-gold"
             placeholder={t('your name')}
-          />
+          /></>
         )}
 
         {step === 1 && (

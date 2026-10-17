@@ -42,6 +42,7 @@ import { matchXpEarned } from '../engine/xp'
 import { maybeRequestInAppReview } from '../engine/inAppReview'
 import CareerEnd from './CareerEnd'
 import TurnedPro from './TurnedPro'
+import ProCareer from './ProCareer'
 import ContractOffers from './ContractOffers'
 import AgentSelect from './AgentSelect'
 import NegotiationScreen from './NegotiationScreen'
@@ -129,7 +130,9 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
   if (!calendar || !player) return null
 
   if (player.turnedPro) {
-    return <TurnedPro player={player} onMenu={() => onExitToMenu?.()} />
+    return player.proCareer?.welcomed
+      ? <ProCareer onExitToMenu={() => onExitToMenu?.()} />
+      : <TurnedPro player={player} onContinue={() => { useCareerStore.getState().ensureProCareer(); useCareerStore.getState().acknowledgeProSigning() }} onMenu={() => onExitToMenu?.()} />
   }
 
   if (player.careerEnded) {

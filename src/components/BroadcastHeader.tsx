@@ -34,7 +34,7 @@ export default function BroadcastHeader({ tab, player, team, division, week }: {
     : [{ label: 'POSITION', value: position ? `#${position}` : '—' }, { label: 'TEAMS', value: division.teams.length }, { label: 'WEEK', value: week }]
   return <section className={`broadcast-head broadcast-head--${scene.tint}`} aria-label={`${scene.eyebrow} overview`}>
     <div className="broadcast-head__texture" aria-hidden="true" />
-    <div className="broadcast-head__top"><span>KS / {scene.eyebrow}</span><span>SEASON {player.careerClock.ageYears} · WK {week}</span></div>
+    <div className="broadcast-head__top"><span>KS / {scene.eyebrow}</span><span>SEASON {player.proCareer?.season ?? player.careerClock.ageYears} · WK {week}</span></div>
     <div className="broadcast-head__body">
       <div className="broadcast-head__identity">
         <span className="broadcast-head__index">{scene.mark} / 05</span>

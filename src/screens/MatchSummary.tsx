@@ -38,12 +38,12 @@ export default function MatchSummary({ rating, goals, assists, won, drew, injury
   const academyLeague = useCareerStore((s) => s.academyLeague)
   const calendar = useCareerStore((s) => s.calendar)
   const player = useCareerStore((s) => s.player)
-  const division = academyLeague
+  const division = player?.proCareer?.world.divisions[1] ?? (academyLeague
     ? academyLeague.divisions[academyLeague.playerDivision]
     : league
     ? league.divisions[league.playerDivision]
-    : null
-  const weekNumber = calendar?.currentWeek.weekNumber
+    : null)
+  const weekNumber = player?.proCareer ? ((player.proCareer.week - 4) / 2 + 1) : calendar?.currentWeek.weekNumber
   const roundFixtures = division && weekNumber
     ? division.fixtures.filter((f) => f.week === weekNumber && f.played && f.homeGoals !== null && f.awayGoals !== null)
     : []

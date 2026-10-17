@@ -229,6 +229,9 @@ export interface Player {
 
   // Win-state: signed a professional contract (the V1.0 end goal)
   turnedPro: { clubName: string; weekSigned: number } | null
+  /** Professional chapter lives in the same save as the youth career. */
+  proCareer?: import('../engine/proCareer').ProCareerState
+  proTrial?: { week: number; points: number }
   squadRole: 'starting-xi' | 'bench' | 'reserves' | 'released' | null
   /** P50 — the week (totalWeeksElapsed) squadRole last changed. Selection is now STICKY: a trial or coach verdict has to hold for a settling-in period before the coach reconsiders, so it actually means something rather than being recomputed away within a week. */
   squadRoleSetWeek?: number

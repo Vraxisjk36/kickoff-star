@@ -7,7 +7,7 @@ export interface ProLeaguePlan {
   associationName: string
   confederation: ProConfederation
   mode: 'playable' | 'simulated'
-  /** Club count, cup rules and exact dates require association-level research. */
+  /** A career destination target, not proof that interactive play is implemented. */
   rulesStatus: 'research-pending'
 }
 
@@ -15,36 +15,44 @@ export interface ProLeaguePlan {
 // Codes are stable in saves; player-facing club and competition names live elsewhere.
 const planned: Array<{ confederation: ProConfederation; playable: string; simulated: string }> = [
   { confederation: 'uefa',
-    playable: 'eng:England,esp:Spain,ger:Germany,fra:France,ita:Italy,por:Portugal,ned:Netherlands,bel:Belgium,sco:Scotland,tur:Türkiye,grc:Greece,aut:Austria',
-    simulated: 'sui:Switzerland,dnk:Denmark,swe:Sweden,nor:Norway,pol:Poland,cze:Czechia,hrv:Croatia,srb:Serbia' },
+    playable: 'eng:England,esp:Spain,ger:Germany,fra:France,ita:Italy,por:Portugal,ned:Netherlands,bel:Belgium,sco:Scotland,tur:Türkiye',
+    simulated: 'grc:Greece,aut:Austria,sui:Switzerland,dnk:Denmark,swe:Sweden,nor:Norway,pol:Poland,cze:Czechia,hrv:Croatia,srb:Serbia' },
   { confederation: 'caf',
-    playable: 'rsa:South Africa,nga:Nigeria,mar:Morocco,egy:Egypt,tun:Tunisia,dza:Algeria,gha:Ghana,sen:Senegal',
-    simulated: 'civ:Côte d’Ivoire,cod:DR Congo,cmr:Cameroon,ken:Kenya,tza:Tanzania,uga:Uganda,zmb:Zambia,ago:Angola,mli:Mali,moz:Mozambique' },
+    playable: 'rsa:South Africa,nga:Nigeria,mar:Morocco,egy:Egypt,tun:Tunisia,dza:Algeria,gha:Ghana',
+    simulated: 'sen:Senegal,civ:Côte d’Ivoire,cod:DR Congo,cmr:Cameroon,ken:Kenya,tza:Tanzania,uga:Uganda,zmb:Zambia,ago:Angola,mli:Mali,moz:Mozambique' },
   { confederation: 'conmebol',
     playable: 'bra:Brazil,arg:Argentina,col:Colombia,ury:Uruguay,chl:Chile',
     simulated: 'ecu:Ecuador,pry:Paraguay,per:Peru,bol:Bolivia,ven:Venezuela' },
   { confederation: 'concacaf',
-    playable: 'usa:United States,mex:Mexico,cri:Costa Rica',
-    simulated: 'can:Canada,hnd:Honduras,pan:Panama,gtm:Guatemala,slv:El Salvador,nic:Nicaragua,jam:Jamaica,tto:Trinidad and Tobago' },
+    playable: 'usa:United States,mex:Mexico',
+    simulated: 'cri:Costa Rica,can:Canada,hnd:Honduras,pan:Panama,gtm:Guatemala,slv:El Salvador,nic:Nicaragua,jam:Jamaica,tto:Trinidad and Tobago' },
   { confederation: 'afc',
     playable: 'jpn:Japan,kor:South Korea,sau:Saudi Arabia,ind:India,chn:China,aus:Australia',
     simulated: 'irn:Iran,are:United Arab Emirates,qat:Qatar,tha:Thailand,idn:Indonesia,uzb:Uzbekistan,vnm:Vietnam,irq:Iraq' },
-  { confederation: 'ofc', playable: 'nzl:New Zealand', simulated: 'fji:Fiji' },
+  { confederation: 'ofc', playable: '', simulated: 'nzl:New Zealand,fji:Fiji' },
 ]
 
 function parseLeagues(countries: string, mode: ProLeaguePlan['mode'], confederation: ProConfederation): ProLeaguePlan[] {
-  return countries.split(',').map(country => {
+  return countries ? countries.split(',').map(country => {
     const separator = country.indexOf(':')
     const associationId = country.slice(0, separator)
     return { id: `top-${associationId}`, associationId, associationName: country.slice(separator + 1),
       confederation, mode, rulesStatus: 'research-pending' }
-  })
+  }) : []
 }
 
 export const PRO_LEAGUE_PLAN: readonly ProLeaguePlan[] = planned.flatMap(group => [
   ...parseLeagues(group.playable, 'playable', group.confederation),
   ...parseLeagues(group.simulated, 'simulated', group.confederation),
 ])
+
+/** Planned destinations and shipped interactive destinations are deliberately separate. */
+export const PRO_CAREER_COUNTRY_TARGETS: readonly string[] = PRO_LEAGUE_PLAN
+  .filter(league => league.mode === 'playable').map(league => league.associationId)
+export const PRO_INTERACTIVE_COUNTRIES: readonly string[] = ['eng']
+export function canStartInteractiveProCareer(associationId: string): boolean {
+  return PRO_INTERACTIVE_COUNTRIES.includes(associationId)
+}
 
 /** Lower flights with a stable, distinct competition identity. */
 export const LOWER_DIVISIONS: Readonly<Record<string, { clubs: number; promoted: number; relegated: number }>> = {
@@ -61,8 +69,8 @@ export const PRO_LOWER_LEAGUE_PLAN: readonly ProLeaguePlan[] = PRO_LEAGUE_PLAN
 export function validateProLeaguePlan(leagues: readonly ProLeaguePlan[] = PRO_LEAGUE_PLAN): string[] {
   const issues: string[] = []
   if (leagues.length !== 75) issues.push(`Expected 75 leagues; found ${leagues.length}`)
-  if (leagues.filter(league => league.mode === 'playable').length !== 35) issues.push('Expected 35 playable leagues')
-  if (leagues.filter(league => league.mode === 'simulated').length !== 40) issues.push('Expected 40 simulated leagues')
+  if (leagues.filter(league => league.mode === 'playable').length !== 30) issues.push('Expected 30 career destination countries')
+  if (leagues.filter(league => league.mode === 'simulated').length !== 45) issues.push('Expected 45 background club countries')
   for (const key of ['id', 'associationId'] as const)
     if (new Set(leagues.map(league => league[key])).size !== leagues.length) issues.push(`Duplicate ${key}`)
   return issues

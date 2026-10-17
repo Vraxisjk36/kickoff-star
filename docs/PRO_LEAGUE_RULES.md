@@ -1,6 +1,6 @@
 # Professional league structure audit (2026/27)
 
-The existing school game and playable pro UI remain in place. This page describes the simulated world. The 35 “playable” labels in the registry remain planned destinations; full match interaction currently exists for the English pro chapter only.
+The existing school game and playable pro UI remain in place. This page describes the simulated world. The 30 “playable” labels in the registry are planned career destinations; full match interaction currently exists for the English pro chapter only. See [the 30-country pyramid plan](PRO_COUNTRY_PYRAMID_PLAN.md).
 
 | Area | Implemented | Remaining rules work |
 | --- | --- | --- |

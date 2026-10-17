@@ -1,0 +1,38 @@
+# Pro world: 30 career countries and a simulated international world
+
+This is the target architecture. The current playable pro chapter is England only. A registry flag is not a claim that a country is currently playable.
+
+## Career countries (30)
+
+| Confederation | Countries | Count |
+| --- | --- | ---: |
+| UEFA | England, Spain, Germany, France, Italy, Portugal, Netherlands, Belgium, Scotland, Türkiye | 10 |
+| CAF | South Africa, Nigeria, Morocco, Egypt, Tunisia, Algeria, Ghana | 7 |
+| CONMEBOL | Brazil, Argentina, Colombia, Uruguay, Chile | 5 |
+| CONCACAF | United States, Mexico | 2 |
+| AFC | Japan, South Korea, Saudi Arabia, India, China, Australia | 6 |
+
+The other 45 countries with club leagues remain simulated. The 143 additional associations currently have national sides only. An association's domestic mode, continental eligibility, and ability to sign the human player are distinct flags; never infer one from another. Some associations have different membership for regional tournaments and world qualification, which must be encoded per competition and edition.
+
+## Complete pyramid contract
+
+A career country is complete only when all of these work together:
+
+1. Its actual professional divisions for the chosen season have correct membership, calendars, league phases, playoffs or splits, tiebreakers and points deductions where applicable. “Full pyramid” means the supported professional levels down to a defined boundary, with a feeder pool at the bottom; it does not imply thousands of amateur teams are individually modelled.
+2. Promotion and relegation are resolved from completed results, including playoff fixtures, with stable club IDs. The next season draws from the new membership. A promoted simulated club is immediately a valid career club if its country and division are playable.
+3. National and league cups draw the correct tiers and qualifying entrants. Super cups, top-eight cups and continental berths consume actual prior winners and league standings, including pass-down and disqualification rules.
+4. Transfers, wages, squad registration, loans, injuries, academy intake and retirement work for the human player in every playable division. The match engine and club UI use the same fixtures and table as the background world. No duplicate “player league” can disagree with world results.
+5. Season archives preserve tables, titles, promotions, relegations, cup brackets and club records. Old saves migrate without rewriting historic results or replacing clubs.
+6. Representative and continental competitions have edition-specific association eligibility, entries and qualification rounds. Simulated countries can qualify, win and send clubs without becoming human career destinations.
+
+## Performance levels
+
+- **Career simulation:** full player match flow and detailed squad/economy/event systems in all 30 career countries.
+- **Club background:** 45 countries with season results, rosters, transfers, domestic winners and continental entries. Their clubs are not human transfer destinations.
+- **National background:** association strength and national-team participation; no fabricated domestic league required.
+
+The current implementation is still short of this contract: 75 top divisions are simulated, ten second divisions exist, and the English pro league is the only interactive chapter. The simulated English league and the player's league are not yet one table. Most association formats, playoffs and continental eligibility rules are provisional. Promote a country to actual career availability only after its integrated season audits pass.
+
+## Save migration and release gate
+
+Keep stable association and club IDs. Introduce an explicit career-availability flag separate from the league registry's planned mode. Existing saves should retain their club, competition, fixture, contract and history IDs. The first release with cross-country careers must test promotion into a playable division, relegation below it, cross-border transfer, cup qualification, continental qualification and a ten-season resumed save for each format family.

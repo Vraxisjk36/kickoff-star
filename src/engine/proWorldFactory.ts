@@ -1,0 +1,190 @@
+import { PRO_LEAGUE_PLAN, type ProLeaguePlan } from './proLeagueRegistry'
+import { createEmptyProWorld, type IsoDate, type ProAcademyProspect, type ProClub, type ProCompetition, type ProFixture,
+  type ProPlayer, type ProWorldState } from './proWorld'
+import { isInPeriod, type SeasonCalendarProfile } from './proCalendar'
+import { PRO_SATELLITE_ASSOCIATIONS } from './proSatelliteRegistry'
+
+const DAY = 86_400_000
+const utc = (date: IsoDate) => Date.parse(`${date}T00:00:00Z`)
+const iso = (time: number): IsoDate => new Date(time).toISOString().slice(0, 10)
+const padded = (value: number) => String(value).padStart(2, '0')
+const hash = (value: string): number => { let n = 2166136261; for (const char of value) n = Math.imul(n ^ char.charCodeAt(0), 16777619); return n >>> 0 }
+export const proRoll = (seed: number, key: string): number => hash(`${seed}:${key}`) / 4294967296
+
+// Provisional format profiles, never presented as official fixture dates.
+const springStart = new Set(['bra','arg','col','ury','chl','ecu','pry','per','bol','ven','usa','can','jpn','kor','chn','swe','nor','fji'])
+const autumnStart = new Set(['aus','nzl'])
+const julyStart = new Set(['mex'])
+export function proCalendarProfile(associationId: string, startYear: number): SeasonCalendarProfile {
+  const startMonth = springStart.has(associationId) ? 2 : autumnStart.has(associationId) ? 10 : julyStart.has(associationId) ? 7 : 8
+  const endYear = startMonth >= 7 ? startYear + 1 : startYear
+  const endMonth = startMonth === 10 ? 6 : startMonth >= 7 ? 5 : 11
+  const breaks = associationId === 'esp' ? [{ start: `${startYear}-12-22`, end: `${endYear}-01-04` }] : []
+  const finalDay = new Date(Date.UTC(startYear, startMonth, 0)).getUTCDate()
+  return { id: `${associationId}-${startYear}`, startMonth, endMonth, breaks,
+    registrationPeriods: [
+      { start: `${startYear}-${padded(startMonth)}-01`, end: `${startYear}-${padded(startMonth)}-${padded(finalDay)}` },
+      { start: `${endYear}-01-01`, end: `${endYear}-01-31` },
+    ] }
+}
+
+const currencyGroups: Record<string, string> = {
+  GBP: 'eng,sco', EUR: 'esp,ger,fra,ita,por,ned,bel,aut,grc,irl,cyp,hrv',
+  ZAR: 'rsa', NGN: 'nga', MAD: 'mar', EGP: 'egy', TND: 'tun', DZD: 'dza', GHS: 'gha', XOF: 'sen,civ,mli',
+  CDF: 'cod', XAF: 'cmr', KES: 'ken', TZS: 'tza', UGX: 'uga', ZMW: 'zmb', AOA: 'ago', MZN: 'moz',
+  BRL: 'bra', ARS: 'arg', COP: 'col', UYU: 'ury', CLP: 'chl', USD: 'usa,ecu,slv',
+  PYG: 'pry', PEN: 'per', BOB: 'bol', VES: 'ven', MXN: 'mex', CAD: 'can', CRC: 'cri',
+  HNL: 'hnd', PAB: 'pan', GTQ: 'gtm', NIO: 'nic', JMD: 'jam', TTD: 'tto',
+  JPY: 'jpn', KRW: 'kor', SAR: 'sau', INR: 'ind', CNY: 'chn', AUD: 'aus', IRR: 'irn',
+  AED: 'are', QAR: 'qat', THB: 'tha', IDR: 'idn', UZS: 'uzb', VND: 'vnm', IQD: 'irq',
+  NZD: 'nzl', FJD: 'fji', CHF: 'sui', DKK: 'dnk', SEK: 'swe', NOK: 'nor', PLN: 'pol',
+  CZK: 'cze', RSD: 'srb', TRY: 'tur',
+}
+const currencies = Object.fromEntries(Object.entries(currencyGroups).flatMap(([code, ids]) => ids.split(',').map(id => [id, code])))
+
+// Phase 1 world capacity, not verified real-life club counts. Clubs and formats
+// are replaced by researched country editions before the public pro release.
+export function plannedClubCount(id: string): number {
+  if (['eng','esp','ita','fra','bra','mex','nga','egy','usa'].includes(id)) return 20
+  if (id === 'ger' || id === 'por' || id === 'ned' || id === 'tur') return 18
+  if (id === 'sco' || id === 'aut' || id === 'nzl' || id === 'fji') return 12
+  return 16
+}
+
+const namedCities: Record<string, string[]> = {
+  eng: ['London','Manchester','Liverpool','Leeds','Birmingham','Newcastle','Brighton','Bristol'],
+  esp: ['Madrid','Barcelona','Seville','Valencia','Bilbao','Vigo','Málaga','Zaragoza'],
+  rsa: ['Johannesburg','Pretoria','Cape Town','Durban','Bloemfontein','Gqeberha','Stellenbosch','Polokwane'],
+  bra: ['São Paulo','Rio','Santos','Salvador','Recife','Porto Alegre','Belo Horizonte','Curitiba'],
+  usa: ['New York','Los Angeles','Miami','Chicago','Seattle','Atlanta','Dallas','Philadelphia'],
+  jpn: ['Tokyo','Osaka','Yokohama','Nagoya','Kobe','Sapporo','Kyoto','Hiroshima'],
+}
+const identities = ['Athletic','United','City','Sporting','Rovers','Union','Albion','Wanderers',
+  'Olympic','Dynamo','Harbour','Racing','North','South','Eagles','Stars','Central','Lions','Valley','Academia']
+const firstNames = ['Amir','Daniel','Leo','Jamal','Hiro','Thabo','Mateo','Samuel','Yusuf','Kai','André','Rafael','Kofi','Milan','Santiago','Noah']
+const lastNames = ['Silva','Kamara','Morales','Okafor','Diallo','Costa','Kim','Mokoena','Garcia','Sato','Mensah','Bennett','Ahmed','Santos','Novak','Reyes']
+const positions = ['GK','GK','RB','CB','CB','CB','LB','DM','CM','CM','AM','RW','LW','ST','ST','GK','CB','RB','LB','CM','CM','RW','LW','ST']
+const leagueStrength: Record<ProLeaguePlan['confederation'], number> = { uefa: 60, caf: 51, conmebol: 58, concacaf: 53, afc: 53, ofc: 43 }
+
+function clubName(league: ProLeaguePlan, index: number): { name: string; city: string } {
+  const city = namedCities[league.associationId]?.[index % (namedCities[league.associationId].length)]
+    ?? `${league.associationName} ${index < 8 ? 'North' : 'South'}`
+  return { city, name: `${city} ${identities[index]}` }
+}
+
+function createSquad(club: ProClub, seed: number, year: number): ProPlayer[] {
+  const wageBudget = Math.floor(club.finances.annualSquadCostLimit * .66)
+  const weights = positions.map((_, i) => 1 + proRoll(seed, `${club.id}:wage:${i}`) * 2)
+  const totalWeight = weights.reduce((a, b) => a + b, 0)
+  return positions.map((position, i) => {
+    const surname = lastNames[Math.floor(proRoll(seed, `${club.id}:surname:${i}`) * lastNames.length)]
+    const first = firstNames[Math.floor(proRoll(seed, `${club.id}:first:${i}`) * firstNames.length)]
+    const age = 18 + Math.floor(proRoll(seed, `${club.id}:age:${i}`) * 16)
+    const overall = Math.min(90, Math.max(40, Math.round(club.reputation + (proRoll(seed, `${club.id}:ovr:${i}`) - .5) * 17)))
+    return { id: `player-${club.id}-${i}`, name: `${first} ${surname}`, birthDate: `${year - age}-06-15`,
+      nationalityIds: [club.associationId], position, overall, potential: Math.min(94, overall + 4 + Math.floor(proRoll(seed, `${club.id}:potential:${i}`) * 12)),
+      clubId: club.id, annualWage: Math.floor(wageBudget * weights[i] / totalWeight), shirtNumber: i + 1 }
+  })
+}
+
+/** Two prospects per club per intake; only successful graduates enter the wage bill. */
+export function createAcademyIntake(club: ProClub, seed: number, year: number): ProAcademyProspect[] {
+  return [0, 1].map(index => {
+    const id = `academy-${club.id}-${year}-${index}`
+    const rating = Math.max(34, Math.round(club.reputation - 15 + proRoll(seed, `${id}:ability`) * 13))
+    return { id, clubId: club.id, intakeYear: year,
+      name: `${firstNames[Math.floor(proRoll(seed, `${id}:first`) * firstNames.length)]} ${lastNames[Math.floor(proRoll(seed, `${id}:last`) * lastNames.length)]}`,
+      birthDate: `${year - 18}-06-15`, nationalityIds: [club.associationId],
+      position: positions[Math.floor(proRoll(seed, `${id}:position`) * positions.length)],
+      overall: rating, potential: Math.min(94, rating + 7 + Math.floor(proRoll(seed, `${id}:potential`) * 13)) }
+  })
+}
+
+export function newProLeagueSeason(world: ProWorldState, league: ProLeaguePlan, startYear: number): ProFixture[] {
+  const clubIds = Object.values(world.clubs).filter(club => club.associationId === league.associationId).map(club => club.id).sort()
+  const competitionId = league.id
+  const rounds = (clubIds.length - 1) * 2
+  const competition: ProCompetition = { id: competitionId, associationId: league.associationId, kind: 'league',
+    seasonId: String(startYear), entrantIds: clubIds, format: { legs: 2, scheduledRounds: rounds } }
+  world.competitions[competitionId] = competition
+  world.standings[competitionId] = clubIds.map(clubId => ({ clubId, played: 0, won: 0, drawn: 0, lost: 0,
+    goalsFor: 0, goalsAgainst: 0, points: 0 }))
+  const profile = proCalendarProfile(league.associationId, startYear)
+  const endYear = profile.endMonth < profile.startMonth ? startYear + 1 : startYear
+  const start = utc(`${startYear}-${padded(profile.startMonth)}-15`)
+  const end = utc(`${endYear}-${padded(profile.endMonth)}-17`)
+  const rotating = [...clubIds]
+  const half = rotating.length / 2
+  let previousKickoff = 0
+  const fixtures: ProFixture[] = []
+  for (let round = 0; round < rounds; round++) {
+    const firstLeg = round < clubIds.length - 1
+    const week = round % (clubIds.length - 1)
+    const arr = [...rotating]
+    for (let turn = 0; turn < week; turn++) arr.splice(1, 0, arr.pop()!)
+    let kickoff = start + Math.round(round * (end - start) / (rounds - 1) / DAY) * DAY
+    // Prefer a weekend; winter breaks push the round, never erase it.
+    kickoff += ((6 - new Date(kickoff).getUTCDay() + 7) % 7) * DAY
+    while (isInPeriod(iso(kickoff), profile.breaks) || kickoff <= previousKickoff) kickoff += 7 * DAY
+    previousKickoff = kickoff
+    for (let pair = 0; pair < half; pair++) {
+      const home = arr[pair]
+      const away = arr[arr.length - 1 - pair]
+      const [h, a] = (week + pair) % 2 === 0 ? [home, away] : [away, home]
+      const homeId = firstLeg ? h : a
+      const awayId = firstLeg ? a : h
+      const id = `fixture-${league.associationId}-${startYear}-${round + 1}-${pair + 1}`
+      const fixture = { id, competitionId, kickoffDate: iso(kickoff), homeId, awayId } satisfies ProFixture
+      world.fixtures[id] = fixture
+      fixtures.push(fixture)
+    }
+  }
+  return fixtures
+}
+
+export function createProWorld(seed: number, currentDate: IsoDate): ProWorldState {
+  const world = createEmptyProWorld(currentDate, seed)
+  for (const association of PRO_SATELLITE_ASSOCIATIONS) world.associations[association.id] = { ...association }
+  const currentYear = Number(currentDate.slice(0, 4))
+  for (const league of PRO_LEAGUE_PLAN) {
+    const currency = currencies[league.associationId]
+    if (!currency) throw new Error(`No currency for ${league.associationId}`)
+    world.associations[league.associationId] = { id: league.associationId, name: league.associationName,
+      confederation: league.confederation, currency, domesticMode: 'full' }
+    const clubCount = plannedClubCount(league.associationId)
+    for (let i = 0; i < clubCount; i++) {
+      const id = `club-${league.associationId}-${padded(i + 1)}`
+      const identity = clubName(league, i)
+      const reputation = Math.max(35, Math.min(89, leagueStrength[league.confederation] + 13 - i * 1.25
+        + Math.floor(proRoll(seed, `${id}:rep`) * 7) - 3))
+      const revenue = Math.round((11_000_000 + reputation * 2_300_000) * (league.mode === 'playable' ? 1.1 : .8))
+      const annualSquadCostLimit = Math.floor(revenue * .58)
+      const finances: ProClub['finances'] = { clubId: id, currency, annualRevenue: revenue,
+        baselineAnnualRevenue: revenue, cash: Math.floor(revenue * .36), debt: 0,
+        annualSquadCostLimit, committedAnnualWages: 0,
+        committedAnnualBonuses: Math.floor(annualSquadCostLimit * .08),
+        committedAnnualTransferCosts: Math.floor(annualSquadCostLimit * .07),
+        committedAnnualAgentFees: Math.floor(annualSquadCostLimit * .015),
+        reservedAnnualSquadCosts: Math.floor(annualSquadCostLimit * .04),
+        committedTransferPayments: Math.floor(revenue * .03), topPlayerAnnualWage: 0,
+        roleWageMultiplier: { prospect: .24, rotation: .65, starter: 1, star: 1.45 } }
+      const club: ProClub = { id, associationId: league.associationId, name: identity.name,
+        homeCity: identity.city, stadiumId: `stadium-${id}`, reputation, finances }
+      world.clubs[id] = club
+      world.stadiums[club.stadiumId] = { id: club.stadiumId, name: `${identity.city} Ground ${padded(i + 1)}`,
+        city: identity.city, capacity: 5_000 + Math.round(reputation * 300) }
+      world.managers[`manager-${id}`] = { id: `manager-${id}`, clubId: id,
+        name: `${firstNames[(i + 3) % firstNames.length]} ${lastNames[(i + 8) % lastNames.length]}`,
+        tacticalStyle: ['balanced','possession','counter','pressing'][i % 4], reputation: Math.round(reputation) }
+      const squad = createSquad(club, seed, currentYear)
+      for (const player of squad) world.players[player.id] = player
+      for (const prospect of createAcademyIntake(club, seed, currentYear)) world.academyProspects[prospect.id] = prospect
+      finances.committedAnnualWages = squad.reduce((sum, player) => sum + player.annualWage, 0)
+      finances.topPlayerAnnualWage = Math.max(...squad.map(player => player.annualWage))
+    }
+    const startMonth = proCalendarProfile(league.associationId, currentYear).startMonth
+    const startYear = Number(currentDate.slice(5, 7)) >= startMonth ? currentYear : currentYear - 1
+    newProLeagueSeason(world, league, startYear)
+  }
+  return world
+}

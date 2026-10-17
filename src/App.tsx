@@ -140,7 +140,7 @@ export default function App() {
   if (screen === 'settings') return <SettingsScreen onBack={goBackToMenu} />
   if (screen === 'credits') return <CreditsScreen onBack={goBackToMenu} />
   if (screen === 'help') return <HelpScreen onBack={goBackToMenu} />
-  if (screen === 'create') return <PlayerCreation onComplete={() => replace('story')} onBack={goBackToMenu} />
+  if (screen === 'create') return <PlayerCreation onComplete={(route) => replace(route === 'pro' ? 'career' : 'story')} onBack={goBackToMenu} />
   if (screen === 'story') return <StoryIntro onComplete={() => replace('school')} />
   if (screen === 'school') return <SchoolSelection onChoose={handleSchoolChosen} />
   if (screen === 'trials' && player && chosenSchool) {

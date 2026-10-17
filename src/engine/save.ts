@@ -7,6 +7,8 @@ import type { CupWorld } from './cup'
 import type { InternationalWorld } from './international'
 import type { TrainingSession } from './training'
 import type { TrainingIntensity } from './energy'
+import type { ProWorldState } from './proWorld'
+import type { ProCareerState } from './proCareer'
 
 // Locked scope: local-only save data (IndexedDB), 3 save slots per device.
 //
@@ -25,7 +27,9 @@ import type { TrainingIntensity } from './energy'
 //      of restarting.
 //  v4: separates school football from the Sunday League fallback route.
 //  v5: complete representative pathway + National Schools Championship.
-export const SAVE_SCHEMA_VERSION = 8
+// v9 reserves a dormant pro-world boundary. v10 adds the separate pro career
+// state; legacy youth saves remain youth saves.
+export const SAVE_SCHEMA_VERSION = 10
 
 export type SaveSlotId = 0 | 1 | 2
 
@@ -59,6 +63,9 @@ export interface SaveGame {
   cups: CupWorlds
   international: InternationalWorld | null
   pendingTraining: PendingTrainingSnapshot | null
+  /** Null until a direct pro start or signed youth handoff. */
+  proWorld?: ProWorldState | null
+  proCareer?: ProCareerState | null
 }
 
 const slotKey = (slot: SaveSlotId) => `kickoff-star-save-${slot}`
@@ -67,6 +74,8 @@ const slotKey = (slot: SaveSlotId) => `kickoff-star-save-${slot}`
 // cups/internationals — they get empty worlds, which the store lazily
 // initializes on the next week tick (batch-sim self-heal covers the missed rounds).
 function migrateSave(raw: SaveGame & { schemaVersion?: number }): SaveGame {
+  if (raw.schemaVersion && raw.schemaVersion > SAVE_SCHEMA_VERSION)
+    throw new Error('This career was saved by a newer version of Kickoff Star.')
   if (!raw.schemaVersion || raw.schemaVersion < 2) {
     return {
       ...raw,
@@ -74,23 +83,45 @@ function migrateSave(raw: SaveGame & { schemaVersion?: number }): SaveGame {
       cups: (raw as SaveGame).cups ?? { ...EMPTY_CUPS },
       international: (raw as SaveGame).international ?? null,
       pendingTraining: null,
+      proWorld: null,
     }
   }
   if (raw.schemaVersion < 3) {
-    return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, pendingTraining: null }
+    return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, pendingTraining: null, proWorld: null }
   }
   if (raw.schemaVersion < 4) {
-    return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION }
+    return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, proWorld: null }
   }
-  if (raw.schemaVersion < 5) return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, cups: { ...EMPTY_CUPS, ...(raw.cups ?? {}) } }
-  if (raw.schemaVersion < 6) return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, cups: { ...EMPTY_CUPS, ...(raw.cups ?? {}) } }
-  if (raw.schemaVersion < 7) return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, cups: { ...EMPTY_CUPS, ...(raw.cups ?? {}) } }
-  if (raw.schemaVersion < 8) return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, cups: { ...EMPTY_CUPS, ...(raw.cups ?? {}) }, player: { ...raw.player, matchLedger: raw.player.matchLedger ?? [] } }
-  return { ...raw, cups: { ...EMPTY_CUPS, ...(raw.cups ?? {}) } }
+  if (raw.schemaVersion < 5) return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, cups: { ...EMPTY_CUPS, ...(raw.cups ?? {}) }, proWorld: null }
+  if (raw.schemaVersion < 6) return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, cups: { ...EMPTY_CUPS, ...(raw.cups ?? {}) }, proWorld: null }
+  if (raw.schemaVersion < 7) return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, cups: { ...EMPTY_CUPS, ...(raw.cups ?? {}) }, proWorld: null }
+  if (raw.schemaVersion < 8) return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, cups: { ...EMPTY_CUPS, ...(raw.cups ?? {}) }, player: { ...raw.player, matchLedger: raw.player.matchLedger ?? [] }, proWorld: null }
+  if (raw.schemaVersion < 9) return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, cups: { ...EMPTY_CUPS, ...(raw.cups ?? {}) }, proWorld: null }
+  const proWorld = raw.proWorld ? {
+    ...raw.proWorld,
+    academyProspects: raw.proWorld.academyProspects ?? {},
+    retirementHistory: raw.proWorld.retirementHistory ?? [],
+    retirementCount: raw.proWorld.retirementCount ?? 0,
+    academyGraduateCount: raw.proWorld.academyGraduateCount ?? 0,
+    transferIntakeCount: raw.proWorld.transferIntakeCount ?? 0,
+    loans: raw.proWorld.loans ?? {},
+  } : null
+  const proCareer = raw.proCareer ? {
+    ...raw.proCareer,
+    agentId: raw.proCareer.agentId ?? null,
+    talks: raw.proCareer.talks ?? null,
+    ledger: raw.proCareer.ledger ?? [],
+    wallets: raw.proCareer.wallets ?? {},
+    residence: raw.proCareer.residence ?? null,
+    pendingBonus: raw.proCareer.pendingBonus ?? 0,
+    loan: raw.proCareer.loan ?? null,
+    injuryUntil: raw.proCareer.injuryUntil ?? null,
+  } : null
+  return { ...raw, schemaVersion: SAVE_SCHEMA_VERSION, cups: { ...EMPTY_CUPS, ...(raw.cups ?? {}) }, proWorld, proCareer }
 }
 
 export async function writeSave(save: SaveGame): Promise<void> {
-  await set(slotKey(save.slotId), { ...save, schemaVersion: SAVE_SCHEMA_VERSION })
+  await set(slotKey(save.slotId), { ...save, proWorld: save.proWorld ?? null, proCareer: save.proCareer ?? null, schemaVersion: SAVE_SCHEMA_VERSION })
 }
 
 export async function readSave(slot: SaveSlotId): Promise<SaveGame | undefined> {

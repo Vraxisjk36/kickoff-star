@@ -1,3 +1,4 @@
+import { buyProAsset, sellProAsset, equipProAsset, payOffProAsset, refinanceProAsset, type AssetPayment } from '../engine/proAssets'
 import { create } from 'zustand'
 import type { Player } from '../types/player'
 import type { MatchLine, MatchRecord } from '../engine/matchLedger'
@@ -55,6 +56,13 @@ import { addStoryMoment, createStoryMoment, type StoryMoment } from '../engine/p
 import { academyEntryOpen, academyRecruitmentReport, academyTrialAvailable, academyTrialBase, academyOfferCleared, academyRegistrationOpen, migrateAcademyRecruitment, reviewAcademyShowcase } from '../engine/academyRecruitment'
 import { ageGroupFor, initYouthPathway, representativeSelection, selectionPassed } from '../engine/pathway'
 import { initOctoberLeague, recordOctoberResult, simulateOctoberWeek, octoberStandings } from '../engine/octoberLeague'
+import type { ProWorldState } from '../engine/proWorld'
+import { createProWorld } from '../engine/proWorldFactory'
+import { acceptProLoan, advanceProDay, beginProTrial, beginYouthProOffers, chooseProAgent, completeProMove,
+  declineProTalks, openProTalks, openTransferTalks, requestProCounter, resolveProOpportunity, retireProCareer,
+  signProOffer, type ProAction, type ProCareerState } from '../engine/proCareer'
+import { answerSponsor, launchSignatureBoot } from '../engine/proMedia'
+import type { ProAgentId } from '../engine/proContracts'
 
 // UI actions can save several snapshots in one tick. Keep their disk writes in
 // action order so an older snapshot cannot finish after a newer one.
@@ -80,6 +88,26 @@ interface CareerStore {
   academyLeague: AcademyWorld | null
   cups: CupWorlds
   international: InternationalWorld | null
+  proWorld: ProWorldState | null
+  proCareer: ProCareerState | null
+  startDirectProCareer: (player: Player, calendar: CalendarState, slot: SaveSlotId) => Promise<void>
+  enterYouthProCareer: () => void
+  advanceProCareerDay: (action: ProAction) => void
+  resolveProCareerEvent: (choice: 0 | 1) => void
+  respondProSponsor: (id: string, accept: boolean) => void
+  createSignatureBoot: (name: string) => void
+  purchaseProAsset: (id: string, method: AssetPayment) => void
+  sellOwnedProAsset: (id: string) => void
+  activateProAsset: (id: string) => void
+  payOffOwnedProAsset: (id: string) => void
+  refinanceOwnedProAsset: (id: string) => void
+  signProClub: (clubId: string) => void
+  chooseProRepresentation: (id: ProAgentId) => void
+  beginProNegotiation: (clubId: string, transfer?: boolean) => void
+  counterProNegotiation: () => void
+  declineProNegotiation: () => void
+  acceptProLoan: (clubId: string) => void
+  finishProCareer: () => void
   activeSlot: SaveSlotId | null
   /** P53 — in-progress training session, checkpointed after every completed
       drill so a mobile reload mid-session resumes instead of silently
@@ -328,6 +356,8 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   academyLeague: null,
   cups: { ...EMPTY_CUPS },
   international: null,
+  proWorld: null,
+  proCareer: null,
   activeSlot: null,
   pendingTraining: null,
 
@@ -335,6 +365,12 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     await saveQueue
     const save = await readSave(slot)
     if (!save) return
+    if (save.proWorld && save.proCareer) {
+      setState({ player: save.player, calendar: save.calendar, league: save.league,
+        academyLeague: save.academyLeague, cups: save.cups, international: save.international,
+        proWorld: save.proWorld, proCareer: save.proCareer, activeSlot: slot, pendingTraining: null })
+      return
+    }
     let player = migrateAcademyRecruitment(migratePlayer(save.player), save.calendar)
     if (player.squadRoleSetAppearances === undefined) player = { ...player, squadRoleSetAppearances: player.career?.appearances ?? 0 }
     const originalCalendar = player.trialWeekCompleted >= 3 && save.calendar.currentWeek.seasonYear === 1 && save.calendar.currentWeek.weekNumber < 4
@@ -419,7 +455,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       alignInternationalDuty(loadedCalendar, internationalDutyForWeek(save.international ?? null, player, loadedCalendar.currentWeek.weekNumber)),
       player.careerClock.phase, 'school', false), player.careerClock.phase, 'school', Boolean(cups.schoolDevelopment)),
       !!cups.academyChampionsCup?.qualifier && cups.academyChampionsCup.stage === 'qualifying' && CONTINENTAL_QUALIFIER_WEEKS[cups.academyChampionsCup.qualifier.round] === loadedCalendar.currentWeek.weekNumber && !!playerCupFixture(cups.academyChampionsCup)),
-      league, academyLeague, cups: { ...cups, sundayCup: null }, international: save.international ?? null, activeSlot: slot, pendingTraining: save.pendingTraining ?? null, pendingArcVerdicts: [] })
+      league, academyLeague, cups: { ...cups, sundayCup: null }, international: save.international ?? null, proWorld: null, proCareer: null, activeSlot: slot, pendingTraining: save.pendingTraining ?? null, pendingArcVerdicts: [] })
     void getState().saveCurrent()
   },
 
@@ -473,14 +509,132 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       clubGlory: {},
       nationalGlory: {},
     }
-    setState({ player, calendar, league: null, academyLeague: null, cups: { ...EMPTY_CUPS }, international: null, activeSlot: slot, pendingTraining: null })
+    setState({ player, calendar, league: null, academyLeague: null, cups: { ...EMPTY_CUPS }, international: null, proWorld: null, proCareer: null, activeSlot: slot, pendingTraining: null })
     await queueSave({ schemaVersion: SAVE_SCHEMA_VERSION, slotId: slot, savedAt: new Date().toISOString(), player, calendar, league: null, academyLeague: null, cups: { ...EMPTY_CUPS }, international: null, pendingTraining: null })
   },
 
   saveCurrent: async () => {
-    const { player, calendar, league, academyLeague, cups, international, activeSlot, pendingTraining } = getState()
+    const { player, calendar, league, academyLeague, cups, international, proWorld, proCareer, activeSlot, pendingTraining } = getState()
     if (!player || !calendar || activeSlot === null) return
-    await queueSave({ schemaVersion: SAVE_SCHEMA_VERSION, slotId: activeSlot, savedAt: new Date().toISOString(), player, calendar, league, academyLeague, cups, international, pendingTraining: pendingTraining ?? null })
+    await queueSave({ schemaVersion: SAVE_SCHEMA_VERSION, slotId: activeSlot, savedAt: new Date().toISOString(), player, calendar, league, academyLeague, cups, international, proWorld, proCareer, pendingTraining: pendingTraining ?? null })
+  },
+
+  startDirectProCareer: async (player, calendar, slot) => {
+    await getState().startNewCareer(player, calendar, slot)
+    const date = '2026-07-01'
+    setState({ proWorld: createProWorld(2026 + slot, date), proCareer: beginProTrial(date) })
+    await getState().saveCurrent()
+  },
+
+  enterYouthProCareer: () => {
+    const { player, proCareer } = getState()
+    if (!player?.turnedPro || proCareer) return
+    const date = `${2026 + Math.max(0, (player.careerClock.grassrootsSeason ?? 1) - 1)}-07-01`
+    const world = createProWorld(2026 + (getState().activeSlot ?? 0), date)
+    const score = Math.max(40, Math.min(100, Math.round((player.matchRatings?.slice(-10).reduce((sum, value) => sum + value, 0) ?? 0) * 1.5)))
+    const offers = beginYouthProOffers(world, date, getNation(player.nationality).id, score)
+    const chosen = offers.offers.find(offer => world.clubs[offer.clubId].name === player.turnedPro?.clubName) ?? offers.offers[0]
+    if (!chosen) return
+    const signed = signProOffer(world, offers, chosen.clubId, { id: player.id, name: player.name,
+      nationalityId: getNation(player.nationality).id, position: player.position,
+      overall: Math.max(38, Math.min(72, 40 + Math.round(score / 9))), age: player.careerClock.ageYears }, 'family', true)
+    signed.world.clubs[chosen.clubId].name = player.turnedPro.clubName
+    setState({ proWorld: signed.world, proCareer: signed.career })
+    void getState().saveCurrent()
+  },
+
+  advanceProCareerDay: (action) => {
+    const { proWorld, proCareer, player } = getState()
+    if (!proWorld || !proCareer || !player) return
+    const result = advanceProDay(proWorld, proCareer, action, getNation(player.nationality).id)
+    const years = result.career.playerId && result.world.players[result.career.playerId]
+      ? Number(result.career.date.slice(0, 4)) - Number(result.world.players[result.career.playerId].birthDate.slice(0, 4))
+      : player.careerClock.ageYears
+    setState({ proWorld: result.world, proCareer: result.career,
+      player: years === player.careerClock.ageYears ? player : { ...player, careerClock: { ...player.careerClock, ageYears: years } } })
+    void getState().saveCurrent()
+  },
+
+  resolveProCareerEvent: (choice) => {
+    const { proCareer } = getState()
+    if (!proCareer?.pendingEvent) return
+    setState({ proCareer: resolveProOpportunity(proCareer, choice) })
+    void getState().saveCurrent()
+  },
+
+  respondProSponsor: (id, accept) => {
+    const { proCareer } = getState()
+    if (!proCareer) return
+    setState({ proCareer: answerSponsor(proCareer, id, accept) }); void getState().saveCurrent()
+  },
+  createSignatureBoot: (name) => {
+    const { proCareer } = getState()
+    if (!proCareer) return
+    setState({ proCareer: launchSignatureBoot(proCareer, name) }); void getState().saveCurrent()
+  },
+
+  purchaseProAsset: (id, method) => { const career = getState().proCareer; if (!career) return
+    setState({ proCareer: buyProAsset(career, id, method) }); void getState().saveCurrent() },
+  sellOwnedProAsset: (id) => { const career = getState().proCareer; if (!career) return
+    setState({ proCareer: sellProAsset(career, id) }); void getState().saveCurrent() },
+  activateProAsset: (id) => { const career = getState().proCareer; if (!career) return
+    setState({ proCareer: equipProAsset(career, id) }); void getState().saveCurrent() },
+
+  payOffOwnedProAsset: (id) => { const career = getState().proCareer; if (!career) return
+    setState({ proCareer: payOffProAsset(career, id) }); void getState().saveCurrent() },
+  refinanceOwnedProAsset: (id) => { const career = getState().proCareer; if (!career) return
+    setState({ proCareer: refinanceProAsset(career, id) }); void getState().saveCurrent() },
+
+  signProClub: (clubId) => {
+    const { proWorld, proCareer, player } = getState()
+    if (!proWorld || !proCareer || !player) return
+    if (proCareer.stage === 'signed') {
+      const result = completeProMove(proWorld, proCareer)
+      setState({ proWorld: result.world, proCareer: result.career,
+        player: { ...player, turnedPro: { clubName: result.world.clubs[result.career.clubId!].name, weekSigned: player.totalWeeksElapsed ?? 0 } } })
+      void getState().saveCurrent()
+      return
+    }
+    const result = signProOffer(proWorld, proCareer, clubId, { id: player.id, name: player.name,
+      nationalityId: getNation(player.nationality).id, position: player.position,
+      overall: Math.max(38, Math.min(72, Math.round(42 + proCareer.trialScore / 8))), age: Math.max(16, player.careerClock.ageYears) }, proCareer.agentId ?? 'family')
+    setState({ proWorld: result.world, proCareer: result.career,
+      player: { ...player, turnedPro: { clubName: result.world.clubs[clubId].name, weekSigned: player.totalWeeksElapsed ?? 0 } } })
+    void getState().saveCurrent()
+  },
+
+  chooseProRepresentation: (id) => {
+    const { proCareer } = getState()
+    if (!proCareer) return
+    setState({ proCareer: chooseProAgent(proCareer, id) }); void getState().saveCurrent()
+  },
+  beginProNegotiation: (clubId, transfer = false) => {
+    const { proWorld, proCareer } = getState()
+    if (!proWorld || !proCareer) return
+    setState({ proCareer: transfer ? openTransferTalks(proWorld, proCareer, clubId) : openProTalks(proWorld, proCareer, clubId) })
+    void getState().saveCurrent()
+  },
+  counterProNegotiation: () => {
+    const { proWorld, proCareer } = getState()
+    if (!proWorld || !proCareer) return
+    setState({ proCareer: requestProCounter(proWorld, proCareer) }); void getState().saveCurrent()
+  },
+  declineProNegotiation: () => {
+    const { proCareer } = getState()
+    if (!proCareer) return
+    setState({ proCareer: declineProTalks(proCareer) }); void getState().saveCurrent()
+  },
+  acceptProLoan: (clubId) => {
+    const { proWorld, proCareer } = getState()
+    if (!proWorld || !proCareer) return
+    const result = acceptProLoan(proWorld, proCareer, clubId)
+    setState({ proWorld: result.world, proCareer: result.career }); void getState().saveCurrent()
+  },
+  finishProCareer: () => {
+    const { proWorld, proCareer } = getState()
+    if (!proWorld || !proCareer) return
+    const result = retireProCareer(proWorld, proCareer)
+    setState({ proWorld: result.world, proCareer: result.career }); void getState().saveCurrent()
   },
 
   setPendingTraining: (snapshot) => {

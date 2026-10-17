@@ -42,6 +42,7 @@ import { matchXpEarned } from '../engine/xp'
 import { maybeRequestInAppReview } from '../engine/inAppReview'
 import CareerEnd from './CareerEnd'
 import TurnedPro from './TurnedPro'
+import ProCareerScreen from './ProCareerScreen'
 import ContractOffers from './ContractOffers'
 import AgentSelect from './AgentSelect'
 import NegotiationScreen from './NegotiationScreen'
@@ -76,6 +77,7 @@ type Mode =
 
 export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) {
   const player = useCareerStore((s) => s.player)
+  const proCareer = useCareerStore((s) => s.proCareer)
   const calendar = useCareerStore((s) => s.calendar)
   const league = useCareerStore((s) => s.league)
   const academyLeague = useCareerStore((s) => s.academyLeague)
@@ -127,6 +129,8 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
   }, [player, league, isInAcademy, ensureLeagueWorld])
 
   if (!calendar || !player) return null
+
+  if (proCareer) return <ProCareerScreen onMenu={() => onExitToMenu?.()} />
 
   if (player.turnedPro) {
     return <TurnedPro player={player} onMenu={() => onExitToMenu?.()} />

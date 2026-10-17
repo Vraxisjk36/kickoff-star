@@ -4,7 +4,9 @@ import { rand } from './rng'
 // Reuses competitions.ts's knockout generator for the finals bracket rather
 // than a fourth copy of bracket math.
 import { generateTeam, type Team } from './teams'
+import { NATIONS, type Nation } from './nations'
 import { generateRoundRobin, generateKnockoutRound, knockoutWinners, type GenericFixture } from './competitions'
+import { capturePlayedFixtures, type MatchRecord } from './matchLedger'
 
 export type CallUpTier = 'none' | 'friendly' | 'qualifiers' | 'finals'
 
@@ -42,7 +44,7 @@ export function isCallUpEligible(overallRating: number): boolean {
 /** Once eligible for the squad, this is what decides whether you're picked for a SPECIFIC upcoming fixture. */
 export function formQualifiesForSelection(recentRatings: number[]): boolean {
   const window = recentRatings.slice(-SELECTION_FORM_WINDOW)
-  if (window.length === 0) return false
+  if (window.length < SELECTION_FORM_WINDOW) return false
   const avg = window.reduce((a, b) => a + b, 0) / window.length
   return avg >= SELECTION_FORM_THRESHOLD
 }
@@ -66,19 +68,34 @@ export interface InternationalWorld {
   stage: 'qualifiers' | 'finals' | 'complete' | 'not-qualified'
   wonTournament: boolean
   eliminated: boolean
+  matchRecords?: MatchRecord[]
+}
+
+export function captureInternationalMatches(world: InternationalWorld, season: number, week: number, playerMatch?: MatchRecord): InternationalWorld {
+  const teams = [...world.qualifyingGroup.teams, ...world.finalsTeams.filter(team =>
+    !world.qualifyingGroup.teams.some(qualifier => qualifier.id === team.id))]
+  return { ...world, matchRecords: capturePlayedFixtures(world.matchRecords ?? [],
+    [...world.qualifyingGroup.fixtures, ...world.finalsRounds.flat()], teams,
+    'international', season, week, playerMatch) }
 }
 
 function standing(teams: Team[]) {
   return teams.map((t) => ({ teamId: t.id, points: 0, goalsFor: 0, goalsAgainst: 0 }))
 }
 
+function nationTeam(nation: Nation): Team {
+  return { ...generateTeam(nation.strength), name: nation.name, short: nation.short, countryId: nation.id }
+}
+
 // Qualifying group of 5 nations (player's nation + 4 others), single
 // round-robin (4 rounds) — small enough to fit the season budget alongside
 // everything else, big enough to feel like a real qualifying campaign.
-export function initInternationalWorld(playerNationName: string): InternationalWorld {
-  const others: Team[] = []
-  while (others.length < 4) others.push(generateTeam(4 + Math.floor(rand() * 5)))
-  const nation = { ...generateTeam(6), name: playerNationName, short: playerNationName.slice(0, 3).toUpperCase() }
+export function initInternationalWorld(playerNationName: string, playerNationId?: string): InternationalWorld {
+  const selected = NATIONS.find(n => n.id === playerNationId || n.name === playerNationName)
+  const others: Team[] = selected
+    ? [...NATIONS.filter(n => n.id !== selected.id)].sort(() => rand() - 0.5).slice(0, 4).map(nationTeam)
+    : Array.from({ length: 4 }, () => generateTeam(4 + Math.floor(rand() * 5)))
+  const nation = selected ? nationTeam(selected) : { ...generateTeam(6), name: playerNationName, short: playerNationName.slice(0, 3).toUpperCase() }
   const teams = [nation, ...others]
   const fixtures = generateRoundRobin(teams.map((t) => t.id), 1)
   return {
@@ -144,11 +161,13 @@ export function advanceInternationalStage(world: InternationalWorld): Internatio
     if (!top2.includes(world.nationTeamId)) {
       return { ...world, stage: 'not-qualified', qualified: false }
     }
-    // Finals: an 8-nation knockout bracket, seeded with the qualified nation
-    // plus 7 other generated finalists.
-    const others: Team[] = []
-    while (others.length < 7) others.push(generateTeam(5 + Math.floor(rand() * 5)))
     const nation = world.qualifyingGroup.teams.find((t) => t.id === world.nationTeamId)!
+    const otherQualifier = world.qualifyingGroup.teams.find(t => t.id === top2.find(id => id !== nation.id))
+    const used = new Set([nation.countryId, otherQualifier?.countryId])
+    const finalists = [...NATIONS.filter(n => !used.has(n.id))].sort(() => rand() - 0.5).slice(0, 7 - (otherQualifier ? 1 : 0))
+    const others: Team[] = nation.countryId
+      ? [...(otherQualifier ? [otherQualifier] : []), ...finalists.map(nationTeam)]
+      : Array.from({ length: 7 }, () => generateTeam(5 + Math.floor(rand() * 5)))
     const round1 = generateKnockoutRound([nation.id, ...others.map((t) => t.id)], 1)
     return { ...world, stage: 'finals', qualified: true, finalsRounds: [round1], currentFinalsRound: 1, finalsTeams: [nation, ...others] }
   }
@@ -193,8 +212,8 @@ export function nationFixture(world: InternationalWorld): GenericFixture | null 
 export function recordNationResult(world: InternationalWorld, opponentId: string, nationScored: number, opponentScored: number, nationWasHome: boolean, shootoutWonByNation?: boolean): InternationalWorld {
   const homeId = nationWasHome ? world.nationTeamId : opponentId
   const awayId = nationWasHome ? opponentId : world.nationTeamId
-  let hg = nationWasHome ? nationScored : opponentScored
-  let ag = nationWasHome ? opponentScored : nationScored
+  const hg = nationWasHome ? nationScored : opponentScored
+  const ag = nationWasHome ? opponentScored : nationScored
 
   if (world.stage === 'qualifiers') {
     const fixtures = world.qualifyingGroup.fixtures.map((f) =>
@@ -206,14 +225,9 @@ export function recordNationResult(world: InternationalWorld, opponentId: string
   if (world.stage === 'finals') {
     const drew = hg === ag
     const nationOut = drew ? !(shootoutWonByNation ?? false) : (nationWasHome ? hg < ag : ag < hg)
-    if (drew) {
-      const nationWins = shootoutWonByNation ?? false
-      const homeWins = nationWasHome ? nationWins : !nationWins
-      if (homeWins) hg += 0 // home already advances on level goals in knockoutWinners
-      else ag += 1
-    }
+    const winnerTeamId = drew ? (shootoutWonByNation ? world.nationTeamId : opponentId) : undefined
     const round = world.finalsRounds[world.currentFinalsRound - 1].map((f) =>
-      !f.played && f.homeTeamId === homeId && f.awayTeamId === awayId ? { ...f, played: true, homeGoals: hg, awayGoals: ag } : f
+      !f.played && f.homeTeamId === homeId && f.awayTeamId === awayId ? { ...f, played: true, homeGoals: hg, awayGoals: ag, winnerTeamId } : f
     )
     const rounds = [...world.finalsRounds]
     rounds[world.currentFinalsRound - 1] = round
@@ -232,13 +246,13 @@ export function batchSimFinalsRound(world: InternationalWorld): InternationalWor
     if (f.homeTeamId === world.nationTeamId || f.awayTeamId === world.nationTeamId) return f
     const home = byId.get(f.homeTeamId), away = byId.get(f.awayTeamId)
     if (!home || !away) return f
-    let hg = simpleScore(home.ratings.attack, away.ratings.defense)
-    let ag = simpleScore(away.ratings.attack, home.ratings.defense)
+    const hg = simpleScore(home.ratings.attack, away.ratings.defense)
+    const ag = simpleScore(away.ratings.attack, home.ratings.defense)
+    let winnerTeamId: string | undefined
     if (hg === ag) {
-      if (rand() < 0.5 + (home.ratings.midfield - away.ratings.midfield) / 200) hg += 1
-      else ag += 1
+      winnerTeamId = rand() < 0.5 + (home.ratings.midfield - away.ratings.midfield) / 200 ? home.id : away.id
     }
-    return { ...f, played: true, homeGoals: hg, awayGoals: ag }
+    return { ...f, played: true, homeGoals: hg, awayGoals: ag, winnerTeamId }
   })
   const rounds = [...world.finalsRounds]
   rounds[world.currentFinalsRound - 1] = round

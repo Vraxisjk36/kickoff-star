@@ -43,7 +43,7 @@ export default function StreetInvite({ player, variant, onAccept, onDecline }: {
         It&apos;s football for the sake of it — and the sharpening is real.
       </p>
 
-      <div className="flex flex-col gap-2" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <div className="flex flex-col gap-2" style={{ paddingBottom: 'var(--safe-bottom)' }}>
         <button
           onClick={onAccept}
           disabled={tooDrained}

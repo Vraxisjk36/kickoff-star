@@ -142,12 +142,11 @@ export function restOption(id: RestChoice): RestOption {
   return REST_OPTIONS.find((o) => o.id === id) ?? REST_OPTIONS[0]
 }
 
-// Recovery is deliberately self-correcting enough to prevent a normal week from
-// becoming a permanent energy debt. At 50 energy, full rest restores ~42; at 20,
-// ~54. Players can still overtrain themselves, but ordinary play recovers.
+// Rest helps without erasing the cost of a match in a single weekend. The
+// missing-energy component still protects an exhausted player from a spiral.
 export function baseRecovery(player: Player): number {
   const missing = 100 - player.fitness.stamina
-  return Math.round(missing * 0.40) + 22
+  return Math.round(missing * 0.22) + 9
 }
 
 export function recoveryFor(player: Player, choice: RestChoice): number {

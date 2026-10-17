@@ -1,0 +1,22 @@
+import { useState } from 'react'
+import type { ProWorldState } from '../engine/proWorld'
+import { PRO_LEAGUE_PLAN } from '../engine/proLeagueRegistry'
+import { proCompetitionName } from '../engine/proTournaments'
+
+const CONFEDERATIONS = ['uefa','caf','conmebol','concacaf','afc','ofc'] as const
+export default function ProWorldPanel({ world, playableAssociation = 'eng' }: { world: ProWorldState; playableAssociation?: string }) {
+  const [confederation, setConfederation] = useState<typeof CONFEDERATIONS[number]>('uefa')
+  const leagues = PRO_LEAGUE_PLAN.filter(league => league.confederation === confederation && league.associationId !== playableAssociation)
+  const competitions = Object.values(world.competitions).filter(comp => comp.id.includes(confederation) && comp.kind !== 'league')
+  const champions = world.championHistory.filter(row => row.competitionId.includes(confederation)).slice(-5).reverse()
+  return <div className="rounded-xl border border-ks-border bg-[#10100d] p-4 text-ks-ink">
+    <p className="font-display text-ks-gold tracking-widest text-xs">WORLD FOOTBALL</p><p className="text-ks-muted text-xs mt-2">A wider simulated football world across six confederations. Your playable club table is above; scores, titles, squads and new generations progress here with your career.</p>
+    <div className="flex gap-1 overflow-x-auto mt-4 pb-1">{CONFEDERATIONS.map(item => <button key={item} onClick={() => setConfederation(item)} className={`px-2.5 py-2 rounded-md uppercase text-[10px] shrink-0 ${item === confederation ? 'bg-ks-gold text-ks-black' : 'bg-white/5 text-ks-muted'}`}>{item}</button>)}</div>
+    <h3 className="font-display text-ks-gold text-sm mt-5">DOMESTIC LEAGUES</h3>
+    {leagues.map(league => { const comp = world.competitions[league.id]; const rows = [...(world.standings[league.id] ?? [])].sort((a,b) => b.points-a.points || (b.goalsFor-b.goalsAgainst)-(a.goalsFor-a.goalsAgainst)); const leader = world.clubs[rows[0]?.clubId]; return <div key={league.id} className="py-2 border-b border-ks-border/35 text-xs"><div className="flex justify-between gap-2"><span>{league.associationName}</span><span className="text-ks-muted">{comp?.seasonId ?? '—'}</span></div><p className="text-ks-gold mt-0.5">{leader?.name ?? 'Season pending'} · {rows[0]?.points ?? 0} pts</p></div> })}
+    <h3 className="font-display text-ks-gold text-sm mt-6">CUPS & NATIONAL TEAMS</h3>
+    {competitions.slice(0, 12).map(comp => <div key={comp.id} className="flex justify-between gap-2 py-2 border-b border-ks-border/35 text-xs"><span>{proCompetitionName(comp.id)}</span><span className="text-ks-muted">{comp.entrantIds.length} entrants</span></div>)}
+    <h3 className="font-display text-ks-gold text-sm mt-6">RECENT CHAMPIONS</h3>
+    {champions.length ? champions.map(row => <div key={`${row.competitionId}:${row.seasonId}`} className="flex justify-between gap-2 py-2 border-b border-ks-border/35 text-xs"><span>{proCompetitionName(row.competitionId)}</span><span className="text-ks-gold">{world.clubs[row.championId]?.name ?? row.championId}</span></div>) : <p className="text-ks-muted text-xs mt-2">The first trophies will be awarded at the end of their competitions.</p>}
+  </div>
+}

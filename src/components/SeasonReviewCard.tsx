@@ -1,6 +1,8 @@
 import type { SeasonReview } from '../engine/seasonReview'
 import { sfx } from '../engine/audio'
 import { useEffect } from 'react'
+import { Share } from '@capacitor/share'
+import { Capacitor } from '@capacitor/core'
 
 // P33 — the end-of-season beat. A season used to pass in complete silence.
 const GRADE_COLOR: Record<SeasonReview['grade'], string> = {
@@ -71,6 +73,14 @@ export default function SeasonReviewCard({ review, onDismiss }: { review: Season
               {review.verdict}
             </p>
           </div>
+
+          <button type="button" onClick={() => {
+            const text = `My Kickoff Star season: ${review.appearances} appearances, ${review.goals} goals, ${review.assists} assists and a ${review.grade} grade in ${review.competitionLabel}.`
+            const url = 'https://play.google.com/store/apps/details?id=com.vraxis.kickoffstar'
+            if (Capacitor.isNativePlatform()) void Share.share({ title: 'Kickoff Star season', text, url }).catch(() => {})
+            else if (navigator.share) void navigator.share({ title: 'Kickoff Star season', text, url }).catch(() => {})
+            else void navigator.clipboard.writeText(`${text} ${url}`).catch(() => {})
+          }} className="w-full border border-ks-gold text-ks-gold font-display tracking-wide rounded-xl py-3.5 text-sm mb-3">share season ↗</button>
 
           <button
             onClick={onDismiss}

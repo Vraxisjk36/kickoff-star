@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { listSaves } from '../engine/save'
 import LogoBadge from '../components/LogoBadge'
 import { useTranslate } from '../i18n'
+import { checkForPlayUpdate } from '../engine/inAppUpdate'
 
 interface MainMenuProps {
   onNewCareer: () => void
@@ -17,7 +18,7 @@ type Action = 'new' | 'continue' | 'load' | 'settings' | 'help' | 'credits'
 const MENU_ITEMS = (hasSave: boolean) => [
   { icon: '★', label: 'New Career', sub: 'Start your journey', action: 'new' as Action },
   { icon: '↻', label: 'Continue', sub: 'Continue your saved career', action: 'continue' as Action, disabled: !hasSave },
-  { icon: '⛁', label: 'Load Career', sub: 'Load a previously saved career', action: 'load' as Action, disabled: !hasSave },
+  { icon: '⛁', label: 'Load Career', sub: 'Load or import a career', action: 'load' as Action },
   { icon: '?', label: 'Help', sub: 'How Kickoff Star works', action: 'help' as Action },
   { icon: '⚙', label: 'Settings', sub: 'Game settings and preferences', action: 'settings' as Action },
   { icon: '◈', label: 'Credits', sub: 'Meet the team', action: 'credits' as Action },
@@ -29,6 +30,7 @@ export default function MainMenu({ onNewCareer, onContinue, onLoadCareer, onOpen
 
   useEffect(() => {
     listSaves().then((saves) => setHasSave(saves.some(Boolean)))
+    void checkForPlayUpdate()
   }, [])
 
   const handleClick = (action: Action) => {

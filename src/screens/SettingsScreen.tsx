@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { musicEnabled, setMusicEnabled, currentTrack, skipTrack } from '../engine/music'
 import LanguagePicker from '../components/LanguagePicker'
 import { useTranslate } from '../i18n'
+import { effectsEnabled, setEffectsEnabled } from '../engine/audio'
+import { hapticsEnabled, setHapticsEnabled } from '../engine/haptics'
+import { deleteLocalGameData } from '../engine/saveTransfer'
 
 interface Props { onBack: () => void }
 
@@ -14,6 +17,9 @@ export default function SettingsScreen({ onBack }: Props) {
   const [lowPower, setLowPower] = useState(() => localStorage.getItem(LOW_POWER_KEY) === '1')
   const [musicOn, setMusicOn] = useState(musicEnabled)
   const [track, setTrack] = useState(currentTrack)
+  const [soundsOn, setSoundsOn] = useState(effectsEnabled)
+  const [hapticsOn, setHapticsOn] = useState(hapticsEnabled)
+  const [deleteStatus, setDeleteStatus] = useState('')
 
   useEffect(() => {
     document.documentElement.classList.toggle('reduce-motion', reducedMotion)
@@ -55,6 +61,14 @@ export default function SettingsScreen({ onBack }: Props) {
             </button>
           </div>
           <button type="button" onClick={() => setTrack(skipTrack())} className="w-full min-h-12 flex items-center justify-between text-left border-b border-ks-border py-3 text-sm"><span className="capitalize text-ks-ink">♫ {track}</span><span className="text-ks-gold font-display tracking-wider">{t('NEXT TRACK →')}</span></button>
+          <div className="flex items-center justify-between gap-4 py-5 border-b border-ks-border">
+            <div><h2 className="font-bold">{t('Sound effects')}</h2><p className="text-sm text-ks-muted mt-1">{t('Match and menu sounds. You can also mute them during a match.')}</p></div>
+            <button type="button" role="switch" aria-checked={soundsOn} onClick={() => { const next = !soundsOn; setSoundsOn(next); setEffectsEnabled(next) }} className={`min-w-16 min-h-11 rounded-full border px-2 font-bold ${soundsOn ? 'bg-ks-gold text-ks-black border-ks-gold' : 'border-ks-border text-ks-muted'}`}>{t(soundsOn ? 'ON' : 'OFF')}</button>
+          </div>
+          <div className="flex items-center justify-between gap-4 py-5 border-b border-ks-border">
+            <div><h2 className="font-bold">{t('Vibration')}</h2><p className="text-sm text-ks-muted mt-1">{t('Feel goals and important match moments on supported devices.')}</p></div>
+            <button type="button" role="switch" aria-checked={hapticsOn} onClick={() => { const next = !hapticsOn; setHapticsOn(next); setHapticsEnabled(next) }} className={`min-w-16 min-h-11 rounded-full border px-2 font-bold ${hapticsOn ? 'bg-ks-gold text-ks-black border-ks-gold' : 'border-ks-border text-ks-muted'}`}>{t(hapticsOn ? 'ON' : 'OFF')}</button>
+          </div>
           <div className="flex items-center justify-between gap-4 pt-5">
             <div>
               <h2 className="font-bold">{t('Reduced motion')}</h2>
@@ -81,7 +95,26 @@ export default function SettingsScreen({ onBack }: Props) {
           </div>
         </section>
 
+        <section className="mt-5 rounded-2xl border border-ks-border bg-white/[0.025] p-5">
+          <h2 className="font-bold">{t('Your data')}</h2>
+          <p className="text-sm text-ks-muted mt-1">{t('Export and import careers from Load Career on the main menu. Keep the backup file somewhere safe.')}</p>
+          <button type="button" onClick={async () => {
+            if (!window.confirm(t('Delete all three careers and local preferences from this device? This cannot be undone.'))) return
+            try { await deleteLocalGameData(); window.location.reload() }
+            catch { setDeleteStatus(t('Could not delete your data. Please try again.')) }
+          }} className="mt-4 min-h-11 rounded-xl border border-red-500/60 px-4 text-red-300 font-semibold">{t('Delete local data')}</button>
+          {deleteStatus && <p role="alert" className="text-sm text-red-300 mt-3">{deleteStatus}</p>}
+        </section>
+
         <p className="text-xs text-ks-muted mt-6 leading-relaxed">{t('Your career saves remain stored locally on this device. Settings are also saved locally.')}</p>
+        <a
+          href="https://vraxisjk36.github.io/kickoff-star/privacy-policy.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-ks-gold underline underline-offset-4"
+        >
+          {t('Privacy policy ↗')}
+        </a>
       </div>
     </main>
   )

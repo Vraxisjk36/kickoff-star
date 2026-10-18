@@ -128,13 +128,14 @@ export function generateMarketOffers(state: ProCareerState, player: Player): Pro
   const world = state.backgroundWorld
   if (!world || !state.clubWorldIds || !state.date) return []
   const homeCountry = state.associationId ?? 'eng'
-  if (!registrationOpen(homeCountry, state.date)) return []
+  const offerDate = state.date
+  if (!registrationOpen(homeCountry, offerDate)) return []
   const base = player.contract?.terms.weeklyWage ?? 1200
   const currentWorldClubId = state.clubWorldIds[state.world.playerTeamId]
   // Active professional countries only, top divisions only. Cross-border
   // registrations must be open on both ends.
   const targets = PRO_INTERACTIVE_COUNTRIES.flatMap(country => {
-    if (!registrationOpen(country, state.date)) return []
+    if (!registrationOpen(country, offerDate)) return []
     // To avoid discarding matchdays when changing leagues, international
     // offers occur around the opening of the professional season.
     if (country !== homeCountry && state.week > 3) return []

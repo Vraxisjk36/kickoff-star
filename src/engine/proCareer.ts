@@ -17,6 +17,9 @@ export interface ProSeasonRecord { season: number; associationId: string; clubNa
 export interface ProCareerState {
   world: LeagueWorld
   associationId?: string
+  /** Actual living-world competition identity (may become second-tier after relegation). */
+  activeCompetitionId?: string
+  activeSeasonId?: string
   season: number
   week: number
   welcomed: boolean
@@ -104,6 +107,11 @@ export function proRound(week: number, teamCount = 20): number | null {
   // Existing ten-club pro saves keep their original dates until a separate
   // migration can preserve their played fixtures and historic match records.
   if (teamCount === 10) return week >= 4 && week <= 38 && (week - 4) % 2 === 0 ? (week - 4) / 2 + 1 : null
+  // The Scottish Premiership has 33 regular matches and five post-split rounds.
+  if (teamCount === 12) {
+    const index = LEAGUE_WEEKS.indexOf(week)
+    return index < 0 || index >= 38 ? null : index + 1
+  }
   const index = LEAGUE_WEEKS.indexOf(week)
   return index < 0 || index >= (teamCount - 1) * 2 ? null : index + 1
 }
@@ -123,10 +131,15 @@ export function resolveProMatch(state: ProCareerState, player: Player, result: {
   const record = world.divisions[1].matchRecords!.at(-1)!
   const humanClub = state.clubWorldIds?.[state.world.playerTeamId]
   const opponentClub = state.clubWorldIds?.[result.opponent.id]
-  const backgroundWorld = state.backgroundWorld && humanClub && opponentClub
+  const playedFixture = state.world.divisions[1].fixtures.find(fixture =>
+    !fixture.played && fixture.homeTeamId === (result.home ? state.world.playerTeamId : result.opponent.id) &&
+    fixture.awayTeamId === (result.home ? result.opponent.id : state.world.playerTeamId))
+  const backgroundWorld = state.backgroundWorld && humanClub && opponentClub &&
+    (state.activeCompetitionId ?? `top-${state.associationId ?? 'eng'}`) === `top-${state.associationId ?? 'eng'}`
     ? recordHumanProLeagueMatch(state.backgroundWorld, state.associationId ?? 'eng',
       result.home ? humanClub : opponentClub, result.home ? opponentClub : humanClub,
-      result.home ? result.scored : result.conceded, result.home ? result.conceded : result.scored)
+      result.home ? result.scored : result.conceded, result.home ? result.conceded : result.scored,
+      playedFixture?.id)
     : state.backgroundWorld
   return { state: { ...state, world, backgroundWorld, resolvedWeek: state.week },
     record: { ...record, competitionId: 'proLeague', season: state.season, week: state.week } }

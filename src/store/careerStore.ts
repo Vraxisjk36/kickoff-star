@@ -56,6 +56,7 @@ import { academyEntryOpen, academyRecruitmentReport, academyTrialAvailable, acad
 import { ageGroupFor, initYouthPathway, representativeSelection, selectionPassed } from '../engine/pathway'
 import { initOctoberLeague, recordOctoberResult, simulateOctoberWeek, octoberStandings } from '../engine/octoberLeague'
 import { createProCareer, advanceProWeek, resolveProMatch, proRound } from '../engine/proCareer'
+import { canStartInteractiveProCareer } from '../engine/proLeagueRegistry'
 import { attachProWorld, advanceLivingWorld, generateMarketOffers, finalizeProMove, resolveProCup } from '../engine/proIntegration'
 import { startProLoan, registrationOpen } from '../engine/proMovement'
 import { assessProDeal } from '../engine/proClubFinance'
@@ -504,7 +505,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   ensureProCareer: () => {
     const { player } = getState()
     if (!player?.turnedPro || player.proCareer) return
-    setState({ player: { ...player, proCareer: createProCareer(player.turnedPro.clubName, player.contract ? Math.min(6, Math.max(3, Math.round(player.contract.terms.weeklyWage / 500))) : 4, player.turnedPro.countryId ?? 'eng') } })
+    setState({ player: { ...player, proCareer: createProCareer(player.turnedPro.clubName, player.contract ? Math.min(6, Math.max(3, Math.round(player.contract.terms.weeklyWage / 500))) : 4, canStartInteractiveProCareer(player.turnedPro.countryId ?? 'eng') ? player.turnedPro.countryId : 'eng') } })
     void getState().saveCurrent()
   },
   acknowledgeProSigning: () => {
@@ -1068,8 +1069,9 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
         return
       }
       if (dealKind === 'professional') {
-        const country = player.contractOffers.find(offer => offer.clubId === player.negotiation?.clubId)?.countryId ??
+        const requestedCountry = player.contractOffers.find(offer => offer.clubId === player.negotiation?.clubId)?.countryId ??
           player.academyCountryId ?? 'eng'
+        const country = canStartInteractiveProCareer(requestedCountry) ? requestedCountry : 'eng'
         // The win state, now earned through the same five stages as everything
         // else rather than a single tap.
         setState({

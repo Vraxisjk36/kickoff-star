@@ -297,7 +297,7 @@ const regionalFourthCases = [
   { country: 'ita', groups: 9, clubs: 18, promotions: 9 },
   { country: 'por', groups: 4, clubs: 14, promotions: 4 },
   { country: 'rsa', groups: 9, clubs: 12, promotions: 9 },
-  { country: 'bra', groups: 8, clubs: 8, promotions: 4 },
+  { country: 'bra', groups: 16, clubs: 6, promotions: 6 },
 ] as const
 for (const { country, groups, clubs, promotions } of regionalFourthCases) {
   const regionalIds = Array.from({ length: groups }, (_, group) => `fourth-${country}-${group + 1}`)
@@ -343,7 +343,7 @@ for (const { country, groups, clubs, promotions } of regionalFourthCases) {
   assert.ok(history.relegatedIds.every(club => regionalIds.some(id =>
     first.competitions[id].entrantIds.includes(club))), `${country}: demoted third-tier side absent from fourth`)
   if (country === 'bra') {
-    assert.equal(history.fixtures.length, 8, 'Brazil Série D needs four two-legged playoff ties')
+    assert.equal(history.fixtures.length, 130, 'Brazil Série D knockout should contain 130 fixtures')
     assert.ok(history.fixtures.every(f => !!f.result))
   }
 }

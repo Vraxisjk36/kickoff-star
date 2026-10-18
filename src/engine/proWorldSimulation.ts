@@ -6,7 +6,7 @@ import { nationalLeagueQualification } from './proFifthPlayoffs'
 import { germanRegionalQualification } from './proGermanRegionalliga'
 import { scottishRegionalQualification } from './proScottishRegional'
 import { brazilSerieDQualification } from './proBrazilSerieD'
-import { spanishSegundaFederacion, italianSerieD, portugueseCampeonato, southAfricaProvincial } from './proRegionalRules'
+import { spanishSegundaFederacion, italianSerieD, portugueseCampeonato, southAfricaProvincial, promotionEligible } from './proRegionalRules'
 import { createAcademyIntake, hydrateDeepDivisions, hydrateFifthDivisions, hydrateGroupedFourthDivisions, hydrateGroupedFifthDivisions, hydrateGroupedDivisions, hydrateLowerDivisions, hydrateNewBackgroundLeagues, createProWorld, newProLeagueSeason, proRoll } from './proWorldFactory'
 import { ageOf, growOrDecline, nextShirtNumber, seasonalInjury, shouldRetire, signBackgroundReplacement } from './proLifecycle'
 import { advanceTournamentsTo, beginClubWorldSeason, beginContinentalSeason, beginNationsLeague, beginWorldQualifiers, beginDomesticSeason, beginNationalSeason, beginWorldSeason, beginSouthAfricanTopEight, invalidateTournamentCalendar } from './proTournaments'
@@ -376,7 +376,9 @@ function exchangeFrenchNationalTwo(world: ProWorldState): void {
     const group = world.seasonHistory.filter(row => row.competitionId === groupId).at(-1)?.table
     if (!group || group.length !== GROUPED_FOURTH.fra.clubsPerGroup)
       throw new Error(`Missing French National 2 group ${index + 1}`)
-    return ordered(group)[0].clubId
+    const candidate = ordered(group).find(row => promotionEligible(world,row.clubId,3))
+    if (!candidate) throw new Error('French National 2 group has no eligible licensed promotion candidate')
+    return candidate.clubId
   })
   const relegated = upper.slice(-GROUPED_FOURTH.fra.promoted).map(row => row.clubId)
   if (promoted.length !== relegated.length || new Set(promoted).size !== promoted.length)

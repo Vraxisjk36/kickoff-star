@@ -368,7 +368,7 @@ for (const country of countries) {
 }
 console.log('All ten hard-stop pyramid floors retained clubs and active lowest leagues')
 
-for (const [country, fixtures] of [['esp', 20], ['por', 24], ['ita', 0], ['rsa', 0]] as const) {
+for (const [country, fixtures] of [['esp', 30], ['por', 24], ['ita', 0], ['rsa', 0]] as const) {
   const history = first.promotionHistory?.find(h => h.associationId === `${country}-3`)
   assert.ok(history, `${country}: missing fourth-tier promotion archive`)
   assert.equal(history.fixtures.length, fixtures, `${country}: wrong authentic promotion phase fixture count`)

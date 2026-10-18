@@ -618,7 +618,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   acceptProLoan: (teamId) => {
     const { player } = getState()
     const pro = player?.proCareer
-    if (!player || !pro?.backgroundWorld || !pro.date || !pro.clubWorldIds || pro.loan || player.squadRole === 'starting-xi' || !registrationOpen('eng', pro.date)) return false
+    if (!player || !pro?.backgroundWorld || !pro.date || !pro.clubWorldIds || pro.loan || player.squadRole === 'starting-xi' || !registrationOpen(pro.associationId ?? 'eng', pro.date)) return false
     const borrower = pro.clubWorldIds[teamId]
     if (!borrower || teamId === pro.world.playerTeamId) return false
     try {

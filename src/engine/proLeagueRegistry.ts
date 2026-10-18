@@ -85,6 +85,15 @@ export const PRO_FIFTH_LEAGUE_PLAN: readonly ProLeaguePlan[] = PRO_LEAGUE_PLAN
   .filter(league => league.associationId in FIFTH_DIVISIONS)
   .map(league => ({ ...league, id: `fifth-${league.associationId}`, mode: 'simulated' }))
 
+/** Regionalliga groups beneath the national German third tier. */
+export const GROUPED_FOURTH: Readonly<Record<string, { groups: number; clubsPerGroup: number; promoted: number }>> = {
+  ger: { groups: 5, clubsPerGroup: 18, promoted: 4 },
+}
+export const PRO_GROUPED_FOURTH_LEAGUE_PLAN: readonly ProLeaguePlan[] = PRO_LEAGUE_PLAN
+  .filter(league => league.associationId in GROUPED_FOURTH)
+  .flatMap(league => Array.from({ length: GROUPED_FOURTH[league.associationId].groups }, (_, group) =>
+    ({ ...league, id: `fourth-${league.associationId}-${group + 1}`, mode: 'simulated' as const })))
+
 /** Distinct regional tables; member clubs keep their region when divisions exchange. */
 export const GROUPED_THIRD: Readonly<Record<string, { groups: number; clubsPerGroup: number; promoted: number }>> = {
   esp: { groups: 2, clubsPerGroup: 20, promoted: 4 },

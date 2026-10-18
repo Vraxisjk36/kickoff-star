@@ -13,7 +13,8 @@
     "audit:progression": "node --import tsx scripts/auditProgression.ts",
     "audit:v4-ui": "node --import tsx scripts/auditV4Integration.ts",
     "preview": "vite preview",
-    "audit:academy-rhythm": "node --import tsx scripts/auditAcademyRhythm.ts && node --import tsx scripts/auditWorldSchools.ts && node --import tsx scripts/auditContinentalWorld.ts && node --import tsx scripts/auditGazetteWorld.ts && node --import tsx scripts/auditGazetteUpgrade.ts"
+    "audit:academy-rhythm": "node --import tsx scripts/auditAcademyRhythm.ts && node --import tsx scripts/auditWorldSchools.ts && node --import tsx scripts/auditContinentalWorld.ts && node --import tsx scripts/auditGazetteWorld.ts && node --import tsx scripts/auditGazetteUpgrade.ts",
+    "audit:pro-pyramids": "node --import tsx scripts/auditFirstTenPyramids.ts && node --import tsx scripts/auditAllProLeagues.ts && node --import tsx scripts/auditGroupedPyramids.ts && node --import tsx scripts/auditDeepPyramids.ts && node --import tsx scripts/auditPromotionPlayoffs.ts && node --import tsx scripts/auditLeagueRules.ts"
   },
   "dependencies": {
     "@capacitor-community/admob": "^8.0.0",

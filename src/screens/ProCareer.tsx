@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useCareerStore } from '../store/careerStore'
-import { proFixture, PRO_CAREER_DESTINATIONS } from '../engine/proCareer'
+import { proFixture, professionalSeasonWeeks, PRO_CAREER_DESTINATIONS } from '../engine/proCareer'
 import { playerForMatch } from '../engine/selection'
 import type { HubTab } from '../components/navItems'
 import WeeklyHub from './WeeklyHub'
@@ -56,7 +56,7 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
     <WeeklyHub tab={tab} onTabChange={setTab} onOpenOffers={() => setTab('club')} onExitToMenu={onExitToMenu} league={world} academyLeague={null} playerTeam={team} playerDivision={division} proCalendar={calendar} />
     <div className="career-continue fixed left-0 right-0 px-3 max-w-md mx-auto z-20" style={{ bottom: 'calc(var(--safe-bottom) + 4.5rem)' }}>
       <button className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-3.5 text-sm shadow-[0_0_25px_rgba(212,175,55,0.3)]" onClick={() => matchReady && !player.injury && !(player.suspensionMatches ?? 0) && player.fitness.stamina >= 30 ? setMode('matchday') : advance()}>
-        {matchReady ? player.injury ? `injured — sit out ${opponent?.name ?? 'fixture'} →` : (player.suspensionMatches ?? 0) ? `suspended — sit out ${opponent?.name ?? 'fixture'} →` : player.fitness.stamina < 30 ? `unavailable — sit out ${opponent?.name ?? 'fixture'} →` : `${cup ? label : 'matchday'} — ${opponent?.name ?? 'opponent'} →` : `continue — week ${pro.week + 1 > 44 ? '1, new season' : pro.week + 1} →`}
+        {matchReady ? player.injury ? `injured — sit out ${opponent?.name ?? 'fixture'} →` : (player.suspensionMatches ?? 0) ? `suspended — sit out ${opponent?.name ?? 'fixture'} →` : player.fitness.stamina < 30 ? `unavailable — sit out ${opponent?.name ?? 'fixture'} →` : `${cup ? label : 'matchday'} — ${opponent?.name ?? 'opponent'} →` : `continue — week ${pro.week + 1 > professionalSeasonWeeks(pro) ? '1, new season' : pro.week + 1} →`}
       </button>
     </div>
   </div>

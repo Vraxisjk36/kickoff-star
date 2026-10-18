@@ -8,11 +8,12 @@
 - The living pro world attaches the player to a real top-flight club in that country, without changing the youth save.
 - The transfer desk uses domestic registration dates, finds eligible top-flight offers in other selectable countries, and can sign a cross-border move.
 - A cross-border move carries the living-world history into a local league match roster for the new country, plus updates residence, wages and contract club.
-- Senior seasons progress until retirement at age 38, followed by the Hall of Fame career record screen.
+- Senior seasons progress until retirement at age 38, with club-by-club results and a Hall of Fame career record screen.
+- Human-controlled league scores reconcile with persistent world fixtures and standings (including adjustment if the background sim already generated a result).
 - Automated country-coverage and league-schedule checks run in GitHub Actions along with the existing pro-pyramid audits.
 
 ## Remaining before Phase 2 is feature-complete
-- **Single-source match simulation**: the interactive local league calendar and the background world league calendar are not yet fully unified. They currently share club identity, but the player's match results do not update all real-world league standings and qualification outcomes.
+- **Single-source match calendar**: human match results now reconcile into the persistent world standings, but the interactive calendar and the world fixture schedule still have different round ordering. They need one source of truth before every competition can be claimed perfectly synchronized.
 - **Every domestic format**: Scottish split fixtures and league-specific cup calendars need to drive interactive matchday, not just the world simulator.
 - **Promotion/relegation of the human player's club**: the top-division local UI still needs playable second and lower tiers when a club is relegated.
 - **Full international player selection**: international call-ups need integration into the human playable fixture flow.

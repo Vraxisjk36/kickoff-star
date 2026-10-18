@@ -19,6 +19,11 @@ export interface ProClub {
   /** Missing on older saves and therefore interpreted as the top division. */
   tier?: 1 | 2 | 3 | 4 | 5
   feederGroup?: number
+  /** Stable geographic home region, independent of the currently assigned league group. */
+  homeRegion?: number
+  /** Reserve-team link and federation licensing; absent fields mean independent/eligible. */
+  parentClubId?: string
+  licenseEligible?: boolean
   name: string
   homeCity: string
   stadiumId: ProWorldId

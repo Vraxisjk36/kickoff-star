@@ -128,7 +128,13 @@ function exchangeDivisions(world: ProWorldState, associationId: string, playoffW
   const second = ordered(world.seasonHistory.filter(row => row.competitionId === `second-${associationId}`).at(-1)!.table)
   let relegated = top.slice(-rule.relegated).map(row => row.clubId)
   let promoted = second.slice(0, rule.promoted).map(row => row.clubId)
-  if (associationId === 'eng' && playoffWinner) promoted = [...second.slice(0, 2).map(row => row.clubId), playoffWinner]
+  if (['eng', 'esp'].includes(associationId) && playoffWinner)
+    promoted = [...second.slice(0, 2).map(row => row.clubId), playoffWinner]
+  if (['ger', 'fra', 'sco'].includes(associationId) && playoffWinner &&
+      playoffWinner !== top.at(associationId === 'sco' ? -2 : -3)!.clubId) {
+    promoted = [...promoted, playoffWinner]
+    relegated = [...relegated, top.at(associationId === 'sco' ? -2 : -3)!.clubId]
+  }
   if (associationId === 'rsa' && playoffWinner) {
     promoted = [second[0].clubId]
     if (playoffWinner !== top.at(-2)!.clubId) {
@@ -211,9 +217,9 @@ function advanceLeaguesTo(world: ProWorldState, targetDate: IsoDate): void {
       }
       if (!batches.every(fixtures => fixtures.every(fixture => !!fixture.result))) break
       let playoffWinner: string | undefined
-      if (league.associationId === 'eng' || league.associationId === 'rsa') {
+      if (['eng', 'rsa', 'esp', 'ger', 'fra', 'sco'].includes(league.associationId)) {
         const lastDate = batches.flat().reduce((latest, fixture) => fixture.kickoffDate > latest ? fixture.kickoffDate : latest, '0000-01-01')
-        playoffWinner = advancePromotionPlayoff(world, league.associationId, world.competitions[league.id].seasonId,
+        playoffWinner = advancePromotionPlayoff(world, league.associationId as 'eng' | 'rsa' | 'esp' | 'ger' | 'fra' | 'sco', world.competitions[league.id].seasonId,
           lastDate, targetDate, world.standings[league.id], world.standings[lower!.id]) ?? undefined
         if (!playoffWinner) break
       }

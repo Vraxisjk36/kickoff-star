@@ -121,7 +121,8 @@ export function newProLeagueSeason(world: ProWorldState, league: ProLeaguePlan, 
   const profile = proCalendarProfile(league.associationId, startYear)
   const endYear = profile.endMonth < profile.startMonth ? startYear + 1 : startYear
   const start = utc(`${startYear}-${padded(profile.startMonth)}-15`)
-  const end = utc(`${endYear}-${padded(profile.endMonth)}-17`)
+  // The Scottish top flight reserves five weekly matchdays after the 33-game split.
+  const end = utc(scottishSplit ? `${endYear}-04-17` : `${endYear}-${padded(profile.endMonth)}-17`)
   const rotating = [...clubIds]
   const half = rotating.length / 2
   let previousKickoff = 0

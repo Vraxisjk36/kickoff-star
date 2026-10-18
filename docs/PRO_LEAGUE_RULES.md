@@ -5,8 +5,8 @@ The existing school game and playable pro UI remain in place. This page describe
 | Area | Implemented | Remaining rules work |
 | --- | --- | --- |
 | World leagues | 100 top divisions with persistent fixtures, tables, title archives, finances and squads | Most association formats are provisional double round robins; exact calendars and tiebreakers need federation review. |
-| Second divisions | England 24/46, Spain 22/42, Germany 18/34, France 18/34, Italy 20/38, Netherlands 20/38, Portugal 18/34, Brazil 20/38, South Africa 16/30, Scotland 10/18 | Third tiers, second-tier relegation, playoffs and lower-tier splits are not simulated. |
-| Promotion/relegation | Top and second divisions exchange stable clubs between completed seasons, retaining squads, shirt numbers and title records. England, Spain and Italy exchange three; Brazil four; Germany, France, Netherlands and Portugal two; South Africa and Scotland one. | Real playoff places are not decided on the pitch. Germany, France, Netherlands, Scotland, South Africa and England Championship 2026/27 playoff routes remain pending. |
+| Second divisions | England 24/46, Spain 22/42, Germany 18/34, France 18/34, Italy 20/38, Netherlands 20/38, Portugal 18/34, Brazil 20/38, South Africa 16/30, Scotland 10/18 | Third tiers, second-tier relegation and lower-tier splits are not simulated. |
+| Promotion/relegation | England has two direct Championship places plus a saved six-team playoff from the 2026/27 season; earlier seasons retain the four-team bracket. South Africa has one direct place plus a six-match, three-club mini league for the second place. Scores determine the next division and remain in promotion history. Other second divisions exchange clubs directly. | Germany, France, Netherlands, Scotland, Spain and Italy still need their edition-specific playoff routes; relegation from the second tier and additional professional tiers remain pending. |
 | Scottish Premiership | Twelve clubs play 33 games, split top/bottom six and play five more each, for 38 total. | Venue balancing after the split and league-specific tiebreakers are provisional. |
 | Domestic cups | Lower-tier clubs enter national cups where a second division exists. England has a 44-club simulated national cup and league cup; South Africa has a 32-club national cup, plus top-eight and league cups. Cup winners are archived without a history cutoff. | The actual English FA Cup has many more pyramid entrants; qualifying rounds and specific calendars are not modelled. South Africa's amateur entrants are not represented. |
 | Continental routes | Existing English and South African league/cup pass-downs work in the simulated world. | UEFA coefficient spots, titleholder slots, other association allocations and playable-club results feeding the world draw are provisional. |
@@ -24,3 +24,5 @@ Fictional clubs and names are not real fixtures or a licensed database. Do not a
 - PSL national cup field: https://www.psl.co.za/news/article/5613244-nedbank-cup-2026-participating-clubs
 - Bundesliga promotion/relegation: https://www.bundesliga.com/en/bundesliga/news/how-does-promotion-relegation-work-bundesliga-2-bundesliga-play-offs-17824
 - Scottish split: https://spfl.co.uk/pages/premiership
+
+- PSL promotion playoff fixtures: https://www.psl.co.za/news/article/5614854-promotion-play-off-draw-on-thursday

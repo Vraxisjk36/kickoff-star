@@ -127,6 +127,25 @@ export interface ProChampionRecord {
   championId: ProWorldId
 }
 
+export interface ProPromotionRecord {
+  associationId: string
+  seasonId: string
+  promotedIds: string[]
+  relegatedIds: string[]
+  /** Saved final scores, including eliminators and relegation mini-league matches. */
+  fixtures: ProFixture[]
+}
+
+export interface ProPromotionPlayoff {
+  associationId: string
+  seasonId: string
+  stage: 'eliminator' | 'semifinal' | 'final' | 'mini-league' | 'completed'
+  fixtureIds: string[]
+  winnerId?: string
+  topFifteenthId?: string
+  directPromotedId?: string
+}
+
 export interface ProFixture {
   id: ProWorldId
   competitionId: ProWorldId
@@ -165,6 +184,8 @@ export interface ProWorldState {
   standings: Record<ProWorldId, ProStandingRow[]>
   seasonHistory: ProSeasonArchive[]
   championHistory: ProChampionRecord[]
+  promotionHistory?: ProPromotionRecord[]
+  promotionPlayoffs?: Record<string, ProPromotionPlayoff>
   /** Keep a bounded hot log; season archives will be stored separately. */
   recentEvents: ProWorldEvent[]
   /** European national-competition divisions; restored with the world save. */

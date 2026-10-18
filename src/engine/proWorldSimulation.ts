@@ -1,4 +1,5 @@
 import { LOWER_DIVISIONS, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN } from './proLeagueRegistry'
+import { advancePromotionPlayoff } from './proPromotionPlayoffs'
 import { createAcademyIntake, hydrateLowerDivisions, hydrateNewBackgroundLeagues, newProLeagueSeason, proRoll } from './proWorldFactory'
 import { ageOf, growOrDecline, nextShirtNumber, seasonalInjury, shouldRetire, signBackgroundReplacement } from './proLifecycle'
 import { advanceTournamentsTo, beginClubWorldSeason, beginContinentalSeason, beginNationsLeague, beginWorldQualifiers, beginDomesticSeason, beginNationalSeason, beginWorldSeason, beginSouthAfricanTopEight, invalidateTournamentCalendar } from './proTournaments'
@@ -121,17 +122,33 @@ function archive(world: ProWorldState, competitionId: string, fixtures: ProFixtu
   void nextYear
 }
 
-function exchangeDivisions(world: ProWorldState, associationId: string): void {
+function exchangeDivisions(world: ProWorldState, associationId: string, playoffWinner?: string): void {
   const rule = LOWER_DIVISIONS[associationId]
   const top = ordered(world.seasonHistory.filter(row => row.competitionId === `top-${associationId}`).at(-1)!.table)
   const second = ordered(world.seasonHistory.filter(row => row.competitionId === `second-${associationId}`).at(-1)!.table)
-  // The playoff berth is decided deterministically by the teams' season performance.
-  const relegated = top.slice(-rule.relegated).map(row => row.clubId)
-  const promoted = second.slice(0, rule.promoted).map(row => row.clubId)
+  let relegated = top.slice(-rule.relegated).map(row => row.clubId)
+  let promoted = second.slice(0, rule.promoted).map(row => row.clubId)
+  if (associationId === 'eng' && playoffWinner) promoted = [...second.slice(0, 2).map(row => row.clubId), playoffWinner]
+  if (associationId === 'rsa' && playoffWinner) {
+    promoted = [second[0].clubId]
+    if (playoffWinner !== top.at(-2)!.clubId) {
+      promoted.push(playoffWinner)
+      relegated = [...relegated, top.at(-2)!.clubId]
+    }
+  }
   for (const id of relegated) world.clubs[id].tier = 2
   for (const id of promoted) world.clubs[id].tier = 1
+  const playoff = world.promotionPlayoffs?.[`promotion-${associationId}`]
+  const fixtures = playoff?.fixtureIds.map(id => world.fixtures[id]).filter(Boolean) ?? []
+  const date = fixtures.reduce((last, fixture) => fixture.kickoffDate > last ? fixture.kickoffDate : last,
+    `${world.competitions[`top-${associationId}`].seasonId}-01-01`)
+  world.promotionHistory ??= []
+  world.promotionHistory.push({ associationId, seasonId: world.competitions[`top-${associationId}`].seasonId,
+    promotedIds: promoted, relegatedIds: relegated, fixtures: structuredClone(fixtures) })
+  for (const fixture of fixtures) delete world.fixtures[fixture.id]
+  if (playoff) delete world.promotionPlayoffs![`promotion-${associationId}`]
   world.recentEvents.push({ id: `event-promotion-${associationId}-${world.seasonHistory.at(-1)!.seasonId}`,
-    date: world.currentDate, kind: 'award', subjectIds: [...promoted, ...relegated],
+    date, kind: 'award', subjectIds: [...promoted, ...relegated],
     details: { action: 'promotion-relegation', associationId, promoted: promoted.length, relegated: relegated.length } })
 }
 
@@ -193,9 +210,16 @@ function advanceLeaguesTo(world: ProWorldState, targetDate: IsoDate): void {
         if (extended !== batches[0]) { fixtureIndex.set('top-sco', extended); continue }
       }
       if (!batches.every(fixtures => fixtures.every(fixture => !!fixture.result))) break
+      let playoffWinner: string | undefined
+      if (league.associationId === 'eng' || league.associationId === 'rsa') {
+        const lastDate = batches.flat().reduce((latest, fixture) => fixture.kickoffDate > latest ? fixture.kickoffDate : latest, '0000-01-01')
+        playoffWinner = advancePromotionPlayoff(world, league.associationId, world.competitions[league.id].seasonId,
+          lastDate, targetDate, world.standings[league.id], world.standings[lower!.id]) ?? undefined
+        if (!playoffWinner) break
+      }
       const nextYear = Number(world.competitions[league.id].seasonId) + 1
       divisions.forEach((item, index) => archive(world, item.id, batches[index], rosters, prospects))
-      if (lower) exchangeDivisions(world, league.associationId)
+      if (lower) exchangeDivisions(world, league.associationId, playoffWinner)
       divisions.forEach(item => fixtureIndex.set(item.id, newProLeagueSeason(world, item, nextYear)))
     }
   }

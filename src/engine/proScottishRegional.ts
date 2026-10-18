@@ -1,4 +1,5 @@
 import { proRoll } from './proWorldFactory'
+import { promotionEligible } from './proRegionalRules'
 import type { IsoDate, ProFixture, ProStandingRow, ProWorldState } from './proWorld'
 const add = (date: IsoDate, days: number) =>
   new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10)
@@ -35,7 +36,10 @@ export function scottishRegionalQualification(world: ProWorldState, lastDate: Is
     return goalsA !== goalsB ? goalsA > goalsB ? a : b :
       proRoll(world.seed, `sco-regional-${season}-${round}-pens`) < .5 ? a : b
   }
-  const challenger = tie(ordered(highland)[0].clubId, ordered(lowland)[0].clubId, 0)
+  const highlandWinner = ordered(highland).find(row => promotionEligible(world,row.clubId,4))?.clubId
+  const lowlandWinner = ordered(lowland).find(row => promotionEligible(world,row.clubId,4))?.clubId
+  if (!highlandWinner || !lowlandWinner) throw new Error('Scottish regional licensing left no eligible champions')
+  const challenger = tie(highlandWinner, lowlandWinner, 0)
   const winner = tie(challenger, incumbent, 1)
   return {
     promotedIds: winner === incumbent ? [] : [winner],

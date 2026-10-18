@@ -22,7 +22,7 @@ export function brazilSerieDQualification(world: ProWorldState, lastDate: IsoDat
   })
   const starters=[
     ...groups.map(g=>g[0]),...groups.map(g=>g[1]),
-    ...groups.map(g=>g[2]),...groups.map((_,i)=>groups[(i+1)%16][3]),
+    ...groups.map(g=>g[2]),...groups.map((_,i)=>groups[(16-i)%16][3]),
   ]
   const fixtures:ProFixture[]=[]
   const contest=(a:string,b:string,round:number,index:number)=>{

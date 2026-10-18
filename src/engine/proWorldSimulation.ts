@@ -1,9 +1,10 @@
-import { GROUPED_THIRD, LOWER_DIVISIONS, PRO_FIFTH_LEAGUE_PLAN, PRO_DEEP_LEAGUE_PLAN, PRO_GROUPED_LEAGUE_PLAN, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN } from './proLeagueRegistry'
+import { GROUPED_FOURTH, GROUPED_THIRD, LOWER_DIVISIONS, PRO_GROUPED_FOURTH_LEAGUE_PLAN, PRO_FIFTH_LEAGUE_PLAN, PRO_DEEP_LEAGUE_PLAN, PRO_GROUPED_LEAGUE_PLAN, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN } from './proLeagueRegistry'
 import { advancePromotionPlayoff } from './proPromotionPlayoffs'
 import { advanceDeepPlayoff } from './proDeepPlayoffs'
 import { feederQualification } from './proFeederPlayoffs'
 import { nationalLeagueQualification } from './proFifthPlayoffs'
-import { createAcademyIntake, hydrateDeepDivisions, hydrateFifthDivisions, hydrateGroupedDivisions, hydrateLowerDivisions, hydrateNewBackgroundLeagues, newProLeagueSeason, proRoll } from './proWorldFactory'
+import { germanRegionalQualification } from './proGermanRegionalliga'
+import { createAcademyIntake, hydrateDeepDivisions, hydrateFifthDivisions, hydrateGroupedFourthDivisions, hydrateGroupedDivisions, hydrateLowerDivisions, hydrateNewBackgroundLeagues, newProLeagueSeason, proRoll } from './proWorldFactory'
 import { ageOf, growOrDecline, nextShirtNumber, seasonalInjury, shouldRetire, signBackgroundReplacement } from './proLifecycle'
 import { advanceTournamentsTo, beginClubWorldSeason, beginContinentalSeason, beginNationsLeague, beginWorldQualifiers, beginDomesticSeason, beginNationalSeason, beginWorldSeason, beginSouthAfricanTopEight, invalidateTournamentCalendar } from './proTournaments'
 import type { IsoDate, ProClub, ProFixture, ProPlayer, ProStandingRow, ProWorldState } from './proWorld'
@@ -280,6 +281,30 @@ function exchangeEnglishNationalLeague(world: ProWorldState,
     fixtures: structuredClone(qualification.fixtures) })
 }
 
+/** The five Regionalliga champions contest four places in the national 3. Liga. */
+function exchangeGermanRegionalliga(world: ProWorldState,
+  qualification: ReturnType<typeof germanRegionalQualification>): void {
+  const upper = ordered(world.seasonHistory.filter(row => row.competitionId === 'third-ger').at(-1)!.table)
+  const promoted = qualification.promotedIds
+  const feederEntrants = Array.from({ length: GROUPED_FOURTH.ger.groups }, (_, index) =>
+    world.seasonHistory.filter(row => row.competitionId === `fourth-ger-${index + 1}`).at(-1)?.table ?? [])
+    .flat().map(row => row.clubId)
+  const relegated = upper.slice(-4).map(row => row.clubId)
+  if (promoted.length !== 4 || relegated.length !== 4 ||
+      new Set(promoted).size !== 4 || new Set(relegated).size !== 4 ||
+      promoted.some(id => !feederEntrants.includes(id)))
+    throw new Error('Invalid German Regionalliga promotion/relegation')
+  // Assign relegated clubs to the vacated regional places; keep all groups at 18.
+  const vacated = promoted.map(id => world.clubs[id].feederGroup ?? 1)
+  promoted.forEach(id => { world.clubs[id].tier = 3; world.clubs[id].feederGroup = undefined })
+  relegated.forEach((id, index) => { world.clubs[id].tier = 4; world.clubs[id].feederGroup = vacated[index] })
+  world.promotionHistory ??= []
+  world.promotionHistory.push({ associationId: 'ger-3',
+    seasonId: world.competitions['third-ger'].seasonId,
+    promotedIds: promoted, relegatedIds: relegated,
+    fixtures: structuredClone(qualification.fixtures) })
+}
+
 function scheduleScottishSplit(world: ProWorldState, fixtures: ProFixture[]): ProFixture[] {
   const competition = world.competitions['top-sco']
   if (competition.splitScheduled || fixtures.length !== 198 || !fixtures.every(fixture => fixture.result)) return fixtures
@@ -334,7 +359,8 @@ function advanceLeaguesTo(world: ProWorldState, targetDate: IsoDate): void {
     const divisions = [league, ...(lower ? [lower] : []),
       ...PRO_DEEP_LEAGUE_PLAN.filter(item => item.associationId === league.associationId),
       ...PRO_GROUPED_LEAGUE_PLAN.filter(item => item.associationId === league.associationId),
-      ...PRO_FIFTH_LEAGUE_PLAN.filter(item => item.associationId === league.associationId)]
+      ...PRO_FIFTH_LEAGUE_PLAN.filter(item => item.associationId === league.associationId),
+      ...PRO_GROUPED_FOURTH_LEAGUE_PLAN.filter(item => item.associationId === league.associationId)]
     for (let season = 0; season < 60; season++) {
       const batches = divisions.map(item => (fixtureIndex.get(item.id) ?? [])
         .sort((a, b) => a.kickoffDate.localeCompare(b.kickoffDate) || a.id.localeCompare(b.id)))
@@ -365,6 +391,7 @@ function advanceLeaguesTo(world: ProWorldState, targetDate: IsoDate): void {
       }
       const deepResults: { upperTier: 2 | 3; winner: string }[] = []
       let nationalLeagueResult: ReturnType<typeof nationalLeagueQualification> | undefined
+      let germanRegionalResult: ReturnType<typeof germanRegionalQualification> | undefined
       let feederResult: ReturnType<typeof feederQualification> | undefined
       if (league.associationId in GROUPED_THIRD || league.associationId === 'bra') {
         const lastDate = batches.slice(2).flat().reduce((latest, fixture) => fixture.kickoffDate > latest ? fixture.kickoffDate : latest, '0000-01-01')
@@ -391,12 +418,19 @@ function advanceLeaguesTo(world: ProWorldState, targetDate: IsoDate): void {
         nationalLeagueResult = nationalLeagueQualification(world, lastDate)
         if (targetDate <= nationalLeagueResult.readyDate) break
       }
+      if (league.associationId === 'ger') {
+        const lastDate = batches.flat().reduce((latest, fixture) =>
+          fixture.kickoffDate > latest ? fixture.kickoffDate : latest, '0000-01-01')
+        germanRegionalResult = germanRegionalQualification(world, lastDate)
+        if (targetDate <= germanRegionalResult.readyDate) break
+      }
       const nextYear = Number(world.competitions[league.id].seasonId) + 1
       divisions.forEach((item, index) => archive(world, item.id, batches[index], rosters, prospects))
       if (lower) exchangeDivisions(world, league.associationId, playoffWinner)
       for (const { upperTier, winner } of deepResults)
         exchangeDeepDivisions(world, league.associationId as 'eng' | 'ger' | 'sco', upperTier, winner)
       if (nationalLeagueResult) exchangeEnglishNationalLeague(world, nationalLeagueResult)
+      if (germanRegionalResult) exchangeGermanRegionalliga(world, germanRegionalResult)
       if (feederResult && league.associationId in GROUPED_THIRD)
         exchangeGroupedDivisions(world, league.associationId, feederResult)
       if (league.associationId === 'fra' || league.associationId === 'bra')
@@ -425,6 +459,7 @@ export function advanceProWorldTo(source: ProWorldState, targetDate: IsoDate): P
   hydrateDeepDivisions(world)
   hydrateGroupedDivisions(world)
   hydrateFifthDivisions(world)
+  hydrateGroupedFourthDivisions(world)
   const milestones: { date: IsoDate; kind: 'national' | 'continental' | 'summer-cups' }[] = []
   for (let year = Number(source.currentDate.slice(0, 4)); year <= Number(targetDate.slice(0, 4)); year++) {
     milestones.push({ date: `${year}-01-01`, kind: 'national' }, { date: `${year}-07-01`, kind: 'summer-cups' }, { date: `${year}-09-01`, kind: 'continental' })

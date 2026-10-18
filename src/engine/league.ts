@@ -256,7 +256,7 @@ export function regionalCupField(world: LeagueWorld): Team[] {
 }
 
 // Record the player's own match result into their division.
-export function recordPlayerMatchResult(world: LeagueWorld, opponentId: string, playerScored: number, opponentScored: number, playerWasHome: boolean, personalGoals = 0, playerLine?: MatchLine, season = 1, calendarWeek = 0): LeagueWorld {
+export function recordPlayerMatchResult(world: LeagueWorld, opponentId: string, playerScored: number, opponentScored: number, playerWasHome: boolean, personalGoals = 0, playerLine?: MatchLine, season = 1, calendarWeek = 0, exactFixtureId?: string): LeagueWorld {
   const division = world.divisions[world.playerDivision]
   const homeId = playerWasHome ? world.playerTeamId : opponentId
   const awayId = playerWasHome ? opponentId : world.playerTeamId
@@ -264,7 +264,8 @@ export function recordPlayerMatchResult(world: LeagueWorld, opponentId: string, 
   const ag = playerWasHome ? opponentScored : playerScored
 
   const fixtures = division.fixtures.map((f) =>
-    !f.played && f.homeTeamId === homeId && f.awayTeamId === awayId
+    !f.played && f.homeTeamId === homeId && f.awayTeamId === awayId &&
+      (!exactFixtureId || f.id === exactFixtureId)
       ? { ...f, played: true, homeGoals: hg, awayGoals: ag }
       : f
   )

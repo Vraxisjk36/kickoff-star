@@ -78,7 +78,7 @@ assert.equal(useCareerStore.getState().player?.trialWeekCompleted, 3)
 console.log('Direct-start trial, contract, same-slot save and reload passed')
 useCareerStore.getState().ensureLivingWorld()
 const linked = useCareerStore.getState().player!.proCareer!
-assert.equal(Object.keys(linked.backgroundWorld!.clubs).length, 1412)
+assert.equal(Object.keys(linked.backgroundWorld!.clubs).length, 1812)
 assert.equal(linked.backgroundWorld!.players[`career-${entrant.id}`].clubId, linked.clubWorldIds![linked.world.playerTeamId])
 // Interactive cup fixture must update the tournament table and match ledger once.
 const ownWorldClub = linked.clubWorldIds![linked.world.playerTeamId]

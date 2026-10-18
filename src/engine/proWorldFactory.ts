@@ -30,16 +30,19 @@ export function proCalendarProfile(associationId: string, startYear: number): Se
 }
 
 const currencyGroups: Record<string, string> = {
-  GBP: 'eng,sco', EUR: 'esp,ger,fra,ita,por,ned,bel,aut,grc,irl,cyp,hrv',
-  ZAR: 'rsa', NGN: 'nga', MAD: 'mar', EGP: 'egy', TND: 'tun', DZD: 'dza', GHS: 'gha', XOF: 'sen,civ,mli',
+  GBP: 'eng,sco', EUR: 'esp,ger,fra,ita,por,ned,bel,aut,grc,irl,cyp,hrv,fin,bul',
+  ZAR: 'rsa', NGN: 'nga', MAD: 'mar', EGP: 'egy', TND: 'tun', DZD: 'dza', GHS: 'gha', XOF: 'sen,civ,mli,ben,bfa',
   CDF: 'cod', XAF: 'cmr', KES: 'ken', TZS: 'tza', UGX: 'uga', ZMW: 'zmb', AOA: 'ago', MZN: 'moz',
-  BRL: 'bra', ARS: 'arg', COP: 'col', UYU: 'ury', CLP: 'chl', USD: 'usa,ecu,slv',
+  BRL: 'bra', ARS: 'arg', COP: 'col', UYU: 'ury', CLP: 'chl', USD: 'usa,ecu,slv,zwe',
   PYG: 'pry', PEN: 'per', BOB: 'bol', VES: 'ven', MXN: 'mex', CAD: 'can', CRC: 'cri',
   HNL: 'hnd', PAB: 'pan', GTQ: 'gtm', NIO: 'nic', JMD: 'jam', TTD: 'tto',
   JPY: 'jpn', KRW: 'kor', SAR: 'sau', INR: 'ind', CNY: 'chn', AUD: 'aus', IRR: 'irn',
   AED: 'are', QAR: 'qat', THB: 'tha', IDR: 'idn', UZS: 'uzb', VND: 'vnm', IQD: 'irq',
-  NZD: 'nzl', FJD: 'fji', CHF: 'sui', DKK: 'dnk', SEK: 'swe', NOK: 'nor', PLN: 'pol',
+  NZD: 'nzl', FJD: 'fji', SBD: 'sol', PGK: 'png', CHF: 'sui', DKK: 'dnk', SEK: 'swe', NOK: 'nor', PLN: 'pol',
   CZK: 'cze', RSD: 'srb', TRY: 'tur',
+  UAH: 'ukr', RON: 'rou', HUF: 'hun',
+  ETB: 'eth', RWF: 'rwa', LYD: 'lby', HTG: 'hti', XCG: 'cur', DOP: 'dom', SRD: 'sur', GYD: 'guy',
+  JOD: 'jor', OMR: 'oma', BHD: 'bhr', KWD: 'kwt', MYR: 'mas', PHP: 'phi',
 }
 const currencies = Object.fromEntries(Object.entries(currencyGroups).flatMap(([code, ids]) => ids.split(',').map(id => [id, code])))
 
@@ -196,6 +199,32 @@ export function createProWorld(seed: number, currentDate: IsoDate): ProWorldStat
     if (second) newProLeagueSeason(world, second, startYear)
   }
   return world
+}
+
+/** Existing careers gain new background leagues without replacing an active season. */
+export function hydrateNewBackgroundLeagues(world: ProWorldState): void {
+  const missing = PRO_LEAGUE_PLAN.filter(league => !world.competitions[league.id])
+  if (!missing.length) return
+  const generated = createProWorld(world.seed, world.currentDate)
+  for (const league of missing) {
+    const id = league.associationId
+    if (Object.values(world.clubs).some(club => club.associationId === id))
+      throw new Error(`Missing league but existing clubs for ${id}`)
+    world.associations[id] = generated.associations[id]
+    for (const club of Object.values(generated.clubs).filter(club => club.associationId === id)) {
+      world.clubs[club.id] = club
+      world.stadiums[club.stadiumId] = generated.stadiums[club.stadiumId]
+      world.managers[`manager-${club.id}`] = generated.managers[`manager-${club.id}`]
+    }
+    for (const player of Object.values(generated.players).filter(player => player.nationalityIds.includes(id) && player.clubId && world.clubs[player.clubId]))
+      world.players[player.id] = player
+    for (const prospect of Object.values(generated.academyProspects).filter(player => player.nationalityIds.includes(id)))
+      world.academyProspects[prospect.id] = prospect
+    world.competitions[league.id] = generated.competitions[league.id]
+    world.standings[league.id] = generated.standings[league.id]
+    for (const fixture of Object.values(generated.fixtures).filter(fixture => fixture.competitionId === league.id))
+      world.fixtures[fixture.id] = fixture
+  }
 }
 
 /** Add lower flights to pre-upgrade saves without replacing their existing clubs or records. */

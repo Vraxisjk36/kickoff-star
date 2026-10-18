@@ -16,20 +16,20 @@ export interface ProLeaguePlan {
 const planned: Array<{ confederation: ProConfederation; playable: string; simulated: string }> = [
   { confederation: 'uefa',
     playable: 'eng:England,esp:Spain,ger:Germany,fra:France,ita:Italy,por:Portugal,ned:Netherlands,bel:Belgium,sco:Scotland,tur:Türkiye',
-    simulated: 'grc:Greece,aut:Austria,sui:Switzerland,dnk:Denmark,swe:Sweden,nor:Norway,pol:Poland,cze:Czechia,hrv:Croatia,srb:Serbia' },
+    simulated: 'grc:Greece,aut:Austria,sui:Switzerland,dnk:Denmark,swe:Sweden,nor:Norway,pol:Poland,cze:Czechia,hrv:Croatia,srb:Serbia,ukr:Ukraine,rou:Romania,hun:Hungary,bul:Bulgaria,irl:Ireland,fin:Finland' },
   { confederation: 'caf',
     playable: 'rsa:South Africa,nga:Nigeria,mar:Morocco,egy:Egypt,tun:Tunisia,dza:Algeria,gha:Ghana',
-    simulated: 'sen:Senegal,civ:Côte d’Ivoire,cod:DR Congo,cmr:Cameroon,ken:Kenya,tza:Tanzania,uga:Uganda,zmb:Zambia,ago:Angola,mli:Mali,moz:Mozambique' },
+    simulated: 'sen:Senegal,civ:Côte d’Ivoire,cod:DR Congo,cmr:Cameroon,ken:Kenya,tza:Tanzania,uga:Uganda,zmb:Zambia,ago:Angola,mli:Mali,moz:Mozambique,zwe:Zimbabwe,eth:Ethiopia,rwa:Rwanda,lby:Libya,ben:Benin,bfa:Burkina Faso' },
   { confederation: 'conmebol',
     playable: 'bra:Brazil,arg:Argentina,col:Colombia,ury:Uruguay,chl:Chile',
     simulated: 'ecu:Ecuador,pry:Paraguay,per:Peru,bol:Bolivia,ven:Venezuela' },
   { confederation: 'concacaf',
     playable: 'usa:United States,mex:Mexico',
-    simulated: 'cri:Costa Rica,can:Canada,hnd:Honduras,pan:Panama,gtm:Guatemala,slv:El Salvador,nic:Nicaragua,jam:Jamaica,tto:Trinidad and Tobago' },
+    simulated: 'cri:Costa Rica,can:Canada,hnd:Honduras,pan:Panama,gtm:Guatemala,slv:El Salvador,nic:Nicaragua,jam:Jamaica,tto:Trinidad and Tobago,hti:Haiti,cur:Curaçao,dom:Dominican Republic,sur:Suriname,guy:Guyana' },
   { confederation: 'afc',
     playable: 'jpn:Japan,kor:South Korea,sau:Saudi Arabia,ind:India,chn:China,aus:Australia',
-    simulated: 'irn:Iran,are:United Arab Emirates,qat:Qatar,tha:Thailand,idn:Indonesia,uzb:Uzbekistan,vnm:Vietnam,irq:Iraq' },
-  { confederation: 'ofc', playable: '', simulated: 'nzl:New Zealand,fji:Fiji' },
+    simulated: 'irn:Iran,are:United Arab Emirates,qat:Qatar,tha:Thailand,idn:Indonesia,uzb:Uzbekistan,vnm:Vietnam,irq:Iraq,jor:Jordan,oma:Oman,bhr:Bahrain,kwt:Kuwait,mas:Malaysia,phi:Philippines' },
+  { confederation: 'ofc', playable: '', simulated: 'nzl:New Zealand,fji:Fiji,sol:Solomon Islands,png:Papua New Guinea' },
 ]
 
 function parseLeagues(countries: string, mode: ProLeaguePlan['mode'], confederation: ProConfederation): ProLeaguePlan[] {
@@ -68,9 +68,9 @@ export const PRO_LOWER_LEAGUE_PLAN: readonly ProLeaguePlan[] = PRO_LEAGUE_PLAN
 
 export function validateProLeaguePlan(leagues: readonly ProLeaguePlan[] = PRO_LEAGUE_PLAN): string[] {
   const issues: string[] = []
-  if (leagues.length !== 75) issues.push(`Expected 75 leagues; found ${leagues.length}`)
+  if (leagues.length !== 100) issues.push(`Expected 100 leagues; found ${leagues.length}`)
   if (leagues.filter(league => league.mode === 'playable').length !== 30) issues.push('Expected 30 career destination countries')
-  if (leagues.filter(league => league.mode === 'simulated').length !== 45) issues.push('Expected 45 background club countries')
+  if (leagues.filter(league => league.mode === 'simulated').length !== 70) issues.push('Expected 70 background club countries')
   for (const key of ['id', 'associationId'] as const)
     if (new Set(leagues.map(league => league[key])).size !== leagues.length) issues.push(`Duplicate ${key}`)
   return issues

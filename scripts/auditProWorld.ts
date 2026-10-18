@@ -6,12 +6,17 @@ import { completeProTransfer } from '../src/engine/proTransfers'
 import { assessProDeal } from '../src/engine/proClubFinance'
 import { validateCalendarProfile } from '../src/engine/proCalendar'
 import { readSave, writeSave, SAVE_SCHEMA_VERSION, EMPTY_CUPS } from '../src/engine/save'
-import { PRO_LOWER_LEAGUE_PLAN } from '../src/engine/proLeagueRegistry'
+import { PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN, validateProLeaguePlan } from '../src/engine/proLeagueRegistry'
+import { PRO_SATELLITE_ASSOCIATIONS } from '../src/engine/proSatelliteRegistry'
 
 const world = createProWorld(2051, '2026-01-01')
+assert.deepEqual(validateProLeaguePlan(), [])
+assert.equal(PRO_LEAGUE_PLAN.length, 100)
+assert.equal(PRO_SATELLITE_ASSOCIATIONS.length, 118)
+assert.equal(new Set([...PRO_LEAGUE_PLAN.map(item => item.associationId), ...PRO_SATELLITE_ASSOCIATIONS.map(item => item.id)]).size, 218)
 assert.ok(Object.keys(world.associations).length >= 200)
 assert.equal(Object.values(world.associations).filter(item => item.confederation === 'caf').length, 54)
-assert.equal(Object.keys(world.competitions).length, 75 + PRO_LOWER_LEAGUE_PLAN.length)
+assert.equal(Object.keys(world.competitions).length, 100 + PRO_LOWER_LEAGUE_PLAN.length)
 assert.ok(Object.keys(world.players).length > 25_000)
 const initial = JSON.stringify(world)
 assert.ok(initial.length < 32 * 1024 * 1024)
@@ -70,10 +75,10 @@ const tenYears = advanceProWorldTo(world, '2036-01-01')
 const twentyYears = advanceProWorldTo(tenYears, '2046-01-01')
 const elapsed = Math.round(performance.now() - start)
 assert.equal(twentyYears.championHistory.filter(record => record.competitionId.startsWith('top-')).length,
-  75 * 20 + 18, 'every league season archived')
+  100 * 20 + 18, 'every league season archived')
 assert.ok(twentyYears.championHistory.filter(record => record.competitionId.startsWith('second-')).length >=
   PRO_LOWER_LEAGUE_PLAN.length * 20, 'every lower-division season archived')
-assert.ok(twentyYears.seasonHistory.length <= 170 * 9)
+assert.ok(twentyYears.seasonHistory.length <= 220 * 9)
 assert.ok(twentyYears.recentEvents.length <= 240)
 assert.equal(Object.values(twentyYears.players).filter(candidate => candidate.clubId).length,
   Object.keys(world.players).length, 'retirees were not replaced')

@@ -12,7 +12,7 @@ This is the target architecture. The current playable pro chapter is England onl
 | CONCACAF | United States, Mexico | 2 |
 | AFC | Japan, South Korea, Saudi Arabia, India, China, Australia | 6 |
 
-The other 45 countries with club leagues remain simulated. The 143 additional associations currently have national sides only. An association's domestic mode, continental eligibility, and ability to sign the human player are distinct flags; never infer one from another. Some associations have different membership for regional tournaments and world qualification, which must be encoded per competition and edition.
+The other 70 countries with club leagues remain simulated. The 118 additional associations currently have national sides only. The world retains 218 association IDs in total. An association's domestic mode, continental eligibility, and ability to sign the human player are distinct flags; never infer one from another. Some associations have different membership for regional tournaments and world qualification, which must be encoded per competition and edition.
 
 ## Complete pyramid contract
 
@@ -28,11 +28,17 @@ A career country is complete only when all of these work together:
 ## Performance levels
 
 - **Career simulation:** full player match flow and detailed squad/economy/event systems in all 30 career countries.
-- **Club background:** 45 countries with season results, rosters, transfers, domestic winners and continental entries. Their clubs are not human transfer destinations.
+- **Club background:** 70 countries with season results, rosters, transfers, domestic winners and continental entries. Their clubs are not human transfer destinations.
 - **National background:** association strength and national-team participation; no fabricated domestic league required.
 
-The current implementation is still short of this contract: 75 top divisions are simulated, ten second divisions exist, and the English pro league is the only interactive chapter. The simulated English league and the player's league are not yet one table. Most association formats, playoffs and continental eligibility rules are provisional. Promote a country to actual career availability only after its integrated season audits pass.
+The current implementation is still short of this contract: 100 top divisions are simulated, ten second divisions exist, and the English pro league is the only interactive chapter. The simulated English league and the player's league are not yet one table. Most association formats, playoffs and continental eligibility rules are provisional. Promote a country to actual career availability only after its integrated season audits pass.
 
 ## Save migration and release gate
 
 Keep stable association and club IDs. Introduce an explicit career-availability flag separate from the league registry's planned mode. Existing saves should retain their club, competition, fixture, contract and history IDs. The first release with cross-country careers must test promotion into a playable division, relegation below it, cross-border transfer, cup qualification, continental qualification and a ten-season resumed save for each format family.
+
+## Background expansion checkpoint
+
+The 25 added club countries are Ukraine, Romania, Hungary, Bulgaria, Ireland, Finland; Zimbabwe, Ethiopia, Rwanda, Libya, Benin, Burkina Faso; Haiti, Curaçao, Dominican Republic, Suriname, Guyana; Jordan, Oman, Bahrain, Kuwait, Malaysia, Philippines; Solomon Islands and Papua New Guinea. They are background top flights only. Their club counts and formats remain provisional, not federation-verified.
+
+The 100-country world benchmark on the development runtime: 1,812 clubs, 43,488 players, 28,486 initial league fixtures, 16.6 MiB initial serialized world, 18.1 MiB after one year, and 27.3 MiB after 20 years. A one-year advance took around 1.4 seconds here. This is not an Android WebView performance guarantee. A 32 MiB serialized-world audit ceiling remains in place; test lower-memory Android devices and save/reload before shipping.

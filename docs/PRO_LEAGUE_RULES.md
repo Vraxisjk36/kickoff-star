@@ -4,7 +4,7 @@ The existing school game and playable pro UI remain in place. This page describe
 
 | Area | Implemented | Remaining rules work |
 | --- | --- | --- |
-| World leagues | 75 top divisions with persistent fixtures, tables, title archives, finances and squads | Most association formats are provisional double round robins; exact calendars and tiebreakers need federation review. |
+| World leagues | 100 top divisions with persistent fixtures, tables, title archives, finances and squads | Most association formats are provisional double round robins; exact calendars and tiebreakers need federation review. |
 | Second divisions | England 24/46, Spain 22/42, Germany 18/34, France 18/34, Italy 20/38, Netherlands 20/38, Portugal 18/34, Brazil 20/38, South Africa 16/30, Scotland 10/18 | Third tiers, second-tier relegation, playoffs and lower-tier splits are not simulated. |
 | Promotion/relegation | Top and second divisions exchange stable clubs between completed seasons, retaining squads, shirt numbers and title records. England, Spain and Italy exchange three; Brazil four; Germany, France, Netherlands and Portugal two; South Africa and Scotland one. | Real playoff places are not decided on the pitch. Germany, France, Netherlands, Scotland, South Africa and England Championship 2026/27 playoff routes remain pending. |
 | Scottish Premiership | Twelve clubs play 33 games, split top/bottom six and play five more each, for 38 total. | Venue balancing after the split and league-specific tiebreakers are provisional. |
@@ -13,7 +13,7 @@ The existing school game and playable pro UI remain in place. This page describe
 | Existing saves | New lower tiers are added on the next world advance without replacing existing clubs, players, current fixtures or title history. | Old saves with a prior fictional top-flight size retain it until a future migration. |
 | Trophy history | League and cup winners persist and can be inspected by association in World Football. | Historical pre-game trophies are not invented; records begin when the simulation completes. |
 
-Fictional clubs and names are not real fixtures or a licensed database. Do not advertise all 75 as faithfully modelled until governing-body rules, cup entrants and continental allocations are verified per edition.
+Fictional clubs and names are not real fixtures or a licensed database. Do not advertise all 100 as faithfully modelled until governing-body rules, cup entrants and continental allocations are verified per edition.
 
 ## Organizer references
 

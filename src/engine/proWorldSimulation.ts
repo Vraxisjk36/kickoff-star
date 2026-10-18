@@ -1,5 +1,5 @@
 import { LOWER_DIVISIONS, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN } from './proLeagueRegistry'
-import { createAcademyIntake, hydrateLowerDivisions, newProLeagueSeason, proRoll } from './proWorldFactory'
+import { createAcademyIntake, hydrateLowerDivisions, hydrateNewBackgroundLeagues, newProLeagueSeason, proRoll } from './proWorldFactory'
 import { ageOf, growOrDecline, nextShirtNumber, seasonalInjury, shouldRetire, signBackgroundReplacement } from './proLifecycle'
 import { advanceTournamentsTo, beginClubWorldSeason, beginContinentalSeason, beginNationsLeague, beginWorldQualifiers, beginDomesticSeason, beginNationalSeason, beginWorldSeason, beginSouthAfricanTopEight, invalidateTournamentCalendar } from './proTournaments'
 import type { IsoDate, ProClub, ProFixture, ProPlayer, ProStandingRow, ProWorldState } from './proWorld'
@@ -215,6 +215,7 @@ export function advanceProWorldTo(source: ProWorldState, targetDate: IsoDate): P
   world.transferIntakeCount ??= 0
   world.retirementHistory ??= []
   world.loans ??= {}
+  hydrateNewBackgroundLeagues(world)
   hydrateLowerDivisions(world)
   const milestones: { date: IsoDate; kind: 'national' | 'continental' | 'summer-cups' }[] = []
   for (let year = Number(source.currentDate.slice(0, 4)); year <= Number(targetDate.slice(0, 4)); year++) {

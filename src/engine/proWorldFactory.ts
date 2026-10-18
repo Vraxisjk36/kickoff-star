@@ -241,10 +241,10 @@ export function createProWorld(seed: number, currentDate: IsoDate): ProWorldStat
 }
 
 /** Existing careers gain new background leagues without replacing an active season. */
-export function hydrateNewBackgroundLeagues(world: ProWorldState): void {
+export function hydrateNewBackgroundLeagues(world: ProWorldState, generatedWorld?: ProWorldState): void {
   const missing = PRO_LEAGUE_PLAN.filter(league => !world.competitions[league.id])
   if (!missing.length) return
-  const generated = createProWorld(world.seed, world.currentDate)
+  const generated = generatedWorld ?? createProWorld(world.seed, world.currentDate)
   for (const league of missing) {
     const id = league.associationId
     if (Object.values(world.clubs).some(club => club.associationId === id))
@@ -267,10 +267,10 @@ export function hydrateNewBackgroundLeagues(world: ProWorldState): void {
 }
 
 /** Add lower flights to pre-upgrade saves without replacing their existing clubs or records. */
-export function hydrateLowerDivisions(world: ProWorldState): void {
+export function hydrateLowerDivisions(world: ProWorldState, generatedWorld?: ProWorldState): void {
   const missing = PRO_LOWER_LEAGUE_PLAN.filter(league => !world.competitions[league.id])
   if (!missing.length) return
-  const generated = createProWorld(world.seed, world.currentDate)
+  const generated = generatedWorld ?? createProWorld(world.seed, world.currentDate)
   for (const league of missing) {
     const id = league.associationId
     const templates = Object.values(generated.clubs).filter(club => club.associationId === id && club.tier === 2)
@@ -298,10 +298,10 @@ export function hydrateLowerDivisions(world: ProWorldState): void {
 }
 
 /** Older saves receive the national feeder flights without replacing any club or season already played. */
-export function hydrateDeepDivisions(world: ProWorldState): void {
+export function hydrateDeepDivisions(world: ProWorldState, generatedWorld?: ProWorldState): void {
   const missing = PRO_DEEP_LEAGUE_PLAN.filter(league => !world.competitions[league.id])
   if (!missing.length) return
-  const generated = createProWorld(world.seed, world.currentDate)
+  const generated = generatedWorld ?? createProWorld(world.seed, world.currentDate)
   for (const league of missing) {
     const id = league.associationId
     const tier = league.id.startsWith('third-') ? 3 : 4
@@ -330,10 +330,10 @@ export function hydrateDeepDivisions(world: ProWorldState): void {
 
 /** Add the grouped feeders to existing saves while retaining every played result. */
 /** Supply the new English National League to old saves, without touching previous fixtures. */
-export function hydrateFifthDivisions(world: ProWorldState): void {
+export function hydrateFifthDivisions(world: ProWorldState, generatedWorld?: ProWorldState): void {
   const missing = PRO_FIFTH_LEAGUE_PLAN.filter(league => !world.competitions[league.id])
   if (!missing.length) return
-  const generated = createProWorld(world.seed, world.currentDate)
+  const generated = generatedWorld ?? createProWorld(world.seed, world.currentDate)
   for (const league of missing) {
     const id = league.associationId
     const templates = Object.values(generated.clubs).filter(club => club.associationId === id && club.tier === 5)
@@ -360,10 +360,10 @@ export function hydrateFifthDivisions(world: ProWorldState): void {
 }
 
 /** Add German regional fourth-tier groups to existing saves without replaying older seasons. */
-export function hydrateGroupedFourthDivisions(world: ProWorldState): void {
+export function hydrateGroupedFourthDivisions(world: ProWorldState, generatedWorld?: ProWorldState): void {
   const missing = PRO_GROUPED_FOURTH_LEAGUE_PLAN.filter(league => !world.competitions[league.id])
   if (!missing.length) return
-  const generated = createProWorld(world.seed, world.currentDate)
+  const generated = generatedWorld ?? createProWorld(world.seed, world.currentDate)
   for (const league of missing) {
     const id = league.associationId
     const group = Number(league.id.split('-').at(-1))
@@ -392,10 +392,10 @@ export function hydrateGroupedFourthDivisions(world: ProWorldState): void {
 }
 
 /** Attach the Highland/Lowland tiers to older Scottish saves. */
-export function hydrateGroupedFifthDivisions(world: ProWorldState): void {
+export function hydrateGroupedFifthDivisions(world: ProWorldState, generatedWorld?: ProWorldState): void {
   const missing = PRO_GROUPED_FIFTH_LEAGUE_PLAN.filter(league => !world.competitions[league.id])
   if (!missing.length) return
-  const generated = createProWorld(world.seed, world.currentDate)
+  const generated = generatedWorld ?? createProWorld(world.seed, world.currentDate)
   for (const league of missing) {
     const id = league.associationId
     const group = Number(league.id.split('-').at(-1))
@@ -423,10 +423,10 @@ export function hydrateGroupedFifthDivisions(world: ProWorldState): void {
   }
 }
 
-export function hydrateGroupedDivisions(world: ProWorldState): void {
+export function hydrateGroupedDivisions(world: ProWorldState, generatedWorld?: ProWorldState): void {
   const missing = PRO_GROUPED_LEAGUE_PLAN.filter(league => !world.competitions[league.id])
   if (!missing.length) return
-  const generated = createProWorld(world.seed, world.currentDate)
+  const generated = generatedWorld ?? createProWorld(world.seed, world.currentDate)
   for (const league of missing) {
     const id = league.associationId
     const group = Number(league.id.split('-').at(-1))

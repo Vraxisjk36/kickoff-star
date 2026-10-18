@@ -1,4 +1,5 @@
 import { proRoll } from './proWorldFactory'
+import { promotionEligible } from './proRegionalRules'
 import type { IsoDate, ProFixture, ProStandingRow, ProWorldState } from './proWorld'
 const add = (date: IsoDate, days: number) =>
   new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10)
@@ -15,7 +16,9 @@ export function brazilSerieDQualification(world: ProWorldState, lastDate: IsoDat
   const champions = Array.from({ length: 8 }, (_, i) => {
     const rows = world.standings[`fourth-bra-${i + 1}`]
     if (!rows || rows.length !== 8) throw new Error(`Incomplete Brazilian Série D group ${i + 1}`)
-    return rank(rows)[0].clubId
+    const eligible = rank(rows).find(row => promotionEligible(world, row.clubId, 3))
+    if (!eligible) throw new Error('No licensed Brazilian fourth-tier candidate')
+    return eligible.clubId
   })
   const fixtures: ProFixture[] = []
   const promotedIds: string[] = []

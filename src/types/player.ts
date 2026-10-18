@@ -228,7 +228,7 @@ export interface Player {
   academyCountryId?: string
 
   // Win-state: signed a professional contract (the V1.0 end goal)
-  turnedPro: { clubName: string; weekSigned: number } | null
+  turnedPro: { clubName: string; weekSigned: number; countryId?: string } | null
   /** Professional chapter lives in the same save as the youth career. */
   proCareer?: import('../engine/proCareer').ProCareerState
   proTrial?: { week: number; points: number }

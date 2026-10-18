@@ -18,9 +18,15 @@ export function germanRegionalQualification(world: ProWorldState, lastDate: IsoD
     if (!standings || standings.length !== 18) throw new Error('Incomplete German Regionalliga groups')
     return ordered(standings)[0].clubId
   })
-  const rotation = year % 5
-  const direct = [0, 1, 2].map(offset => winners[(rotation + offset) % 5])
-  const a = winners[(rotation + 3) % 5], b = winners[(rotation + 4) % 5]
+  // DFB 2026/27: West and Südwest are guaranteed direct berths. The third
+  // automatic berth rotates through Nord, Nordost and Bayern, with the
+  // other two champions contesting the fourth slot over two legs.
+  // Group identity is stable: 1=West, 2=Südwest, 3=Nord, 4=Nordost, 5=Bayern.
+  const rotatingRegions = [2, 3, 4]
+  const selected = rotatingRegions[((year - 2026) % 3 + 3) % 3]
+  const otherRegions = rotatingRegions.filter(index => index !== selected)
+  const direct = [winners[0], winners[1], winners[selected]]
+  const a = winners[otherRegions[0]], b = winners[otherRegions[1]]
   const id = `promotion-ger-regionalliga-${year}`
   const goals = (home: string, away: string, leg: number) => {
     const edge = (world.clubs[home].reputation - world.clubs[away].reputation) * .035

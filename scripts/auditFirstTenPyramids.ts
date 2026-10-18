@@ -103,7 +103,7 @@ for (const [country, expectedMatches] of [['esp', 12], ['ita', 14]] as const) {
   }
 }
 
-const scottishSplitWorld = advanceProWorldTo(initial, '2027-05-01')
+const scottishSplitWorld = advanceProWorldTo(initial, '2027-04-15')
 const splitFixtures = Object.values(scottishSplitWorld.fixtures).filter(f =>
   f.competitionId === 'top-sco' && f.id.includes('-split-'))
 assert.equal(splitFixtures.length, 30, 'Scotland: split must schedule 30 matches')

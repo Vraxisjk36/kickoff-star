@@ -46,6 +46,7 @@ export interface ProCareerState {
 const CLUB_NAMES = ['North London Athletic', 'South London Blue', 'Mersey Red', 'West Midlands United', 'Brighton Coast', 'Yorkshire White', 'Severn City', 'East London Iron', 'Tyne Albion', 'Lancashire Rovers',
   'Manchester Sky', 'North London White', 'Mersey Blue', 'West London Cottage', 'South Coast Saints', 'Nottingham Forest Green', 'West London Bees', 'Crystal South', 'Suffolk Town', 'Lancashire Wanderers']
 const LEAGUE_WEEKS = Array.from({ length: 40 }, (_, index) => index + 3).filter(week => week !== 18 && week !== 29)
+const LONG_LEAGUE_WEEKS = Array.from({ length: 50 }, (_, index) => index + 2).filter(week => week !== 18 && week !== 29)
 
 export const PRO_CAREER_DESTINATIONS = [
   { id: 'eng', name: 'England', cities: ['London', 'Manchester', 'Liverpool', 'Leeds'] },
@@ -103,21 +104,26 @@ export function createProCareer(clubName: string, prestige = 4, associationId = 
   return { associationId, world: { divisions: { 1: division, 2: { ...division, teams: [], standings: [], fixtures: [], matchRecords: [] }, 3: { ...division, teams: [], standings: [], fixtures: [], matchRecords: [] } }, playerDivision: 1, playerTeamId: own.id, kind: 'pro' }, season: 1, week: 1, welcomed: false }
 }
 
-export function proRound(week: number, teamCount = 20): number | null {
-  // Existing ten-club pro saves keep their original dates until a separate
-  // migration can preserve their played fixtures and historic match records.
-  if (teamCount === 10) return week >= 4 && week <= 38 && (week - 4) % 2 === 0 ? (week - 4) / 2 + 1 : null
-  // The Scottish Premiership has 33 regular matches and five post-split rounds.
-  if (teamCount === 12) {
-    const index = LEAGUE_WEEKS.indexOf(week)
-    return index < 0 || index >= 38 ? null : index + 1
-  }
-  const index = LEAGUE_WEEKS.indexOf(week)
-  return index < 0 || index >= (teamCount - 1) * 2 ? null : index + 1
+/** Professional calendars follow the number of fixtures in their competition.
+ * Old ten-team saves retain their original eighteen-match schedule.
+ */
+export function proRound(week: number, teamCount = 20, scheduledRounds?: number): number | null {
+  if (teamCount === 10 && (!scheduledRounds || scheduledRounds <= 18))
+    return week >= 4 && week <= 38 && (week - 4) % 2 === 0 ? (week - 4) / 2 + 1 : null
+  const rounds = scheduledRounds ?? (teamCount === 12 ? 38 : (teamCount - 1) * 2)
+  const weeks = rounds > LEAGUE_WEEKS.length ? LONG_LEAGUE_WEEKS : LEAGUE_WEEKS
+  const index = weeks.indexOf(week)
+  return index < 0 || index >= rounds ? null : index + 1
+}
+
+export function professionalSeasonWeeks(state: ProCareerState): number {
+  const rounds = Math.max(0, ...state.world.divisions[1].fixtures.map(fixture => fixture.week))
+  return rounds > LEAGUE_WEEKS.length ? 52 : 44
 }
 
 export function proFixture(state: ProCareerState): Fixture | undefined {
-  const round = proRound(state.week, state.world.divisions[1].teams.length)
+  const round = proRound(state.week, state.world.divisions[1].teams.length,
+    Math.max(0, ...state.world.divisions[1].fixtures.map(fixture => fixture.week)))
   return round === null ? undefined : state.world.divisions[1].fixtures.find(fixture => fixture.week === round && !fixture.played && (fixture.homeTeamId === state.world.playerTeamId || fixture.awayTeamId === state.world.playerTeamId))
 }
 
@@ -152,7 +158,7 @@ export function advanceProWeek(state: ProCareerState, player: Player): { state: 
     world = { ...world, divisions: { ...world.divisions, 1: batchSimDivisionRound(world.divisions[1], round, world.playerTeamId, true, 'proLeague', state.season, state.week) } }
   }
   const nextWeek = state.week + 1
-  const seasonEnd = nextWeek > 44
+  const seasonEnd = nextWeek > professionalSeasonWeeks(state)
   let seasonRecords = state.seasonRecords ?? []
   if (seasonEnd) {
     const division = world.divisions[1]

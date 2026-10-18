@@ -163,7 +163,7 @@ export function newProLeagueSeason(world: ProWorldState, league: ProLeaguePlan, 
         const secondIndex = clubIds.indexOf(away)
         const distance = (secondIndex - firstIndex + clubIds.length) % clubIds.length
         const firstHosts = distance < clubIds.length / 2 ||
-          distance === clubIds.length / 2 && firstIndex % 2 === 0
+          distance === clubIds.length / 2 && firstIndex < secondIndex
         homeId = firstHosts ? home : away
         awayId = firstHosts ? away : home
       }

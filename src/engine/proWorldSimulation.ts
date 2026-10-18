@@ -5,7 +5,7 @@ import { feederQualification } from './proFeederPlayoffs'
 import { nationalLeagueQualification } from './proFifthPlayoffs'
 import { germanRegionalQualification } from './proGermanRegionalliga'
 import { scottishRegionalQualification } from './proScottishRegional'
-import { createAcademyIntake, hydrateDeepDivisions, hydrateFifthDivisions, hydrateGroupedFourthDivisions, hydrateGroupedFifthDivisions, hydrateGroupedDivisions, hydrateLowerDivisions, hydrateNewBackgroundLeagues, newProLeagueSeason, proRoll } from './proWorldFactory'
+import { createAcademyIntake, hydrateDeepDivisions, hydrateFifthDivisions, hydrateGroupedFourthDivisions, hydrateGroupedFifthDivisions, hydrateGroupedDivisions, hydrateLowerDivisions, hydrateNewBackgroundLeagues, createProWorld, newProLeagueSeason, proRoll } from './proWorldFactory'
 import { ageOf, growOrDecline, nextShirtNumber, seasonalInjury, shouldRetire, signBackgroundReplacement } from './proLifecycle'
 import { advanceTournamentsTo, beginClubWorldSeason, beginContinentalSeason, beginNationsLeague, beginWorldQualifiers, beginDomesticSeason, beginNationalSeason, beginWorldSeason, beginSouthAfricanTopEight, invalidateTournamentCalendar } from './proTournaments'
 import type { IsoDate, ProClub, ProFixture, ProPlayer, ProStandingRow, ProWorldState } from './proWorld'
@@ -485,13 +485,20 @@ export function advanceProWorldTo(source: ProWorldState, targetDate: IsoDate): P
   world.transferIntakeCount ??= 0
   world.retirementHistory ??= []
   world.loans ??= {}
-  hydrateNewBackgroundLeagues(world)
-  hydrateLowerDivisions(world)
-  hydrateDeepDivisions(world)
-  hydrateGroupedDivisions(world)
-  hydrateFifthDivisions(world)
-  hydrateGroupedFourthDivisions(world)
-  hydrateGroupedFifthDivisions(world)
+  // An old save may be missing several newly modelled tiers. Generate the
+  // complete template once, instead of cloning 100 countries per missing tier.
+  const allPlans = [...PRO_LEAGUE_PLAN, ...PRO_LOWER_LEAGUE_PLAN, ...PRO_DEEP_LEAGUE_PLAN,
+    ...PRO_GROUPED_LEAGUE_PLAN, ...PRO_FIFTH_LEAGUE_PLAN,
+    ...PRO_GROUPED_FOURTH_LEAGUE_PLAN, ...PRO_GROUPED_FIFTH_LEAGUE_PLAN]
+  const template = allPlans.some(plan => !world.competitions[plan.id])
+    ? createProWorld(world.seed, world.currentDate) : undefined
+  hydrateNewBackgroundLeagues(world, template)
+  hydrateLowerDivisions(world, template)
+  hydrateDeepDivisions(world, template)
+  hydrateGroupedDivisions(world, template)
+  hydrateFifthDivisions(world, template)
+  hydrateGroupedFourthDivisions(world, template)
+  hydrateGroupedFifthDivisions(world, template)
   const milestones: { date: IsoDate; kind: 'national' | 'continental' | 'summer-cups' }[] = []
   for (let year = Number(source.currentDate.slice(0, 4)); year <= Number(targetDate.slice(0, 4)); year++) {
     milestones.push({ date: `${year}-01-01`, kind: 'national' }, { date: `${year}-07-01`, kind: 'summer-cups' }, { date: `${year}-09-01`, kind: 'continental' })

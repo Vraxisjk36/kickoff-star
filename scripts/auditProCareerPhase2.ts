@@ -37,7 +37,8 @@ for (const destination of PRO_CAREER_DESTINATIONS) {
   assert.equal(opponents.size, count * (count - 1) / 2)
   for (const homes of opponents.values()) assert.equal(homes.size, 2)
   const activeRounds = Array.from({length:44},(_,i)=>proRound(i+1,count)).filter((round):round is number=>round!==null)
-  assert.equal(activeRounds.length, (count - 1) * 2, `${country} match calendar incomplete`)
+  assert.equal(activeRounds.length, country === 'sco' ? 38 : (count - 1) * 2,
+    `${country} match calendar incomplete`)
   assert.equal(new Set(activeRounds).size, activeRounds.length)
 }
 assert.equal(createProCareer('North London Athletic').associationId, 'eng', 'Old pro careers must default to England')

@@ -4,6 +4,7 @@ import type { ProWorldState } from '../src/engine/proWorld'
 import { createProCareer, advanceProWeek, proRound, proTrialClubs, PRO_CAREER_DESTINATIONS } from '../src/engine/proCareer'
 import { plannedClubCount, createProWorld } from '../src/engine/proWorldFactory'
 import { recordHumanProLeagueMatch } from '../src/engine/proWorldSimulation'
+import { syncPlayableProLeague } from '../src/engine/proIntegration'
 import { PRO_INTERACTIVE_COUNTRIES, canStartInteractiveProCareer } from '../src/engine/proLeagueRegistry'
 
 assert.equal(PRO_INTERACTIVE_COUNTRIES.length, 10, 'Phase 2 must permit ten professional destinations')
@@ -88,3 +89,39 @@ assert.equal(seniorCareer.seasonRecords?.[0].assists,11)
 assert.equal(advanceProWeek(seniorCareer,seniorPlayer).state,seniorCareer,
   'Retired career may not advance')
 console.log('Phase 2: senior season archive and retirement lifecycle passed')
+
+const careerWorld = createProWorld(3400, '2026-08-01')
+for (const country of PRO_INTERACTIVE_COUNTRIES) {
+  const nation = careerWorld.competitions[`top-${country}`]
+  const openingClub = careerWorld.clubs[nation.entrantIds[0]]
+  const career = createProCareer(openingClub.name, 5, country)
+  const clubWorldIds = Object.fromEntries(career.world.divisions[1].teams
+    .map((club, index) => [club.id, nation.entrantIds[index]]))
+  const synced = syncPlayableProLeague({ ...career, clubWorldIds, backgroundWorld: careerWorld })
+  assert.equal(synced.activeCompetitionId, nation.id)
+  assert.equal(synced.activeSeasonId, nation.seasonId)
+  const fixtureIds = new Set(Object.values(careerWorld.fixtures)
+    .filter(fixture => fixture.competitionId === nation.id &&
+      fixture.id.includes(`-${nation.seasonId}-`)).map(fixture => fixture.id))
+  assert.equal(synced.world.divisions[1].fixtures.length, fixtureIds.size,
+    `${country}: playable calendar excludes real fixtures`)
+  assert.ok(synced.world.divisions[1].fixtures.every(f => fixtureIds.has(f.id)),
+    `${country}: local fixture mismatched world ID`)
+  assert.equal(new Set(Object.values(synced.clubWorldIds!)).size, nation.entrantIds.length)
+  const firstClub = synced.clubWorldIds![synced.world.playerTeamId]
+  assert.equal(firstClub, nation.entrantIds[0])
+}
+const secondLeague = careerWorld.competitions['second-eng']
+const secondClub = secondLeague.entrantIds[0]
+const emulatedDrop = createProCareer(careerWorld.clubs[secondClub].name, 4, 'eng')
+const oldMapping = Object.fromEntries(emulatedDrop.world.divisions[1].teams.map((team, i) =>
+  [team.id, i === 0 ? secondClub : careerWorld.competitions['top-eng'].entrantIds[i]]))
+const secondSynced = syncPlayableProLeague({ ...emulatedDrop, clubWorldIds: oldMapping, backgroundWorld: careerWorld })
+assert.equal(secondSynced.activeCompetitionId, 'second-eng')
+assert.equal(secondSynced.world.divisions[1].teams.length, secondLeague.entrantIds.length)
+assert.ok(secondSynced.world.divisions[1].fixtures.length > 0)
+const secondFixture = Object.values(careerWorld.fixtures).find(f => f.competitionId === 'second-eng')!
+const secondScore = recordHumanProLeagueMatch(careerWorld, 'eng', secondFixture.homeId,
+  secondFixture.awayId, 2, 0, secondFixture.id, 'second-eng')
+assert.equal(secondScore.standings['second-eng'].find(r => r.clubId === secondFixture.homeId)!.points, 3)
+console.log('Phase 2: ten real fixture calendars, second-tier club membership and playable result audit passed')

@@ -590,7 +590,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const pro = player?.proCareer
     if (!player || !pro || pro.talks) return
     const offer = pro.marketOffers?.find(item => item.teamId === teamId && item.expiresWeek > player.totalWeeksElapsed)
-    if (!offer || !pro.date || !registrationOpen('eng', pro.date)) return
+    if (!offer || !pro.date || !registrationOpen(pro.associationId ?? 'eng', pro.date)) return
     setState({ player: { ...player, proCareer: { ...pro, talks: { offer, readyWeek: player.totalWeeksElapsed + 2, countered: false }, marketOffers: [] } } })
     void getState().saveCurrent()
   },

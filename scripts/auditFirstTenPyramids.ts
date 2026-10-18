@@ -284,3 +284,60 @@ assert.ok(franceNationalTwo.promotedIds.every(id => first.competitions['third-fr
 assert.ok(franceNationalTwo.relegatedIds.every(id => ['fourth-fra-1','fourth-fra-2','fourth-fra-3']
   .some(group => first.competitions[group].entrantIds.includes(id))))
 console.log('French National 2 and Dutch Tweede Divisie audit passed')
+
+const regionalFourthCases = [
+  { country: 'esp', groups: 5, clubs: 18, promotions: 10 },
+  { country: 'ita', groups: 9, clubs: 18, promotions: 9 },
+  { country: 'por', groups: 4, clubs: 14, promotions: 4 },
+  { country: 'rsa', groups: 9, clubs: 12, promotions: 9 },
+  { country: 'bra', groups: 8, clubs: 8, promotions: 4 },
+] as const
+for (const { country, groups, clubs, promotions } of regionalFourthCases) {
+  const regionalIds = Array.from({ length: groups }, (_, group) => `fourth-${country}-${group + 1}`)
+  const regionalEntrants = new Set<string>()
+  for (const id of regionalIds) {
+    const competition = initial.competitions[id]
+    assert.ok(competition, `${country}: missing fourth-tier regional group ${id}`)
+    assert.equal(competition.entrantIds.length, clubs)
+    assert.equal(competition.format.scheduledRounds, (clubs - 1) * 2)
+    const fixtures = Object.values(initial.fixtures).filter(f => f.competitionId === id)
+    assert.equal(fixtures.length, clubs * (clubs - 1), `${id}: expected home-and-away fixtures`)
+    const home = new Set<string>(), occupied = new Set<string>()
+    for (const fixture of fixtures) {
+      assert.ok(competition.entrantIds.includes(fixture.homeId) &&
+        competition.entrantIds.includes(fixture.awayId), `${id}: outsider fixture`)
+      const key = `${fixture.homeId}:${fixture.awayId}`
+      assert.ok(!home.has(key), `${id}: repeated home-and-away pairing ${key}`)
+      home.add(key)
+      for (const club of [fixture.homeId, fixture.awayId]) {
+        const busy = `${club}:${fixture.kickoffDate}`
+        assert.ok(!occupied.has(busy), `${id}: club double-booked ${busy}`)
+        occupied.add(busy)
+      }
+    }
+    for (const club of competition.entrantIds) {
+      assert.ok(!regionalEntrants.has(club), `${country}: club appears in multiple regions`)
+      regionalEntrants.add(club)
+    }
+    assert.deepEqual(first.competitions[id].entrantIds, resumed.competitions[id].entrantIds,
+      `${id}: fourth-tier entrant save-resume drift`)
+  }
+  const history = first.promotionHistory?.find(h => h.associationId === `${country}-3`)
+  assert.ok(history, `${country}: missing third/fourth relegation exchange`)
+  assert.equal(history.promotedIds.length, promotions)
+  assert.equal(history.relegatedIds.length, promotions)
+  assert.equal(new Set(history.promotedIds).size, promotions)
+  assert.equal(new Set(history.relegatedIds).size, promotions)
+  const thirdIds = country === 'bra' ? ['third-bra'] :
+    Array.from({ length: country === 'rsa' ? 9 : country === 'ita' ? 3 : 2 },
+      (_, index) => `third-${country}-${index + 1}`)
+  assert.ok(history.promotedIds.every(club => thirdIds.some(id =>
+    first.competitions[id].entrantIds.includes(club))), `${country}: promoted fourth-tier side absent from third`)
+  assert.ok(history.relegatedIds.every(club => regionalIds.some(id =>
+    first.competitions[id].entrantIds.includes(club))), `${country}: demoted third-tier side absent from fourth`)
+  if (country === 'bra') {
+    assert.equal(history.fixtures.length, 8, 'Brazil Série D needs four two-legged playoff ties')
+    assert.ok(history.fixtures.every(f => !!f.result))
+  }
+}
+console.log('All grouped fourth-tier fixture and promotion exchange audits passed')

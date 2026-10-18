@@ -219,7 +219,10 @@ export function createProWorld(seed: number, currentDate: IsoDate): ProWorldStat
         fourthGroups && tier === 4 ? Math.floor(offset / fourthGroups.clubsPerGroup) + 1 :
         fifthGroups && tier === 5 ? Math.floor(offset / fifthGroups.clubsPerGroup) + 1 : undefined
       const club: ProClub = { id, associationId: league.associationId, tier, feederGroup,
-        homeRegion: feederGroup, licenseEligible: true, name: identity.name,
+        homeRegion: feederGroup,
+        homeRegionCount: grouped && tier === 3 ? grouped.groups : fourthGroups && tier === 4 ? fourthGroups.groups :
+          fifthGroups && tier === 5 ? fifthGroups.groups : undefined,
+        licenseEligible: true, name: identity.name,
         homeCity: identity.city, stadiumId: `stadium-${id}`, reputation, finances }
       world.clubs[id] = club
       world.stadiums[club.stadiumId] = { id: club.stadiumId, name: `${identity.city} Ground ${padded(i + 1)}`,

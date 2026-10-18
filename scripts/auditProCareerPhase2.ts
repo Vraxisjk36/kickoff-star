@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import type { Player } from '../src/types/player'
 import type { ProWorldState } from '../src/engine/proWorld'
-import { createProCareer, advanceProWeek, proRound, proTrialClubs, PRO_CAREER_DESTINATIONS } from '../src/engine/proCareer'
+import { createProCareer, advanceProWeek, professionalSeasonWeeks, proRound, proTrialClubs, PRO_CAREER_DESTINATIONS } from '../src/engine/proCareer'
 import { plannedClubCount, createProWorld } from '../src/engine/proWorldFactory'
 import { recordHumanProLeagueMatch } from '../src/engine/proWorldSimulation'
 import { syncPlayableProLeague } from '../src/engine/proIntegration'
@@ -125,3 +125,26 @@ const secondScore = recordHumanProLeagueMatch(careerWorld, 'eng', secondFixture.
   secondFixture.awayId, 2, 0, secondFixture.id, 'second-eng')
 assert.equal(secondScore.standings['second-eng'].find(r => r.clubId === secondFixture.homeId)!.points, 3)
 console.log('Phase 2: ten real fixture calendars, second-tier club membership and playable result audit passed')
+
+assert.equal(professionalSeasonWeeks(secondSynced), 52)
+const secondRoundCount = Math.max(...secondSynced.world.divisions[1].fixtures.map(f => f.week))
+assert.equal(secondRoundCount, 46)
+const playableRounds = Array.from({ length: 52 }, (_, week) =>
+  proRound(week + 1, secondSynced.world.divisions[1].teams.length, secondRoundCount))
+  .filter((value): value is number => value !== null)
+assert.deepEqual(playableRounds, Array.from({ length: 46 }, (_, index) => index + 1),
+  'Forty-six-round league must play every fixture before year-end')
+assert.equal(proRound(44, 24, 46) !== null, true, 'Long league season ended before final weeks')
+const scottishLower = careerWorld.competitions['second-sco']
+const scottishCareer = createProCareer(careerWorld.clubs[scottishLower.entrantIds[0]].name, 4, 'sco')
+const scottishMapping = Object.fromEntries(scottishCareer.world.divisions[1].teams.map((team, i) =>
+  [team.id, i === 0 ? scottishLower.entrantIds[0] : careerWorld.competitions['top-sco'].entrantIds[i]]))
+const scottishSynced = syncPlayableProLeague({
+  ...scottishCareer, clubWorldIds: scottishMapping, backgroundWorld: careerWorld,
+})
+assert.equal(scottishSynced.activeCompetitionId, 'second-sco')
+assert.equal(scottishSynced.world.divisions[1].teams.length, 10)
+assert.equal(Math.max(...scottishSynced.world.divisions[1].fixtures.map(f => f.week)), 36)
+assert.equal(Array.from({ length: 44 }, (_, index) => proRound(index + 1, 10, 36))
+  .filter(value => value !== null).length, 36)
+console.log('Phase 2: 46-round EFL and four-leg Scottish lower league calendars passed')

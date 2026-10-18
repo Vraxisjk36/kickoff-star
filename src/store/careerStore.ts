@@ -147,7 +147,7 @@ interface CareerStore {
   completeProMatch: (result: Parameters<typeof resolveProMatch>[2]) => void
   completeProCupMatch: (fixtureId: string, result: Parameters<typeof resolveProMatch>[2]) => void
   completeProTrialWeek: (points: number) => void
-  signOpeningProClub: (clubName: string, prestige: number) => void
+  signOpeningProClub: (clubName: string, prestige: number, associationId?: string) => void
   ensureLivingWorld: () => void
   requestProOffers: () => void
   openProTransferTalks: (teamId: string) => void
@@ -639,7 +639,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     setState({ player: { ...player, proTrial: { week: player.proTrial.week + 1, points: player.proTrial.points + Math.max(0, Math.min(3, points)) } } })
     void getState().saveCurrent()
   },
-  signOpeningProClub: (clubName, prestige) => {
+  signOpeningProClub: (clubName, prestige, associationId = 'eng') => {
     const { player } = getState()
     if (!player?.proTrial || player.proTrial.week !== 3) return
     const wage = 350 + prestige * 175 + player.proTrial.points * 45
@@ -647,7 +647,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     setState({ player: { ...player, proTrial: undefined, trialWeekCompleted: 3, squadRole: player.proTrial.points >= 6 ? 'starting-xi' : 'bench', squad: generateSquad(prestige),
       careerClock: { ...player.careerClock, ageYears: 18, phase: 'academy' }, agentId: player.agentId ?? 'independent',
       contract: { clubName, terms, signedWeek: 0, expiresWeek: 88 }, turnedPro: { clubName, weekSigned: 0 },
-      proCareer: createProCareer(clubName, prestige), money: (player.money ?? 0) + terms.signingBonus } })
+      proCareer: createProCareer(clubName, prestige, associationId), money: (player.money ?? 0) + terms.signingBonus } })
     void getState().saveCurrent()
   },
 

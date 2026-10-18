@@ -14,8 +14,7 @@ export function promotionEligible(world: ProWorldState, clubId: string, destinat
   if (!club || club.licenseEligible === false) return false
   if (!club.parentClubId) return true
   const parent = world.clubs[club.parentClubId]
-  return !parent || parent.associationId !== club.associationId || (parent.tier ?? 1) < destination
-    ? false : (parent.tier ?? 1) > destination
+  return !!parent && parent.associationId === club.associationId && (parent.tier ?? 1) < destination
 }
 
 function fixture(world: ProWorldState, country: string, year: string,

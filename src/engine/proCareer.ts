@@ -5,12 +5,15 @@ import { generateTeam, type Team } from './teams'
 import type { MatchLine, MatchRecord } from './matchLedger'
 import { netWage } from './agents'
 import type { ProWorldState } from './proWorld'
+import { plannedClubCount } from './proWorldFactory'
+import { PRO_INTERACTIVE_COUNTRIES } from './proLeagueRegistry'
 
 export interface ProPayStatement { season: number; month: string; gross: number; bonus: number; estimatedWithholding: number; agentFee: number; housing: number; net: number }
 export interface ProMarketOffer { teamId: string; worldClubId: string; weeklyWage: number; expiresWeek: number }
 
 export interface ProCareerState {
   world: LeagueWorld
+  associationId?: string
   season: number
   week: number
   welcomed: boolean
@@ -35,25 +38,45 @@ const CLUB_NAMES = ['North London Athletic', 'South London Blue', 'Mersey Red', 
   'Manchester Sky', 'North London White', 'Mersey Blue', 'West London Cottage', 'South Coast Saints', 'Nottingham Forest Green', 'West London Bees', 'Crystal South', 'Suffolk Town', 'Lancashire Wanderers']
 const LEAGUE_WEEKS = Array.from({ length: 40 }, (_, index) => index + 3).filter(week => week !== 18 && week !== 29)
 
-export function proTrialClubs(points: number): Team[] {
+export const PRO_CAREER_DESTINATIONS = [
+  { id: 'eng', name: 'England', cities: ['London', 'Manchester', 'Liverpool', 'Leeds'] },
+  { id: 'esp', name: 'Spain', cities: ['Madrid', 'Barcelona', 'Valencia', 'Seville'] },
+  { id: 'ger', name: 'Germany', cities: ['Berlin', 'Munich', 'Hamburg', 'Dortmund'] },
+  { id: 'fra', name: 'France', cities: ['Paris', 'Marseille', 'Lyon', 'Lille'] },
+  { id: 'ita', name: 'Italy', cities: ['Rome', 'Milan', 'Turin', 'Naples'] },
+  { id: 'ned', name: 'Netherlands', cities: ['Amsterdam', 'Rotterdam', 'Eindhoven', 'Utrecht'] },
+  { id: 'por', name: 'Portugal', cities: ['Lisbon', 'Porto', 'Braga', 'Coimbra'] },
+  { id: 'bra', name: 'Brazil', cities: ['São Paulo', 'Rio de Janeiro', 'Salvador', 'Belo Horizonte'] },
+  { id: 'rsa', name: 'South Africa', cities: ['Johannesburg', 'Pretoria', 'Cape Town', 'Durban'] },
+  { id: 'sco', name: 'Scotland', cities: ['Glasgow', 'Edinburgh', 'Aberdeen', 'Dundee'] },
+] as const
+
+export function proTrialClubs(points: number, associationId = 'eng'): Team[] {
+  const region = PRO_CAREER_DESTINATIONS.find(item => item.id === associationId) ?? PRO_CAREER_DESTINATIONS[0]
   const base = points >= 5 ? 5 : points >= 3 ? 4 : 3
-  return [0, 1, 2, 3].map((index) => {
+  return region.cities.map((city, index) => {
     const team = generateTeam(Math.min(6, base + (index === 3 ? 1 : 0)))
-    const name = CLUB_NAMES[(index * 2 + Math.min(2, Math.floor(points / 3))) % CLUB_NAMES.length]
+    const name = associationId === 'eng' ? CLUB_NAMES[(index * 2 + Math.min(2, Math.floor(points / 3))) % CLUB_NAMES.length]
+      : `${city} ${['Athletic', 'United', 'Sporting', 'City'][index]}`
     return { ...team, name, short: name.split(' ').map(part => part[0]).join('').slice(0, 3).toUpperCase() }
   })
 }
 
-export function createProCareer(clubName: string, prestige = 4): ProCareerState {
+export function createProCareer(clubName: string, prestige = 4, associationId = 'eng'): ProCareerState {
+  if (!PRO_INTERACTIVE_COUNTRIES.includes(associationId)) throw new Error('Unavailable professional destination')
+  const region = PRO_CAREER_DESTINATIONS.find(item => item.id === associationId) ?? PRO_CAREER_DESTINATIONS[0]
   const own = generateTeam(Math.max(3, Math.min(6, prestige)))
   own.name = clubName
   own.short = clubName.split(' ').map(part => part[0]).join('').slice(0, 3).toUpperCase()
-  const others = CLUB_NAMES.filter(name => name !== clubName).slice(0, 19).map((name, index) => {
+  const count = plannedClubCount(associationId)
+  const others = Array.from({ length: count - 1 }, (_, index) => {
+    const city = region.cities[index % region.cities.length]
+    const name = associationId === 'eng' ? CLUB_NAMES.filter(name => name !== clubName)[index] :
+      `${city} ${['Rovers', 'Albion', 'Wanderers', 'Olympic', 'Union'][Math.floor(index / region.cities.length) % 5]} ${index + 1}`
     const team = generateTeam(3 + index % 4)
     return { ...team, name, short: name.split(' ').map(part => part[0]).join('').slice(0, 3).toUpperCase() }
   })
   const teams = [own, ...others]
-  // Circle method, twice through the schedule with home and away reversed.
   const rounds: Fixture[] = []
   const ids = teams.map(team => team.id)
   for (let round = 0; round < ids.length - 1; round++) {
@@ -68,7 +91,7 @@ export function createProCareer(clubName: string, prestige = 4): ProCareerState 
   }
   const standings = teams.map(team => ({ teamId: team.id, teamName: team.name, teamShort: team.short, played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, points: 0 }))
   const division: Division = { tier: 1, teams, standings, fixtures: rounds, matchRecords: [] }
-  return { world: { divisions: { 1: division, 2: { ...division, teams: [], standings: [], fixtures: [], matchRecords: [] }, 3: { ...division, teams: [], standings: [], fixtures: [], matchRecords: [] } }, playerDivision: 1, playerTeamId: own.id, kind: 'pro' }, season: 1, week: 1, welcomed: false }
+  return { associationId, world: { divisions: { 1: division, 2: { ...division, teams: [], standings: [], fixtures: [], matchRecords: [] }, 3: { ...division, teams: [], standings: [], fixtures: [], matchRecords: [] } }, playerDivision: 1, playerTeamId: own.id, kind: 'pro' }, season: 1, week: 1, welcomed: false }
 }
 
 export function proRound(week: number, teamCount = 20): number | null {
@@ -76,7 +99,7 @@ export function proRound(week: number, teamCount = 20): number | null {
   // migration can preserve their played fixtures and historic match records.
   if (teamCount === 10) return week >= 4 && week <= 38 && (week - 4) % 2 === 0 ? (week - 4) / 2 + 1 : null
   const index = LEAGUE_WEEKS.indexOf(week)
-  return index < 0 ? null : index + 1
+  return index < 0 || index >= (teamCount - 1) * 2 ? null : index + 1
 }
 
 export function proFixture(state: ProCareerState): Fixture | undefined {

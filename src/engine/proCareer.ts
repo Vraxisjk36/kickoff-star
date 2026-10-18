@@ -17,6 +17,8 @@ export interface ProCareerState {
   season: number
   week: number
   welcomed: boolean
+  /** Career ends at age 38 after the final senior season. */
+  retired?: boolean
   trainedWeek?: number
   /** Matchday resolution is persisted before advancing so a reload cannot replay a result. */
   resolvedWeek?: number
@@ -119,6 +121,7 @@ export function resolveProMatch(state: ProCareerState, player: Player, result: {
 }
 
 export function advanceProWeek(state: ProCareerState, player: Player): { state: ProCareerState; player: Player } {
+  if (state.retired) return { state, player }
   const round = proRound(state.week, state.world.divisions[1].teams.length)
   let world = state.world
   if (round !== null) {
@@ -132,7 +135,8 @@ export function advanceProWeek(state: ProCareerState, player: Player): { state: 
   const pay = state.backgroundWorld ? 0 : netWage(wage, player.agentId)
   const injury = player.injury && player.injury.weeksRemaining > 1 ? { ...player.injury, weeksRemaining: player.injury.weeksRemaining - 1 } : null
   return {
-    state: { ...state, world, season: seasonEnd ? state.season + 1 : state.season, week: seasonEnd ? 1 : nextWeek, resolvedWeek: undefined, trainedWeek: undefined },
+    state: { ...state, world, season: seasonEnd ? state.season + 1 : state.season, week: seasonEnd ? 1 : nextWeek, resolvedWeek: undefined, trainedWeek: undefined,
+      retired: seasonEnd && player.careerClock.ageYears + 1 >= 38 ? true : state.retired },
     player: { ...player, injury, suspensionMatches: Math.max(0, (player.suspensionMatches ?? 0) - (round !== null ? 1 : 0)), totalWeeksElapsed: (player.totalWeeksElapsed ?? 0) + 1, money: (player.money ?? 0) + pay,
       careerEarnings: (player.careerEarnings ?? 0) + wage, fitness: { stamina: Math.min(100, player.fitness.stamina + 18) },
       seasonAppearances: seasonEnd ? 0 : player.seasonAppearances, seasonGoals: seasonEnd ? 0 : player.seasonGoals, seasonAssists: seasonEnd ? 0 : player.seasonAssists,

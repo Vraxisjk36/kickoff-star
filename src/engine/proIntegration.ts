@@ -173,13 +173,30 @@ export function advanceLivingWorld(previous: ProCareerState, next: ProCareerStat
     loan = null
   }
   const news = gatherProNews(world, player, previous.season, previous.week, previous.news ?? [])
-  return { state: { ...next, world: { ...next.world, playerTeamId: worldTeamId }, backgroundWorld: world, date,
+  const interim: ProCareerState = { ...next,
+    world: { ...next.world, playerTeamId: worldTeamId },
+    backgroundWorld: world, date,
     payStatements: payStatements.slice(-36), pendingBonus: bonus, loan, news,
     marketOffers: (previous.marketOffers ?? []).filter(offer => offer.expiresWeek > (player.totalWeeksElapsed ?? 0)),
-    talks: previous.talks },
+    talks: previous.talks }
+  // Promotion, relegation and the Scottish post-split schedule may change the
+  // human club's opponents. Follow federation membership after each season,
+  // and add split fixtures without discarding match results.
+  const country = interim.associationId ?? 'eng'
+  const worldClubId = interim.clubWorldIds?.[worldTeamId]
+  const active = worldClubId && Object.values(world.competitions).find(comp =>
+    comp.kind === 'league' && comp.associationId === country &&
+    comp.entrantIds.includes(worldClubId))
+  const newFixtureCount = active ? Object.values(world.fixtures).filter(f =>
+    f.competitionId === active.id && f.id.includes(`-${active.seasonId}-`)).length : 0
+  const rebuild = !!active && (next.season > previous.season ||
+    active.id !== interim.activeCompetitionId || active.seasonId !== interim.activeSeasonId ||
+    newFixtureCount > interim.world.divisions[1].fixtures.length)
+  const synced = rebuild ? syncPlayableProLeague(interim, world) : interim
+  return { state: synced,
     player: { ...player, money, careerEarnings: grossEarnings, agentFeesPaid: feesPaid,
       contract: worldTeamId !== next.world.playerTeamId && player.contract
-        ? { ...player.contract, clubName: next.world.divisions[1].teams.find(team => team.id === worldTeamId)?.name ?? player.contract.clubName }
+        ? { ...player.contract, clubName: synced.world.divisions[1].teams.find(team => team.id === synced.world.playerTeamId)?.name ?? player.contract.clubName }
         : player.contract } }
 }
 

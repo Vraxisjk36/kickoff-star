@@ -469,7 +469,7 @@ function assertClosedPyramid(world: ProWorldState, associationId: string,
         division.id.startsWith('second-') ? 2 :
         division.id.startsWith('third-') ? 3 :
         division.id.startsWith('fourth-') ? 4 : 5
-      const group = division.id.match(/-(\\d+)$/)?.[1]
+      const group = division.id.match(/-(\d+)$/)?.[1]
       if (!club || club.associationId !== associationId || club.tier !== tier ||
           group && club.feederGroup !== Number(group) || entrants.has(id))
         throw new Error(`Invalid ${associationId} post-promotion membership: ${id} in ${division.id}`)

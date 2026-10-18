@@ -505,7 +505,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   ensureProCareer: () => {
     const { player } = getState()
     if (!player?.turnedPro || player.proCareer) return
-    setState({ player: { ...player, proCareer: createProCareer(player.turnedPro.clubName, player.contract ? Math.min(6, Math.max(3, Math.round(player.contract.terms.weeklyWage / 500))) : 4, canStartInteractiveProCareer(player.turnedPro.countryId ?? 'eng') ? player.turnedPro.countryId : 'eng') } })
+    setState({ player: { ...player, proCareer: createProCareer(player.turnedPro.clubName, player.contract ? Math.min(6, Math.max(3, Math.round(player.contract.terms.weeklyWage / 500))) : 4, player.turnedPro.countryId && canStartInteractiveProCareer(player.turnedPro.countryId) ? player.turnedPro.countryId : 'eng') } })
     void getState().saveCurrent()
   },
   acknowledgeProSigning: () => {

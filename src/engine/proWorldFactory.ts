@@ -66,6 +66,7 @@ const namedCities: Record<string, string[]> = {
   usa: ['New York','Los Angeles','Miami','Chicago','Seattle','Atlanta','Dallas','Philadelphia'],
   jpn: ['Tokyo','Osaka','Yokohama','Nagoya','Kobe','Sapporo','Kyoto','Hiroshima'],
 }
+const regionalCityAnchors: Record<string, string[]> = {"esp":["Vigo","Barcelona","Valencia","Seville","Madrid"],"ger":["Cologne","Mannheim","Hamburg","Leipzig","Munich"],"fra":["Lille","Paris","Marseille"],"ita":["Turin","Milan","Genoa","Venice","Bologna","Florence","Rome","Naples","Palermo"],"por":["Braga","Porto","Coimbra","Faro"],"rsa":["Polokwane","Mbombela","Pretoria","Johannesburg","Rustenburg","Bloemfontein","Kimberley","Durban","Cape Town"],"bra":["Manaus","Belem","Fortaleza","Recife","Salvador","Belo Horizonte","Sao Paulo","Porto Alegre"],"sco":["Inverness","Edinburgh"]}
 const identities = ['Athletic','United','City','Sporting','Rovers','Union','Albion','Wanderers',
   'Olympic','Dynamo','Harbour','Racing','North','South','Eagles','Stars','Central','Lions','Valley','Academia']
 const firstNames = ['Amir','Daniel','Leo','Jamal','Hiro','Thabo','Mateo','Samuel','Yusuf','Kai','André','Rafael','Kofi','Milan','Santiago','Noah']
@@ -198,7 +199,7 @@ export function createProWorld(seed: number, currentDate: IsoDate): ProWorldStat
     const clubCount = topCount + secondCount + thirdCount + fourthCount + fifthCount
     for (let i = 0; i < clubCount; i++) {
       const id = `club-${league.associationId}-${padded(i + 1)}`
-      const identity = clubName(league, i)
+      let identity = clubName(league, i)
       const tier = i < topCount ? 1 : i < topCount + secondCount ? 2 : i < topCount + secondCount + thirdCount ? 3 : i < topCount + secondCount + thirdCount + fourthCount ? 4 : 5
       const offset = tier === 1 ? i : tier === 2 ? i - topCount : tier === 3 ? i - topCount - secondCount :
         tier === 4 ? i - topCount - secondCount - thirdCount : i - topCount - secondCount - thirdCount - fourthCount
@@ -218,6 +219,10 @@ export function createProWorld(seed: number, currentDate: IsoDate): ProWorldStat
       const feederGroup = grouped && tier === 3 ? Math.floor(offset / grouped.clubsPerGroup) + 1 :
         fourthGroups && tier === 4 ? Math.floor(offset / fourthGroups.clubsPerGroup) + 1 :
         fifthGroups && tier === 5 ? Math.floor(offset / fifthGroups.clubsPerGroup) + 1 : undefined
+      if (feederGroup && regionalCityAnchors[league.associationId]?.[feederGroup - 1]) {
+        const city = regionalCityAnchors[league.associationId][feederGroup - 1]
+        identity = { city, name: city + ' ' + identities[i % identities.length] + ' ' + (i + 1) }
+      }
       const club: ProClub = { id, associationId: league.associationId, tier, feederGroup,
         homeRegion: feederGroup,
         homeRegionCount: grouped && tier === 3 ? grouped.groups : fourthGroups && tier === 4 ? fourthGroups.groups :

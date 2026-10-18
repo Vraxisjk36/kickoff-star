@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { createProCareer, proRound, proTrialClubs, PRO_CAREER_DESTINATIONS } from '../src/engine/proCareer'
-import { plannedClubCount } from '../src/engine/proWorldFactory'
+import { plannedClubCount, createProWorld } from '../src/engine/proWorldFactory'
+import { recordHumanProLeagueMatch } from '../src/engine/proWorldSimulation'
 import { PRO_INTERACTIVE_COUNTRIES, canStartInteractiveProCareer } from '../src/engine/proLeagueRegistry'
 
 assert.equal(PRO_INTERACTIVE_COUNTRIES.length, 10, 'Phase 2 must permit ten professional destinations')
@@ -39,3 +40,27 @@ for (const destination of PRO_CAREER_DESTINATIONS) {
 assert.equal(createProCareer('North London Athletic').associationId, 'eng', 'Old pro careers must default to England')
 assert.equal(proRound(4,10), 1, 'Legacy ten-team week alignment changed')
 console.log('Phase 2: ten countries, trial contracts, fixtures, round calendars and legacy saves passed')
+
+const worldSeed = createProWorld(1907, '2026-08-01')
+const firstFixture = Object.values(worldSeed.fixtures).find(f => f.competitionId === 'top-esp')!
+assert.ok(firstFixture)
+const beforeRows = worldSeed.standings['top-esp']
+const updated = recordHumanProLeagueMatch(worldSeed, 'esp', firstFixture.homeId,
+  firstFixture.awayId, 4, 1)
+assert.equal(worldSeed.fixtures[firstFixture.id].result, undefined, 'Human result mutated the original save')
+assert.deepEqual(updated.fixtures[firstFixture.id].result, {homeGoals:4,awayGoals:1})
+const homeBefore = beforeRows.find(row=>row.clubId===firstFixture.homeId)!
+const awayBefore = beforeRows.find(row=>row.clubId===firstFixture.awayId)!
+const homeAfter = updated.standings['top-esp'].find(row=>row.clubId===firstFixture.homeId)!
+const awayAfter = updated.standings['top-esp'].find(row=>row.clubId===firstFixture.awayId)!
+assert.equal(homeAfter.points, homeBefore.points+3)
+assert.equal(awayAfter.points, awayBefore.points)
+assert.equal(homeAfter.goalsFor, homeBefore.goalsFor+4)
+assert.equal(awayAfter.goalsAgainst, awayBefore.goalsAgainst+4)
+assert.equal(recordHumanProLeagueMatch(updated,'esp',firstFixture.homeId,
+  firstFixture.awayId,4,1), updated, 'Replaying human result should be idempotent')
+const correction = recordHumanProLeagueMatch(updated,'esp',firstFixture.homeId,
+  firstFixture.awayId,0,2)
+assert.equal(correction.standings['top-esp'].find(row=>row.clubId===firstFixture.homeId)!.points,homeBefore.points)
+assert.equal(correction.standings['top-esp'].find(row=>row.clubId===firstFixture.awayId)!.points,awayBefore.points+3)
+console.log('Phase 2: human national-league result reconciled, corrected and saved deterministically')

@@ -3,6 +3,7 @@ import { createProWorld } from '../src/engine/proWorldFactory'
 import { advanceProWorldTo } from '../src/engine/proWorldSimulation'
 import { VERIFIED_PRO_RULES } from '../src/engine/proRulebook'
 import { PRO_PYRAMID_FLOORS } from '../src/engine/proLeagueRegistry'
+import { promotionEligible, italianSerieD } from '../src/engine/proRegionalRules'
 
 /** First-ten regression gate: division identities, league fixtures, season movement. */
 const countries = ['eng','esp','ger','fra','ita','ned','por','bra','rsa','sco'] as const
@@ -382,3 +383,34 @@ for (const id of Object.keys(first.clubs)) {
       `Invalid permanent geographic region for ${id}`)
   }
 }
+
+const licensedWorld = createProWorld(901, '2026-08-01')
+const italianFirstGroup = licensedWorld.competitions['fourth-ita-1'].entrantIds
+const reserve = licensedWorld.clubs[italianFirstGroup[0]]
+const parent = licensedWorld.competitions['third-ita-1'].entrantIds[0]
+reserve.parentClubId = parent
+assert.equal(promotionEligible(licensedWorld, reserve.id, 3), false,
+  'A reserve team may not enter the same level as its parent')
+licensedWorld.clubs[parent].tier = 2
+assert.equal(promotionEligible(licensedWorld, reserve.id, 3), true,
+  'A reserve may play below its higher-division parent')
+reserve.licenseEligible = false
+assert.equal(promotionEligible(licensedWorld, reserve.id, 3), false,
+  'Unlicensed clubs cannot gain promotion')
+reserve.licenseEligible = true
+licensedWorld.clubs[parent].tier = 3
+const italianQualifiers = italianSerieD(licensedWorld)
+assert.equal(italianQualifiers.promotedIds.length, 9)
+assert.ok(!italianQualifiers.promotedIds.includes(reserve.id),
+  'Reserve disqualified by parent-tier restriction still received promotion')
+const spanishQualifiers = first.promotionHistory!.find(h => h.associationId === 'esp-3')!
+const spanishSemis = spanishQualifiers.fixtures.filter(f => f.id.includes('cross-') &&
+  !f.id.includes('final') && f.id.endsWith('-1'))
+assert.equal(spanishSemis.length, 10, 'Spanish inter-group draw needs ten semifinal first legs')
+for (const tie of spanishSemis) {
+  const home = initial.clubs[tie.homeId], away = initial.clubs[tie.awayId]
+  assert.ok(home && away)
+  assert.ok(home.homeRegion !== away.homeRegion,
+    'Spanish cross-group semifinal cannot match clubs from same region')
+}
+console.log('Licensing, reserve-club, and geographic regional playoff restrictions passed')

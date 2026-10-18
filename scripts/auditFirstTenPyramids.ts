@@ -171,3 +171,38 @@ assert.ok([...nationalLeagueMembers].every(id => faCup.entrantIds.includes(id)),
   'English FA Cup must contain National League entrants')
 assert.ok([...nationalLeagueMembers].every(id => !eflCup.entrantIds.includes(id)),
   'English EFL Cup must exclude National League entrants')
+
+for (let group = 1; group <= 5; group++) {
+  const id = `fourth-ger-${group}`
+  const comp = initial.competitions[id]
+  assert.ok(comp, `Germany: Regionalliga group ${group} missing`)
+  assert.equal(comp.entrantIds.length, 18)
+  assert.equal(comp.format.scheduledRounds, 34)
+  const fixtures = Object.values(initial.fixtures).filter(f => f.competitionId === id)
+  assert.equal(fixtures.length, 306, `Germany: group ${group} fixture count`)
+  const members = new Set(comp.entrantIds)
+  const opponents = new Map<string, Set<string>>()
+  for (const fixture of fixtures) {
+    assert.ok(members.has(fixture.homeId) && members.has(fixture.awayId))
+    const pair = [fixture.homeId, fixture.awayId].sort().join(':')
+    const seen = opponents.get(pair) ?? new Set<string>()
+    assert.ok(!seen.has(fixture.homeId), `Germany: group ${group} repeated home pairing`)
+    seen.add(fixture.homeId)
+    opponents.set(pair, seen)
+  }
+  assert.equal(opponents.size, 153, `Germany: group ${group} pairings`)
+  for (const seen of opponents.values()) assert.equal(seen.size, 2)
+  assert.deepEqual(first.competitions[id].entrantIds, resumed.competitions[id].entrantIds,
+    `Germany: group ${group} nondeterministic entrants`)
+}
+const regionHistory = first.promotionHistory?.find(h => h.associationId === 'ger-3')
+assert.ok(regionHistory, 'Germany: regional fourth-tier exchange missing')
+assert.equal(regionHistory.promotedIds.length, 4)
+assert.equal(regionHistory.relegatedIds.length, 4)
+assert.equal(regionHistory.fixtures.length, 2, 'Germany: Regionalliga playoff requires two legs')
+assert.ok(regionHistory.fixtures.every(f => !!f.result))
+assert.ok(regionHistory.promotedIds.every(id => first.competitions['third-ger'].entrantIds.includes(id)))
+assert.ok(regionHistory.relegatedIds.every(id =>
+  Array.from({ length: 5 }, (_, i) => first.competitions[`fourth-ger-${i + 1}`].entrantIds)
+    .some(members => members.includes(id))))
+console.log('German Regionalliga five-group regression passed')

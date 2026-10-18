@@ -215,6 +215,14 @@ function exchangeGroupedDivisions(world: ProWorldState, associationId: string,
   if (promoted.length !== format.promoted || new Set(promoted).size !== promoted.length)
     throw new Error(`Invalid ${associationId} feeder qualification`)
   const relegated = upper.slice(-format.promoted).map(row => row.clubId)
+  const feederEntrants = Array.from({ length: format.groups }, (_, index) =>
+    world.seasonHistory.filter(row => row.competitionId === `third-${associationId}-${index + 1}`).at(-1)?.table ?? [])
+    .flat().map(row => row.clubId)
+  if (relegated.length !== promoted.length ||
+      new Set(relegated).size !== relegated.length ||
+      promoted.some(id => !feederEntrants.includes(id)) ||
+      relegated.some(id => !upper.some(row => row.clubId === id)))
+    throw new Error(`Invalid ${associationId} grouped third-tier exchange`)
   for (const id of promoted) world.clubs[id].tier = 2
   // Preserve group size by assigning each incoming club to a promoted vacancy.
   promoted.forEach((id, index) => {
@@ -240,6 +248,10 @@ function exchangeNationalThird(world: ProWorldState, associationId: 'fra' | 'bra
   if (promoted.length !== count || new Set(promoted).size !== count)
     throw new Error(`Invalid ${associationId} national third-tier promotion`)
   const relegated = upper.slice(-count).map(row => row.clubId)
+  if (relegated.length !== promoted.length ||
+      new Set(relegated).size !== relegated.length ||
+      promoted.some(id => !lower.some(row => row.clubId === id)))
+    throw new Error(`Invalid ${associationId} national third-tier exchange`)
   for (const id of promoted) world.clubs[id].tier = 2
   for (const id of relegated) world.clubs[id].tier = 3
   world.promotionHistory ??= []

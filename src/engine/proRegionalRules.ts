@@ -46,6 +46,7 @@ export function spanishSegundaFederacion(world: ProWorldState, lastDate: IsoDate
   {promotedIds: string[]; fixtures: ProFixture[]; readyDate: IsoDate} {
   const year = world.competitions['third-esp-1'].seasonId
   const fixtures: ProFixture[] = [], promotedIds: string[] = []
+  const qualifiers: string[][] = []
   for (let group=1;group<=5;group++) {
     const rows = rank(world.standings[`fourth-esp-${group}`])
     if(rows.length!==18) throw new Error('Missing Spanish Segunda Federación group')
@@ -54,12 +55,21 @@ export function spanishSegundaFederacion(world: ProWorldState, lastDate: IsoDate
     promotedIds.push(direct.clubId)
     const candidates = rows.filter(r=>r.clubId!==direct.clubId && promotionEligible(world,r.clubId,3)).slice(0,4)
     if(candidates.length!==4) throw new Error('Insufficient Spanish playoff-eligible clubs')
-    const semiA = tie(world,'esp',year,`g${group}-semi-a`,add(lastDate,4),
-      candidates[3].clubId,candidates[0].clubId,fixtures)
-    const semiB = tie(world,'esp',year,`g${group}-semi-b`,add(lastDate,4),
-      candidates[2].clubId,candidates[1].clubId,fixtures)
-    promotedIds.push(tie(world,'esp',year,`g${group}-final`,add(lastDate,16),semiB,semiA,fixtures))
+    qualifiers.push(candidates.map(row=>row.clubId))
   }
+  // RFEF-style inter-group draw: second-placed vs fifth, third vs fourth.
+  // Each first leg is hosted by the lower seed; every tie has a return leg.
+  const semiA:string[] = [],semiB:string[] = []
+  for(let g=0;g<5;g++){
+    semiA.push(tie(world,'esp',year,`cross-a-${g}`,add(lastDate,4),
+      qualifiers[(g+1)%5][3],qualifiers[g][0],fixtures))
+    semiB.push(tie(world,'esp',year,`cross-b-${g}`,add(lastDate,4),
+      qualifiers[(g+2)%5][2],qualifiers[g][1],fixtures))
+  }
+  for(let g=0;g<5;g++)
+    promotedIds.push(tie(world,'esp',year,`cross-final-${g}`,add(lastDate,16),
+      semiB[(g+2)%5],semiA[g],fixtures))
+  if(new Set(promotedIds).size!==10) throw new Error('Duplicate Spanish promotion berth')
   return {promotedIds,fixtures,readyDate:add(lastDate,27)}
 }
 

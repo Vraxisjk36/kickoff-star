@@ -12,12 +12,19 @@ for (const [id, profile] of Object.entries(VERIFIED_PRO_RULES)) {
   assert.equal(competition.entrantIds.length, profile.topFlightClubs)
   assert.equal(competition.format.scheduledRounds, profile.topFlightMatches)
   const fixtures = Object.values(world.fixtures).filter(f => f.competitionId === competition.id)
-  assert.equal(fixtures.length, profile.topFlightClubs * profile.topFlightMatches / 2)
+  const regularGames = id === 'sco' ? 33 : profile.topFlightMatches
+  assert.equal(fixtures.length, profile.topFlightClubs * regularGames / 2)
   for (const clubId of competition.entrantIds) {
     const home = fixtures.filter(f => f.homeId === clubId).length
     const away = fixtures.filter(f => f.awayId === clubId).length
-    assert.equal(home, profile.topFlightMatches / 2)
-    assert.equal(away, profile.topFlightMatches / 2)
+    assert.equal(home + away, regularGames)
+    if (id === 'sco') {
+      assert.ok(home === 16 || home === 17, 'Scottish pre-split home games must be 16 or 17')
+      assert.ok(away === 16 || away === 17, 'Scottish pre-split away games must be 16 or 17')
+    } else {
+      assert.equal(home, regularGames / 2)
+      assert.equal(away, regularGames / 2)
+    }
   }
   const second = world.competitions[`second-${id}`]
   assert.equal(second.entrantIds.length, profile.lowerTierClubs)
@@ -55,8 +62,8 @@ for (const id of Object.keys(LOWER_DIVISIONS)) {
 }
 assert.equal(next.seasonHistory.filter(record => record.competitionId === 'top-sco').at(-1)?.table[0].played, 38,
   'Scottish top flight has 33 games before the split and five after')
-assert.equal(next.competitions['cup-eng'].entrantIds.length, 44)
-assert.equal(next.competitions['cup-rsa'].entrantIds.length, 32)
+assert.equal(next.competitions['cup-eng'].entrantIds.length, 116)
+assert.equal(next.competitions['cup-rsa'].entrantIds.length, 149)
 const legacy = createProWorld(31, '2026-08-01')
 for (const [clubId, club] of Object.entries(legacy.clubs)) if (club.tier === 2) {
   delete legacy.clubs[clubId]

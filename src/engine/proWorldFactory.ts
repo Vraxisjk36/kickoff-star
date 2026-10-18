@@ -240,6 +240,34 @@ export function createProWorld(seed: number, currentDate: IsoDate): ProWorldStat
   return world
 }
 
+/** A migration generates one template world. Index its rosters once rather than
+ * repeatedly scanning tens of thousands of players for every incoming club.
+ */
+const generatedRosters = new WeakMap<ProWorldState, {
+  players: Map<string, ProPlayer[]>
+  prospects: Map<string, ProAcademyProspect[]>
+}>()
+function templateRosters(generated: ProWorldState) {
+  const cached = generatedRosters.get(generated)
+  if (cached) return cached
+  const players = new Map<string, ProPlayer[]>()
+  const prospects = new Map<string, ProAcademyProspect[]>()
+  for (const player of Object.values(generated.players)) {
+    if (!player.clubId) continue
+    const group = players.get(player.clubId) ?? []
+    group.push(player)
+    players.set(player.clubId, group)
+  }
+  for (const prospect of Object.values(generated.academyProspects)) {
+    const group = prospects.get(prospect.clubId) ?? []
+    group.push(prospect)
+    prospects.set(prospect.clubId, group)
+  }
+  const result = { players, prospects }
+  generatedRosters.set(generated, result)
+  return result
+}
+
 /** Existing careers gain new background leagues without replacing an active season. */
 export function hydrateNewBackgroundLeagues(world: ProWorldState, generatedWorld?: ProWorldState): void {
   const missing = PRO_LEAGUE_PLAN.filter(league => !world.competitions[league.id])
@@ -284,11 +312,11 @@ export function hydrateLowerDivisions(world: ProWorldState, generatedWorld?: Pro
       world.clubs[clubId] = club
       world.stadiums[stadiumId] = { ...generated.stadiums[template.stadiumId], id: stadiumId }
       world.managers[`manager-${clubId}`] = { ...generated.managers[`manager-${template.id}`], id: `manager-${clubId}`, clubId }
-      for (const player of Object.values(generated.players).filter(player => player.clubId === template.id)) {
+      for (const player of (templateRosters(generated).players.get(template.id) ?? [])) {
         const playerId = player.id.replace(template.id, clubId)
         world.players[playerId] = { ...player, id: playerId, clubId }
       }
-      for (const prospect of Object.values(generated.academyProspects).filter(player => player.clubId === template.id)) {
+      for (const prospect of (templateRosters(generated).prospects.get(template.id) ?? [])) {
         const prospectId = prospect.id.replace(template.id, clubId)
         world.academyProspects[prospectId] = { ...prospect, id: prospectId, clubId }
       }
@@ -315,11 +343,11 @@ export function hydrateDeepDivisions(world: ProWorldState, generatedWorld?: ProW
         finances: { ...structuredClone(template.finances), clubId } }
       world.stadiums[stadiumId] = { ...generated.stadiums[template.stadiumId], id: stadiumId }
       world.managers[`manager-${clubId}`] = { ...generated.managers[`manager-${template.id}`], id: `manager-${clubId}`, clubId }
-      for (const player of Object.values(generated.players).filter(player => player.clubId === template.id)) {
+      for (const player of (templateRosters(generated).players.get(template.id) ?? [])) {
         const playerId = player.id.replace(template.id, clubId)
         world.players[playerId] = { ...player, id: playerId, clubId }
       }
-      for (const prospect of Object.values(generated.academyProspects).filter(item => item.clubId === template.id)) {
+      for (const prospect of (templateRosters(generated).prospects.get(template.id) ?? [])) {
         const prospectId = prospect.id.replace(template.id, clubId)
         world.academyProspects[prospectId] = { ...prospect, id: prospectId, clubId }
       }
@@ -346,11 +374,11 @@ export function hydrateFifthDivisions(world: ProWorldState, generatedWorld?: Pro
         finances: { ...structuredClone(template.finances), clubId } }
       world.stadiums[stadiumId] = { ...generated.stadiums[template.stadiumId], id: stadiumId }
       world.managers[`manager-${clubId}`] = { ...generated.managers[`manager-${template.id}`], id: `manager-${clubId}`, clubId }
-      for (const player of Object.values(generated.players).filter(item => item.clubId === template.id)) {
+      for (const player of (templateRosters(generated).players.get(template.id) ?? [])) {
         const playerId = player.id.replace(template.id, clubId)
         world.players[playerId] = { ...player, id: playerId, clubId }
       }
-      for (const prospect of Object.values(generated.academyProspects).filter(item => item.clubId === template.id)) {
+      for (const prospect of (templateRosters(generated).prospects.get(template.id) ?? [])) {
         const prospectId = prospect.id.replace(template.id, clubId)
         world.academyProspects[prospectId] = { ...prospect, id: prospectId, clubId }
       }
@@ -378,11 +406,11 @@ export function hydrateGroupedFourthDivisions(world: ProWorldState, generatedWor
         finances: { ...structuredClone(template.finances), clubId } }
       world.stadiums[stadiumId] = { ...generated.stadiums[template.stadiumId], id: stadiumId }
       world.managers[`manager-${clubId}`] = { ...generated.managers[`manager-${template.id}`], id: `manager-${clubId}`, clubId }
-      for (const player of Object.values(generated.players).filter(item => item.clubId === template.id)) {
+      for (const player of (templateRosters(generated).players.get(template.id) ?? [])) {
         const playerId = player.id.replace(template.id, clubId)
         world.players[playerId] = { ...player, id: playerId, clubId }
       }
-      for (const prospect of Object.values(generated.academyProspects).filter(item => item.clubId === template.id)) {
+      for (const prospect of (templateRosters(generated).prospects.get(template.id) ?? [])) {
         const prospectId = prospect.id.replace(template.id, clubId)
         world.academyProspects[prospectId] = { ...prospect, id: prospectId, clubId }
       }
@@ -410,11 +438,11 @@ export function hydrateGroupedFifthDivisions(world: ProWorldState, generatedWorl
         finances: { ...structuredClone(template.finances), clubId } }
       world.stadiums[stadiumId] = { ...generated.stadiums[template.stadiumId], id: stadiumId }
       world.managers[`manager-${clubId}`] = { ...generated.managers[`manager-${template.id}`], id: `manager-${clubId}`, clubId }
-      for (const player of Object.values(generated.players).filter(item => item.clubId === template.id)) {
+      for (const player of (templateRosters(generated).players.get(template.id) ?? [])) {
         const playerId = player.id.replace(template.id, clubId)
         world.players[playerId] = { ...player, id: playerId, clubId }
       }
-      for (const prospect of Object.values(generated.academyProspects).filter(item => item.clubId === template.id)) {
+      for (const prospect of (templateRosters(generated).prospects.get(template.id) ?? [])) {
         const prospectId = prospect.id.replace(template.id, clubId)
         world.academyProspects[prospectId] = { ...prospect, id: prospectId, clubId }
       }
@@ -440,11 +468,11 @@ export function hydrateGroupedDivisions(world: ProWorldState, generatedWorld?: P
         finances: { ...structuredClone(template.finances), clubId } }
       world.stadiums[stadiumId] = { ...generated.stadiums[template.stadiumId], id: stadiumId }
       world.managers[`manager-${clubId}`] = { ...generated.managers[`manager-${template.id}`], id: `manager-${clubId}`, clubId }
-      for (const player of Object.values(generated.players).filter(player => player.clubId === template.id)) {
+      for (const player of (templateRosters(generated).players.get(template.id) ?? [])) {
         const playerId = player.id.replace(template.id, clubId)
         world.players[playerId] = { ...player, id: playerId, clubId }
       }
-      for (const prospect of Object.values(generated.academyProspects).filter(item => item.clubId === template.id)) {
+      for (const prospect of (templateRosters(generated).prospects.get(template.id) ?? [])) {
         const prospectId = prospect.id.replace(template.id, clubId)
         world.academyProspects[prospectId] = { ...prospect, id: prospectId, clubId }
       }

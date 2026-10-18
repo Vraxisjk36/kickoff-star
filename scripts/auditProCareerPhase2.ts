@@ -149,3 +149,16 @@ assert.equal(Math.max(...scottishSynced.world.divisions[1].fixtures.map(f => f.w
 assert.equal(Array.from({ length: 44 }, (_, index) => proRound(index + 1, 10, 36))
   .filter(value => value !== null).length, 36)
 console.log('Phase 2: 46-round EFL and four-leg Scottish lower league calendars passed')
+
+const regionalLeague = careerWorld.competitions['third-esp-1']
+const regionalClub = regionalLeague.entrantIds[0]
+const regionalCareer = createProCareer(careerWorld.clubs[regionalClub].name, 4, 'esp')
+const regionalMapping = Object.fromEntries(regionalCareer.world.divisions[1].teams.map((team, i) =>
+  [team.id, i === 0 ? regionalClub : careerWorld.competitions['top-esp'].entrantIds[i]]))
+const regionalSynced = syncPlayableProLeague({
+  ...regionalCareer, clubWorldIds: regionalMapping, backgroundWorld: careerWorld,
+})
+assert.equal(regionalSynced.activeCompetitionId, 'third-esp-1')
+assert.equal(regionalSynced.world.divisions[1].teams.length, regionalLeague.entrantIds.length)
+assert.equal(new Set(Object.values(regionalSynced.clubWorldIds!)).size, regionalLeague.entrantIds.length)
+console.log('Phase 2: grouped regional relegation preserves playable club membership')

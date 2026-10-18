@@ -80,3 +80,25 @@ for (const [country, expectedTeams, expectedGames] of [['bra', 8, 24], ['por', 8
     assert.equal(games[0].home, games[1].away, `${country}: feeder return leg must reverse venue`)
   }
 }
+
+for (const [country, expectedMatches] of [['esp', 12], ['ita', 14]] as const) {
+  const history = first.promotionHistory?.find(h => h.associationId === `${country}-2`)
+  assert.ok(history, `${country}: missing third-tier playoff history`)
+  assert.equal(history.fixtures.length, expectedMatches, `${country}: wrong two-leg playoff fixture count`)
+  const occupied = new Set<string>()
+  const pairings = new Map<string, typeof history.fixtures>()
+  for (const fixture of history.fixtures) {
+    assert.ok(fixture.result, `${country}: unfinished playoff fixture`)
+    for (const id of [fixture.homeId, fixture.awayId]) {
+      const key = `${fixture.kickoffDate}:${id}`
+      assert.ok(!occupied.has(key), `${country}: double-booked playoff club ${key}`)
+      occupied.add(key)
+    }
+    const key = [fixture.homeId, fixture.awayId].sort().join(':')
+    pairings.set(key, [...(pairings.get(key) ?? []), fixture])
+  }
+  for (const games of pairings.values()) {
+    assert.equal(games.length, 2, `${country}: playoff tie must have two legs`)
+    assert.equal(games[0].homeId, games[1].awayId, `${country}: playoff return leg must reverse venue`)
+  }
+}

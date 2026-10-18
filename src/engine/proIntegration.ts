@@ -25,7 +25,9 @@ export function attachProWorld(state: ProCareerState, player: Player): ProCareer
   const date = addDays('2026-08-01', (state.season - 1) * 364 + (state.week - 1) * 7)
   const world = createProWorld(player.id.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) + 17, date)
   const playable = state.world.divisions[1].teams
-  const global = Object.values(world.clubs).filter(club => club.associationId === 'eng').sort((a, b) => a.id.localeCompare(b.id))
+  const country = state.associationId ?? 'eng'
+  const global = world.competitions[`top-${country}`]?.entrantIds.map(id => world.clubs[id]) ?? []
+  if (global.length !== playable.length) throw new Error(`Professional league size mismatch: ${country}`)
   const clubWorldIds = Object.fromEntries(playable.map((team, index) => {
     global[index].name = team.name
     return [team.id, global[index].id]
@@ -123,7 +125,7 @@ export function advanceLivingWorld(previous: ProCareerState, next: ProCareerStat
 
 export function generateMarketOffers(state: ProCareerState, player: Player): ProMarketOffer[] {
   const world = state.backgroundWorld
-  if (!world || !state.clubWorldIds || !state.date || !registrationOpen('eng', state.date)) return []
+  if (!world || !state.clubWorldIds || !state.date || !registrationOpen(state.associationId ?? 'eng', state.date)) return []
   const base = player.contract?.terms.weeklyWage ?? 1200
   return state.world.divisions[1].teams.filter(team => team.id !== state.world.playerTeamId)
     .map(team => {

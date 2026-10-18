@@ -121,6 +121,15 @@ export const PRO_GROUPED_LEAGUE_PLAN: readonly ProLeaguePlan[] = PRO_LEAGUE_PLAN
   .flatMap(league => Array.from({ length: GROUPED_THIRD[league.associationId].groups }, (_, group) =>
     ({ ...league, id: `third-${league.associationId}-${group + 1}`, mode: 'simulated' as const })))
 
+/** Hard stop for domestic relegation: these are the deepest simulated tiers.
+ * A team can move up from the floor and another takes its place, but no team
+ * is sent into an unimplemented lower league. Keep existing floor clubs active.
+ */
+export const PRO_PYRAMID_FLOORS: Readonly<Record<string, 3 | 4 | 5>> = {
+  eng: 5, esp: 4, ger: 4, fra: 4, ita: 4,
+  ned: 3, por: 4, bra: 4, rsa: 4, sco: 5,
+}
+
 export function validateProLeaguePlan(leagues: readonly ProLeaguePlan[] = PRO_LEAGUE_PLAN): string[] {
   const issues: string[] = []
   if (leagues.length !== 100) issues.push(`Expected 100 leagues; found ${leagues.length}`)

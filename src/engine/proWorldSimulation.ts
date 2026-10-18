@@ -128,12 +128,21 @@ function exchangeDivisions(world: ProWorldState, associationId: string, playoffW
   const second = ordered(world.seasonHistory.filter(row => row.competitionId === `second-${associationId}`).at(-1)!.table)
   let relegated = top.slice(-rule.relegated).map(row => row.clubId)
   let promoted = second.slice(0, rule.promoted).map(row => row.clubId)
-  if (['eng', 'esp'].includes(associationId) && playoffWinner)
+  if (['eng', 'esp', 'ita'].includes(associationId) && playoffWinner)
     promoted = [...second.slice(0, 2).map(row => row.clubId), playoffWinner]
-  if (['ger', 'fra', 'sco'].includes(associationId) && playoffWinner &&
+  if (['ger', 'fra', 'sco', 'ned'].includes(associationId) && playoffWinner &&
       playoffWinner !== top.at(associationId === 'sco' ? -2 : -3)!.clubId) {
     promoted = [...promoted, playoffWinner]
     relegated = [...relegated, top.at(associationId === 'sco' ? -2 : -3)!.clubId]
+  }
+  if (associationId === 'por' && playoffWinner && playoffWinner !== top.at(-3)!.clubId) {
+    promoted = [...promoted, playoffWinner]
+    relegated = [...relegated, top.at(-3)!.clubId]
+  }
+  if (associationId === 'bra' && playoffWinner && Number(world.competitions['top-bra'].seasonId) >= 2026) {
+    const otherWinner = world.promotionPlayoffs?.['promotion-bra']?.secondWinnerId
+    if (!otherWinner || otherWinner === playoffWinner) throw new Error('Incomplete Brazilian promotion playoff')
+    promoted = [second[0].clubId, second[1].clubId, playoffWinner, otherWinner]
   }
   if (associationId === 'rsa' && playoffWinner) {
     promoted = [second[0].clubId]
@@ -215,11 +224,21 @@ function advanceLeaguesTo(world: ProWorldState, targetDate: IsoDate): void {
         const extended = scheduleScottishSplit(world, batches[0])
         if (extended !== batches[0]) { fixtureIndex.set('top-sco', extended); continue }
       }
+      // Série B finishes before Série A. Its two promotion ties must exist in
+      // November even while top-flight league fixtures remain on the calendar.
+      if (league.associationId === 'bra' && Number(world.competitions[league.id].seasonId) >= 2026 &&
+          batches[1].every(fixture => !!fixture.result)) {
+        const lastLowerDate = batches[1].at(-1)!.kickoffDate
+        advancePromotionPlayoff(world, 'bra', world.competitions[league.id].seasonId, lastLowerDate,
+          targetDate, world.standings[league.id], world.standings[lower!.id])
+      }
       if (!batches.every(fixtures => fixtures.every(fixture => !!fixture.result))) break
       let playoffWinner: string | undefined
-      if (['eng', 'rsa', 'esp', 'ger', 'fra', 'sco'].includes(league.associationId)) {
-        const lastDate = batches.flat().reduce((latest, fixture) => fixture.kickoffDate > latest ? fixture.kickoffDate : latest, '0000-01-01')
-        playoffWinner = advancePromotionPlayoff(world, league.associationId as 'eng' | 'rsa' | 'esp' | 'ger' | 'fra' | 'sco', world.competitions[league.id].seasonId,
+      if (['eng', 'rsa', 'esp', 'ger', 'fra', 'sco', 'por', 'ita', 'ned'].includes(league.associationId) ||
+          league.associationId === 'bra' && Number(world.competitions[league.id].seasonId) >= 2026) {
+        const playoffBatches = league.associationId === 'bra' ? batches[1] : batches.flat()
+        const lastDate = playoffBatches.reduce((latest, fixture) => fixture.kickoffDate > latest ? fixture.kickoffDate : latest, '0000-01-01')
+        playoffWinner = advancePromotionPlayoff(world, league.associationId as 'eng' | 'rsa' | 'esp' | 'ger' | 'fra' | 'sco' | 'por' | 'bra' | 'ita' | 'ned', world.competitions[league.id].seasonId,
           lastDate, targetDate, world.standings[league.id], world.standings[lower!.id]) ?? undefined
         if (!playoffWinner) break
       }

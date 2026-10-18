@@ -24,9 +24,9 @@ assert.ok(initial.length < 32 * 1024 * 1024)
 for (const competition of Object.values(world.competitions)) {
   const fixtures = Object.values(world.fixtures).filter(fixture => fixture.competitionId === competition.id)
   const n = competition.entrantIds.length
-  assert.equal(fixtures.length, competition.id === 'top-sco' ? 198 : n * (n - 1), `${competition.id} fixture count`)
+  assert.equal(fixtures.length, competition.id === 'top-sco' ? 198 : n * (n - 1) * (competition.id === 'second-sco' ? 2 : 1), `${competition.id} fixture count`)
   const pairs = new Set(fixtures.map(fixture => `${fixture.homeId}:${fixture.awayId}`))
-  assert.equal(pairs.size, competition.id === 'top-sco' ? 132 : fixtures.length,
+  assert.equal(pairs.size, competition.id === 'top-sco' ? 132 : competition.id === 'second-sco' ? fixtures.length / 2 : fixtures.length,
     `${competition.id} repeated home/away tie`)
   const clubDates = new Set<string>()
   for (const fixture of fixtures) for (const id of [fixture.homeId, fixture.awayId]) {
@@ -75,7 +75,7 @@ const tenYears = advanceProWorldTo(world, '2036-01-01')
 const twentyYears = advanceProWorldTo(tenYears, '2046-01-01')
 const elapsed = Math.round(performance.now() - start)
 assert.equal(twentyYears.championHistory.filter(record => record.competitionId.startsWith('top-')).length,
-  100 * 20 + 18, 'every league season archived')
+  100 * 20 + 17, 'every league season archived; Brazil 2026 begins in January')
 assert.ok(twentyYears.championHistory.filter(record => record.competitionId.startsWith('second-')).length >=
   PRO_LOWER_LEAGUE_PLAN.length * 20, 'every lower-division season archived')
 assert.ok(twentyYears.seasonHistory.length <= 220 * 9)

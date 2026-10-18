@@ -91,7 +91,7 @@ export interface ProCompetition {
   seasonId: string
   entrantIds: ProWorldId[]
   /** League format is frozen for this edition; later editions can change. */
-  format: { legs: 1 | 2; scheduledRounds: number }
+  format: { legs: 1 | 2 | 4; scheduledRounds: number }
   splitScheduled?: boolean
   /** Frozen fictional rules edition; the real association rules remain research pending. */
   tournament?: {
@@ -142,6 +142,8 @@ export interface ProPromotionPlayoff {
   stage: 'eliminator' | 'semifinal' | 'final' | 'mini-league' | 'completed'
   fixtureIds: string[]
   winnerId?: string
+  secondWinnerId?: string
+  qualifierIds?: string[]
   topFifteenthId?: string
   directPromotedId?: string
 }

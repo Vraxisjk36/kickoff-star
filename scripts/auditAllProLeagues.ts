@@ -25,7 +25,7 @@ function inspectFixtures(world: typeof initial) {
     const fixtures = byCompetition.get(league.id) ?? []
     const clubCount = comp.entrantIds.length
     const split = league.id === 'top-sco' && comp.splitScheduled
-    assert.equal(fixtures.length, clubCount * (clubCount - 1) * (league.id === 'top-sco' ? 3 : 2) / 2 + (split ? 30 : 0),
+    assert.equal(fixtures.length, clubCount * (clubCount - 1) * (league.id === 'top-sco' ? 3 : league.id === 'second-sco' ? 4 : 2) / 2 + (split ? 30 : 0),
       `${league.id} fixture count`)
     const pairings = new Map<string, number>()
     const home = new Map<string, number>(), away = new Map<string, number>()
@@ -37,7 +37,8 @@ function inspectFixtures(world: typeof initial) {
       home.set(fixture.homeId, (home.get(fixture.homeId) ?? 0) + 1)
       away.set(fixture.awayId, (away.get(fixture.awayId) ?? 0) + 1)
     }
-    for (const count of pairings.values()) assert.ok(league.id === 'top-sco' ? count === 3 || split && count === 4 : count === 2,
+    for (const count of pairings.values()) assert.ok(league.id === 'top-sco' ? count === 3 || split && count === 4 :
+      count === (league.id === 'second-sco' ? 4 : 2),
       `${league.id} duplicate/missing pair`)
     for (const clubId of comp.entrantIds) {
       assert.equal((home.get(clubId) ?? 0) + (away.get(clubId) ?? 0), split ? 38 : league.id === 'top-sco' ? 33 : comp.format.scheduledRounds,

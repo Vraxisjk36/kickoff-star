@@ -15,7 +15,7 @@ export interface ProRuleProfile {
   implementation: 'partial'
   sources: readonly string[]
 }
-export const VERIFIED_PRO_RULES: Record<'eng' | 'rsa' | 'esp' | 'ger' | 'fra' | 'ita' | 'ned', ProRuleProfile> = {
+export const VERIFIED_PRO_RULES: Record<'eng' | 'rsa' | 'esp' | 'ger' | 'fra' | 'ita' | 'ned' | 'por' | 'bra' | 'sco', ProRuleProfile> = {
   eng: { associationId: 'eng', edition: '2026/27', topFlightClubs: 20, topFlightMatches: 38,
     directRelegation: 3, relegationPlayoff: 0, lowerTierClubs: 24, lowerTierMatches: 46,
     domesticCups: ['cup-eng', 'league-cup-eng'], implementation: 'partial',
@@ -46,9 +46,22 @@ export const VERIFIED_PRO_RULES: Record<'eng' | 'rsa' | 'esp' | 'ger' | 'fra' | 
   ita: { associationId: 'ita', edition: '2026/27', topFlightClubs: 20, topFlightMatches: 38,
     directRelegation: 3, relegationPlayoff: 0, lowerTierClubs: 20, lowerTierMatches: 38,
     domesticCups: ['cup-ita', 'super-cup-ita'], implementation: 'partial',
-    sources: ['https://www.legaseriea.it/en'] },
+    sources: ['https://www.legaseriea.it/en', 'https://www.legab.it/news/gli-orari-di-playoff-e-playout'] },
   ned: { associationId: 'ned', edition: '2026/27', topFlightClubs: 18, topFlightMatches: 34,
     directRelegation: 2, relegationPlayoff: 1, lowerTierClubs: 20, lowerTierMatches: 38,
     domesticCups: ['cup-ned', 'super-cup-ned'], implementation: 'partial',
-    sources: ['https://eredivisie.nl/competitie/'] },
+    sources: ['https://eredivisie.nl/competitie/', 'https://www.knvb.nl/downloads/bestand/30190/doc'] },
+  por: { associationId: 'por', edition: '2026/27', topFlightClubs: 18, topFlightMatches: 34,
+    directRelegation: 2, relegationPlayoff: 1, lowerTierClubs: 18, lowerTierMatches: 34,
+    domesticCups: ['cup-por', 'league-cup-por', 'super-cup-por'], implementation: 'partial',
+    sources: ['https://www.ligaportugal.pt/news/28154/definido-o-emparelhamento-dos-playoffs-202627'] },
+  bra: { associationId: 'bra', edition: '2026', topFlightClubs: 20, topFlightMatches: 38,
+    directRelegation: 4, relegationPlayoff: 0, lowerTierClubs: 20, lowerTierMatches: 38,
+    domesticCups: ['cup-bra', 'super-cup-bra'], implementation: 'partial',
+    sources: ['https://www.cbf.com.br/futebol-brasileiro/noticias/undefined/ceara-x-guarani/cbf-divulga-documentos-tecnicos-do-brasileirao-da-serie-b-de-2026'] },
+  sco: { associationId: 'sco', edition: '2026/27', topFlightClubs: 12, topFlightMatches: 38,
+    directRelegation: 1, relegationPlayoff: 1, lowerTierClubs: 10, lowerTierMatches: 36,
+    domesticCups: ['cup-sco', 'league-cup-sco'], implementation: 'partial',
+    sources: ['https://spfl.co.uk/pages/premiership', 'https://spfl.co.uk/news/play-off-schedule-confirmed',
+      'https://spfl.co.uk/news/spfl-fixtures-for-202627'] },
 }

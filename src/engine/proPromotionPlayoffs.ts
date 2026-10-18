@@ -43,8 +43,34 @@ const fixturesFor = (world: ProWorldState, state: ProPromotionPlayoff, round: st
   state.fixtureIds.map(id => world.fixtures[id]).filter(fixture => fixture.id.includes(`-${round}-`))
 const allPlayed = (fixtures: ProFixture[]) => fixtures.every(fixture => !!fixture.result)
 
+function dutchQualifiers(world: ProWorldState, seasonId: string, lower: ProStandingRow[]): string[] {
+  const chosen = new Set<string>()
+  for (const [start, end] of [[1, 10], [11, 19], [21, 28], [29, 38]]) {
+    const period = new Map(lower.map(row => [row.clubId, { ...row, points: 0, goalsFor: 0, goalsAgainst: 0 }]))
+    for (const fixture of Object.values(world.fixtures)) {
+      if (fixture.competitionId !== 'second-ned' || !fixture.id.startsWith(`fixture-second-ned-${seasonId}-`) || !fixture.result) continue
+      const round = Number(fixture.id.slice(`fixture-second-ned-${seasonId}-`.length).split('-')[0])
+      if (round < start || round > end) continue
+      const home = period.get(fixture.homeId)!, away = period.get(fixture.awayId)!
+      home.goalsFor += fixture.result.homeGoals; home.goalsAgainst += fixture.result.awayGoals
+      away.goalsFor += fixture.result.awayGoals; away.goalsAgainst += fixture.result.homeGoals
+      if (fixture.result.homeGoals > fixture.result.awayGoals) home.points += 3
+      else if (fixture.result.homeGoals < fixture.result.awayGoals) away.points += 3
+      else { home.points++; away.points++ }
+    }
+    const eligible = ranking([...period.values()]).find(row => !chosen.has(row.clubId) &&
+      lower.findIndex(candidate => candidate.clubId === row.clubId) >= 2)
+    if (eligible) chosen.add(eligible.clubId)
+  }
+  for (const row of lower.slice(2)) {
+    if (chosen.size === 6) break
+    chosen.add(row.clubId)
+  }
+  return lower.filter(row => chosen.has(row.clubId)).map(row => row.clubId)
+}
+
 /** Advance the saved playoff bracket to a date, returning null until the decisive result exists. */
-export function advancePromotionPlayoff(world: ProWorldState, associationId: 'eng' | 'rsa' | 'esp' | 'ger' | 'fra' | 'sco', seasonId: string,
+export function advancePromotionPlayoff(world: ProWorldState, associationId: 'eng' | 'rsa' | 'esp' | 'ger' | 'fra' | 'sco' | 'por' | 'bra' | 'ita' | 'ned', seasonId: string,
   lastLeagueDate: IsoDate, targetDate: IsoDate, topRows: ProStandingRow[], lowerRows: ProStandingRow[]): string | null {
   world.promotionPlayoffs ??= {}
   const id = `promotion-${associationId}`
@@ -59,10 +85,14 @@ export function advancePromotionPlayoff(world: ProWorldState, associationId: 'en
   if (!state || state.seasonId !== seasonId) {
     state = { associationId, seasonId, stage: associationId === 'eng' ? Number(seasonId) < 2026 ? 'semifinal' : 'eliminator'
       : associationId === 'rsa' ? 'mini-league' : associationId === 'esp' ? 'semifinal'
-        : associationId === 'fra' || associationId === 'sco' ? 'eliminator' : 'final', fixtureIds: [],
+        : associationId === 'fra' || associationId === 'sco' || associationId === 'ita' || associationId === 'ned' ? 'eliminator' : 'final', fixtureIds: [],
+      ...(associationId === 'ned' ? { qualifierIds: dutchQualifiers(world, seasonId, lower) } : {}),
       ...(associationId === 'rsa' ? { topFifteenthId: top.at(-2)!.clubId, directPromotedId: lower[0].clubId } : {}) }
     world.promotionPlayoffs[id] = state
-    if (associationId === 'eng') {
+    if (associationId === 'ita' && lower[2].points - lower[3].points > 14) {
+      state.winnerId = lower[2].clubId
+      state.stage = 'completed'
+    } else if (associationId === 'eng') {
       if (Number(seasonId) < 2026) {
         [[lower[2].clubId, lower[5].clubId], [lower[3].clubId, lower[4].clubId]].forEach(([seed, opponent], index) => {
           createFixture(world, state!, 'semifinal', index * 2, opponent, seed, addDays(lastLeagueDate, 4), occupied)
@@ -85,8 +115,26 @@ export function advancePromotionPlayoff(world: ProWorldState, associationId: 'en
     } else if (associationId === 'ger') {
       createFixture(world, state, 'final', 0, lower[2].clubId, top.at(-3)!.clubId, addDays(lastLeagueDate, 5), occupied)
       createFixture(world, state, 'final', 1, top.at(-3)!.clubId, lower[2].clubId, addDays(lastLeagueDate, 9), occupied)
+    } else if (associationId === 'por') {
+      createFixture(world, state, 'final', 0, lower[2].clubId, top.at(-3)!.clubId, addDays(lastLeagueDate, 5), occupied)
+      createFixture(world, state, 'final', 1, top.at(-3)!.clubId, lower[2].clubId, addDays(lastLeagueDate, 9), occupied)
+    } else if (associationId === 'bra') {
+      [[lower[2].clubId, lower[5].clubId], [lower[3].clubId, lower[4].clubId]].forEach(([seed, opponent], index) => {
+        createFixture(world, state!, 'final', index * 2, opponent, seed, addDays(lastLeagueDate, 4), occupied)
+        createFixture(world, state!, 'final', index * 2 + 1, seed, opponent, addDays(lastLeagueDate, 8), occupied)
+      })
     } else if (associationId === 'fra') {
       createFixture(world, state, 'eliminator', 0, lower[3].clubId, lower[4].clubId, addDays(lastLeagueDate, 4), occupied)
+    } else if (associationId === 'ita') {
+      createFixture(world, state, 'eliminator', 0, lower[5].clubId, lower[6].clubId, addDays(lastLeagueDate, 4), occupied)
+      createFixture(world, state, 'eliminator', 1, lower[4].clubId, lower[7].clubId, addDays(lastLeagueDate, 4), occupied)
+    } else if (associationId === 'ned') {
+      const q = state.qualifierIds!
+      for (let index = 0; index < 3; index++) {
+        const seed = q[index], opponent = q[5 - index]
+        createFixture(world, state, 'eliminator', index * 2, opponent, seed, addDays(lastLeagueDate, 4), occupied)
+        createFixture(world, state, 'eliminator', index * 2 + 1, seed, opponent, addDays(lastLeagueDate, 8), occupied)
+      }
     } else {
       createFixture(world, state, 'eliminator', 0, lower[3].clubId, lower[2].clubId, addDays(lastLeagueDate, 4), occupied)
       createFixture(world, state, 'eliminator', 1, lower[2].clubId, lower[3].clubId, addDays(lastLeagueDate, 8), occupied)
@@ -118,6 +166,21 @@ export function advancePromotionPlayoff(world: ProWorldState, associationId: 'en
       } else if (associationId === 'fra') {
         createFixture(world, state, 'semifinal', 0, lower[2].clubId,
           winner(world, current, lower[3].clubId), addDays(lastLeagueDate, 8), occupied)
+      } else if (associationId === 'ita') {
+        const matchups: [string, string][] = [[lower[2].clubId, winner(world, [current[0]], lower[5].clubId, true)],
+          [lower[3].clubId, winner(world, [current[1]], lower[4].clubId, true)]]
+        matchups.forEach(([seed, opponent], index) => {
+          createFixture(world, state!, 'semifinal', index * 2, opponent, seed, addDays(lastLeagueDate, 9), occupied)
+          createFixture(world, state!, 'semifinal', index * 2 + 1, seed, opponent, addDays(lastLeagueDate, 13), occupied)
+        })
+      } else if (associationId === 'ned') {
+        const q = state.qualifierIds!
+        const survivors = [0, 1, 2].map(index => winner(world, current.slice(index * 2, index * 2 + 2), q[index]))
+        const incumbent = top.at(-3)!.clubId
+        for (const [index, [home, away]] of ([[survivors[1], survivors[0]], [survivors[2], incumbent]] as const).entries()) {
+          createFixture(world, state, 'semifinal', index * 2, home, away, addDays(lastLeagueDate, 12), occupied)
+          createFixture(world, state, 'semifinal', index * 2 + 1, away, home, addDays(lastLeagueDate, 16), occupied)
+        }
       } else {
         const survivors = current.map((fixture, index) => winner(world, [fixture], lower[4 + index].clubId))
         const low = survivors.sort((a, b) => lower.findIndex(row => row.clubId === a) - lower.findIndex(row => row.clubId === b))
@@ -134,17 +197,34 @@ export function advancePromotionPlayoff(world: ProWorldState, associationId: 'en
         const incumbent = top.at(associationId === 'sco' ? -2 : -3)!.clubId
         createFixture(world, state, 'final', 0, challenger, incumbent, addDays(lastLeagueDate, associationId === 'sco' ? 20 : 13), occupied)
         createFixture(world, state, 'final', 1, incumbent, challenger, addDays(lastLeagueDate, associationId === 'sco' ? 24 : 17), occupied)
+      } else if (associationId === 'ned') {
+        const q = state.qualifierIds!
+        const finalists = [0, 1].map(index => winner(world, current.slice(index * 2, index * 2 + 2),
+          index === 0 ? q[0] : top.at(-3)!.clubId))
+        const incumbent = top.at(-3)!.clubId
+        const [first, second] = finalists.includes(incumbent) ? [finalists.find(id => id !== incumbent)!, incumbent] : finalists
+        createFixture(world, state, 'final', 0, first, second, addDays(lastLeagueDate, 20), occupied)
+        createFixture(world, state, 'final', 1, second, first, addDays(lastLeagueDate, 24), occupied)
       } else {
-        const finalists = [0, 1].map(index => winner(world, current.slice(index * 2, index * 2 + 2), lower[2 + index].clubId, associationId === 'esp'))
-        const seeded = associationId === 'esp' ? finalists.sort((a, b) => lower.findIndex(row => row.clubId === a) - lower.findIndex(row => row.clubId === b)) : finalists
-        createFixture(world, state, 'final', 0, associationId === 'esp' ? seeded[1] : seeded[0],
-          associationId === 'esp' ? seeded[0] : seeded[1], addDays(lastLeagueDate, 20), occupied)
-        if (associationId === 'esp') createFixture(world, state, 'final', 1, seeded[0], seeded[1], addDays(lastLeagueDate, 24), occupied)
+        const rankedTie = associationId === 'esp' || associationId === 'ita'
+        const finalists = [0, 1].map(index => winner(world, current.slice(index * 2, index * 2 + 2), lower[2 + index].clubId, rankedTie))
+        const seeded = rankedTie ? finalists.sort((a, b) => lower.findIndex(row => row.clubId === a) - lower.findIndex(row => row.clubId === b)) : finalists
+        createFixture(world, state, 'final', 0, rankedTie ? seeded[1] : seeded[0],
+          rankedTie ? seeded[0] : seeded[1], addDays(lastLeagueDate, 20), occupied)
+        if (rankedTie) createFixture(world, state, 'final', 1, seeded[0], seeded[1], addDays(lastLeagueDate, 24), occupied)
       }
       state.stage = 'final'
     } else if (state.stage === 'final') {
-      state.winnerId = winner(world, current,
-        associationId === 'esp' ? current.at(-1)!.homeId : current[0].homeId, associationId === 'esp')
+      if (associationId === 'bra') {
+        state.winnerId = winner(world, current.slice(0, 2), lower[2].clubId)
+        state.secondWinnerId = winner(world, current.slice(2, 4), lower[3].clubId)
+      } else {
+        const rankedTie = associationId === 'esp' || associationId === 'ita'
+        const higher = rankedTie ? current.at(-1)!.homeId : current[0].homeId
+        const other = current[0].homeId === higher ? current[0].awayId : current[0].homeId
+        state.winnerId = winner(world, current, higher, rankedTie &&
+          (associationId !== 'ita' || lower.find(row => row.clubId === higher)?.points !== lower.find(row => row.clubId === other)?.points))
+      }
       state.stage = 'completed'
     } else break
     if (state.stage === 'completed') return state.winnerId!

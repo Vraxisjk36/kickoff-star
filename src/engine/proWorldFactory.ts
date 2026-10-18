@@ -17,7 +17,8 @@ const springStart = new Set(['bra','arg','col','ury','chl','ecu','pry','per','bo
 const autumnStart = new Set(['aus','nzl'])
 const julyStart = new Set(['mex'])
 export function proCalendarProfile(associationId: string, startYear: number): SeasonCalendarProfile {
-  const startMonth = springStart.has(associationId) ? 2 : autumnStart.has(associationId) ? 10 : julyStart.has(associationId) ? 7 : 8
+  const startMonth = associationId === 'bra' && startYear >= 2026 ? 1
+    : springStart.has(associationId) ? 2 : autumnStart.has(associationId) ? 10 : julyStart.has(associationId) ? 7 : 8
   const endYear = startMonth >= 7 ? startYear + 1 : startYear
   const endMonth = startMonth === 10 ? 6 : startMonth >= 7 ? 5 : 11
   const breaks = associationId === 'esp' ? [{ start: `${startYear}-12-22`, end: `${endYear}-01-04` }] : []
@@ -112,17 +113,22 @@ export function newProLeagueSeason(world: ProWorldState, league: ProLeaguePlan, 
     (lower ? club.tier === 2 : club.tier !== 2)).map(club => club.id).sort()
   const competitionId = league.id
   const scottishSplit = !lower && league.associationId === 'sco' && clubIds.length === 12
-  const rounds = scottishSplit ? 33 : (clubIds.length - 1) * 2
+  const scottishSecond = lower && league.associationId === 'sco' && clubIds.length === 10
+  const rounds = scottishSplit ? 33 : (clubIds.length - 1) * (scottishSecond ? 4 : 2)
   const competition: ProCompetition = { id: competitionId, associationId: league.associationId, kind: 'league',
-    seasonId: String(startYear), entrantIds: clubIds, format: { legs: 2, scheduledRounds: scottishSplit ? 38 : rounds } }
+    seasonId: String(startYear), entrantIds: clubIds, format: { legs: scottishSecond ? 4 : 2, scheduledRounds: scottishSplit ? 38 : rounds } }
   world.competitions[competitionId] = competition
   world.standings[competitionId] = clubIds.map(clubId => ({ clubId, played: 0, won: 0, drawn: 0, lost: 0,
     goalsFor: 0, goalsAgainst: 0, points: 0 }))
   const profile = proCalendarProfile(league.associationId, startYear)
   const endYear = profile.endMonth < profile.startMonth ? startYear + 1 : startYear
-  const start = utc(`${startYear}-${padded(profile.startMonth)}-15`)
+  const brazil2026 = league.associationId === 'bra' && startYear >= 2026
+  const start = utc(brazil2026 ? lower ? `${startYear}-03-21` : `${startYear}-01-28`
+    : `${startYear}-${padded(profile.startMonth)}-15`)
   // The Scottish top flight reserves five weekly matchdays after the 33-game split.
-  const end = utc(scottishSplit ? `${endYear}-04-17` : `${endYear}-${padded(profile.endMonth)}-17`)
+  const end = utc(scottishSplit ? `${endYear}-04-11` : scottishSecond ? `${endYear}-04-30` : brazil2026
+    ? lower ? `${startYear}-11-28` : `${startYear}-12-02`
+    : `${endYear}-${padded(profile.endMonth)}-17`)
   const rotating = [...clubIds]
   const half = rotating.length / 2
   let previousKickoff = 0
@@ -141,8 +147,9 @@ export function newProLeagueSeason(world: ProWorldState, league: ProLeaguePlan, 
       const home = arr[pair]
       const away = arr[arr.length - 1 - pair]
       const [h, a] = (week + pair) % 2 === 0 ? [home, away] : [away, home]
-      const homeId = firstLeg ? h : a
-      const awayId = firstLeg ? a : h
+      const reverse = scottishSecond ? Math.floor(round / (clubIds.length - 1)) % 2 === 1 : !firstLeg
+      const homeId = reverse ? a : h
+      const awayId = reverse ? h : a
       const id = `fixture-${league.id}-${startYear}-${round + 1}-${pair + 1}`
       const fixture = { id, competitionId, kickoffDate: iso(kickoff), homeId, awayId } satisfies ProFixture
       world.fixtures[id] = fixture

@@ -31,7 +31,7 @@ A career country is complete only when all of these work together:
 - **Club background:** 70 countries with season results, rosters, transfers, domestic winners and continental entries. Their clubs are not human transfer destinations.
 - **National background:** association strength and national-team participation; no fabricated domestic league required.
 
-The current implementation is still short of this contract: 100 top divisions are simulated, ten second divisions exist, and the English pro league is the only interactive chapter. The simulated English league and the player's league are not yet one table. Most association formats, playoffs and continental eligibility rules are provisional. Promote a country to actual career availability only after its integrated season audits pass.
+The first ten countries with simulated top/second-tier boundaries are England, Spain, Germany, France, Italy, Netherlands, Portugal, Brazil, South Africa and Scotland. Promotion playoffs now roll into the following season and survive saves. They are not yet complete pyramids: second-tier relegation, third/fourth tiers where applicable, accurate cup entrants, division-specific calendars and player career integration remain. The English pro league is the only interactive chapter, and its player league is not yet the same table as the simulated English league. Most continental eligibility rules are provisional. Promote a country to actual career availability only after its integrated season audits pass.
 
 ## Save migration and release gate
 
@@ -41,4 +41,4 @@ Keep stable association and club IDs. Introduce an explicit career-availability 
 
 The 25 added club countries are Ukraine, Romania, Hungary, Bulgaria, Ireland, Finland; Zimbabwe, Ethiopia, Rwanda, Libya, Benin, Burkina Faso; Haiti, Curaçao, Dominican Republic, Suriname, Guyana; Jordan, Oman, Bahrain, Kuwait, Malaysia, Philippines; Solomon Islands and Papua New Guinea. They are background top flights only. Their club counts and formats remain provisional, not federation-verified.
 
-The 100-country world benchmark on the development runtime: 1,812 clubs, 43,488 players, 28,486 initial league fixtures, 16.6 MiB initial serialized world, 18.1 MiB after one year, and 27.3 MiB after 20 years. A one-year advance took around 1.4 seconds here. This is not an Android WebView performance guarantee. A 32 MiB serialized-world audit ceiling remains in place; test lower-memory Android devices and save/reload before shipping.
+The 100-country world benchmark on the development runtime: 1,812 clubs, 43,488 players, 28,576 initial league fixtures and 27.5 MiB after 20 years. This is not an Android WebView performance guarantee. A 32 MiB serialized-world audit ceiling remains in place; test lower-memory Android devices and save/reload before shipping.

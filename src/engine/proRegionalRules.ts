@@ -102,7 +102,7 @@ export function portugueseCampeonato(world: ProWorldState, lastDate: IsoDate):
     if(eligible.length!==2) throw new Error('Missing Portuguese promotion candidates')
     return eligible.map(r=>r.clubId)
   })
-  const promotedIds:string[]=[]
+  const promotedIds:string[]=[],champions:string[]=[]
   for(let pool=0;pool<2;pool++){
     const teams=[...entries[pool*2],...entries[pool*2+1]]
     const scores=new Map(teams.map(id=>[id,{clubId:id,played:0,won:0,drawn:0,lost:0,goalsFor:0,goalsAgainst:0,points:0} as ProStandingRow]))
@@ -120,8 +120,11 @@ export function portugueseCampeonato(world: ProWorldState, lastDate: IsoDate):
       else {h.drawn++;v.drawn++;h.points++;v.points++}
       round++
     }
-    promotedIds.push(...rank([...scores.values()]).slice(0,2).map(r=>r.clubId))
+    const qualified=rank([...scores.values()]).slice(0,2).map(r=>r.clubId)
+    champions.push(qualified[0])
+    promotedIds.push(...qualified)
   }
+  fixtures.push(fixture(world,'por',year,'championship-final',add(lastDate,31),champions[0],champions[1]))
   return {promotedIds,fixtures,readyDate:add(lastDate,32)}
 }
 

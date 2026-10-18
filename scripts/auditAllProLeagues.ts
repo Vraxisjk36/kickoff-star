@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
-import { PRO_DEEP_LEAGUE_PLAN, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN } from '../src/engine/proLeagueRegistry'
+import { PRO_DEEP_LEAGUE_PLAN, PRO_GROUPED_LEAGUE_PLAN, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN } from '../src/engine/proLeagueRegistry'
 import { createProWorld } from '../src/engine/proWorldFactory'
 import { advanceProWorldTo } from '../src/engine/proWorldSimulation'
 
-const leagues = [...PRO_LEAGUE_PLAN, ...PRO_LOWER_LEAGUE_PLAN, ...PRO_DEEP_LEAGUE_PLAN]
+const leagues = [...PRO_LEAGUE_PLAN, ...PRO_LOWER_LEAGUE_PLAN, ...PRO_DEEP_LEAGUE_PLAN, ...PRO_GROUPED_LEAGUE_PLAN]
 const initial = createProWorld(23, '2026-08-01')
 assert.equal(PRO_LEAGUE_PLAN.length, 100)
 function inspectFixtures(world: typeof initial) {
@@ -25,7 +25,7 @@ function inspectFixtures(world: typeof initial) {
     const fixtures = byCompetition.get(league.id) ?? []
     const clubCount = comp.entrantIds.length
     const split = league.id === 'top-sco' && comp.splitScheduled
-    assert.equal(fixtures.length, clubCount * (clubCount - 1) * (league.id === 'top-sco' ? 3 : league.associationId === 'sco' ? 4 : 2) / 2 + (split ? 30 : 0),
+    assert.equal(fixtures.length, clubCount * (clubCount - 1) * (league.id === 'top-sco' ? 3 : league.associationId === 'sco' ? 4 : league.id === 'third-bra' ? 1 : 2) / 2 + (split ? 30 : 0),
       `${league.id} fixture count`)
     const pairings = new Map<string, number>()
     const home = new Map<string, number>(), away = new Map<string, number>()
@@ -38,12 +38,12 @@ function inspectFixtures(world: typeof initial) {
       away.set(fixture.awayId, (away.get(fixture.awayId) ?? 0) + 1)
     }
     for (const count of pairings.values()) assert.ok(league.id === 'top-sco' ? count === 3 || split && count === 4 :
-      count === (league.associationId === 'sco' ? 4 : 2),
+      count === (league.associationId === 'sco' ? 4 : league.id === 'third-bra' ? 1 : 2),
       `${league.id} duplicate/missing pair`)
     for (const clubId of comp.entrantIds) {
       assert.equal((home.get(clubId) ?? 0) + (away.get(clubId) ?? 0), split ? 38 : league.id === 'top-sco' ? 33 : comp.format.scheduledRounds,
         `${league.id} club matches`)
-      if (league.id !== 'top-sco') assert.equal(home.get(clubId), away.get(clubId), `${league.id} home/away balance`)
+      if (league.id !== 'top-sco' && league.id !== 'third-bra') assert.equal(home.get(clubId), away.get(clubId), `${league.id} home/away balance`)
     }
   }
 }

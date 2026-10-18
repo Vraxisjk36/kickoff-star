@@ -1,4 +1,4 @@
-import { LOWER_DIVISIONS, PRO_DEEP_LEAGUE_PLAN, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN, type ProConfederation } from './proLeagueRegistry'
+import { LOWER_DIVISIONS, PRO_DEEP_LEAGUE_PLAN, PRO_GROUPED_LEAGUE_PLAN, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN, type ProConfederation } from './proLeagueRegistry'
 import { proRoll } from './proWorldFactory'
 import type { IsoDate, ProCompetition, ProFixture, ProStandingRow, ProWorldState } from './proWorld'
 import { englandBerths, southAfricaBerths } from './proQualification'
@@ -19,7 +19,10 @@ export function proCompetitionName(id: string): string {
   if (id === 'world-club') return 'World Club Championship'
   if (id.startsWith('top-')) return `${PRO_LEAGUE_PLAN.find(item => item.associationId === id.slice(4))?.associationName ?? 'Domestic'} Elite League`
   if (id.startsWith('second-')) return `${PRO_LEAGUE_PLAN.find(item => item.associationId === id.slice(7))?.associationName ?? 'Domestic'} Second Division`
-  if (id.startsWith('third-')) return `${PRO_LEAGUE_PLAN.find(item => item.associationId === id.slice(6))?.associationName ?? 'Domestic'} Third Division`
+  if (id.startsWith('third-')) {
+    const [, country, group] = id.match(/^third-([a-z]+)(?:-(\d+))?$/) ?? []
+    return `${PRO_LEAGUE_PLAN.find(item => item.associationId === country)?.associationName ?? 'Domestic'} Third Division${group ? ` · Group ${group}` : ''}`
+  }
   if (id.startsWith('fourth-')) return `${PRO_LEAGUE_PLAN.find(item => item.associationId === id.slice(7))?.associationName ?? 'Domestic'} Fourth Division`
   if (id === 'conference-uefa') return 'European Conference Series'
   if (id === 'mtn8-rsa') return 'South African Top Eight Cup'
@@ -173,8 +176,10 @@ export function beginDomesticSeason(world: ProWorldState, year: number): void {
     const lower = LOWER_DIVISIONS[id] ? [...(world.competitions[`second-${id}`]?.entrantIds ?? [])] : []
     const deep = PRO_DEEP_LEAGUE_PLAN.filter(item => item.associationId === id)
       .flatMap(item => world.competitions[item.id]?.entrantIds ?? [])
+    const grouped = PRO_GROUPED_LEAGUE_PLAN.filter(item => item.associationId === id)
+      .flatMap(item => world.competitions[item.id]?.entrantIds ?? [])
     // Cups follow club membership after movement at every modelled tier.
-    const cupEntrants = [...new Set([...entrants, ...lower, ...deep])]
+    const cupEntrants = [...new Set([...entrants, ...lower, ...deep, ...grouped])]
     createCompetition(world, `cup-${id}`, 'domestic-cup', year, cupEntrants, 'knockout', `${year}-${id === 'eng' ? '01-05' : id === 'rsa' ? '01-27' : '02-04'}`)
     if (leagueCups.has(id) && id !== 'rsa') createCompetition(world, `league-cup-${id}`, 'domestic-cup', year,
       PRO_LOWER_LEAGUE_PLAN.some(item => item.associationId === id) ? cupEntrants : entrants, 'knockout', `${year}-04-09`)

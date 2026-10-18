@@ -21,6 +21,7 @@ export interface ProClub {
   feederGroup?: number
   /** Stable geographic home region, independent of the currently assigned league group. */
   homeRegion?: number
+  homeRegionCount?: number
   /** Reserve-team link and federation licensing; absent fields mean independent/eligible. */
   parentClubId?: string
   licenseEligible?: boolean

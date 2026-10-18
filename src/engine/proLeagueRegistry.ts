@@ -89,6 +89,11 @@ export const PRO_FIFTH_LEAGUE_PLAN: readonly ProLeaguePlan[] = PRO_LEAGUE_PLAN
 export const GROUPED_FOURTH: Readonly<Record<string, { groups: number; clubsPerGroup: number; promoted: number }>> = {
   ger: { groups: 5, clubsPerGroup: 18, promoted: 4 },
   fra: { groups: 3, clubsPerGroup: 16, promoted: 3 },
+  esp: { groups: 5, clubsPerGroup: 18, promoted: 10 },
+  ita: { groups: 9, clubsPerGroup: 18, promoted: 9 },
+  por: { groups: 4, clubsPerGroup: 14, promoted: 4 },
+  rsa: { groups: 9, clubsPerGroup: 12, promoted: 9 },
+  bra: { groups: 8, clubsPerGroup: 8, promoted: 4 },
 }
 export const PRO_GROUPED_FOURTH_LEAGUE_PLAN: readonly ProLeaguePlan[] = PRO_LEAGUE_PLAN
   .filter(league => league.associationId in GROUPED_FOURTH)

@@ -1,4 +1,5 @@
 import { proRoll } from './proWorldFactory'
+import { promotionEligible } from './proRegionalRules'
 import type { IsoDate, ProFixture, ProStandingRow, ProWorldState } from './proWorld'
 
 const day = 86_400_000
@@ -111,11 +112,43 @@ export function feederQualification(world: ProWorldState, country: string, lastD
     const groups = [1, 2].map(index => order(world.standings[`third-por-${index}`]).slice(0, 4))
     promotedIds = phase(groups.flat().map(row => row.clubId)).slice(0, 2).map(row => row.clubId)
   } else {
-    const provincial = Array.from({ length: 9 }, (_, index) => order(world.standings[`third-rsa-${index + 1}`])[0])
-      .sort((a, b) => b.points / b.played - a.points / a.played || a.clubId.localeCompare(b.clubId)).map(row => row.clubId)
+    // SAFA ABC Motsepe national qualifiers: nine province champions in
+    // three round-robin groups of three. Group winners plus the best runner-up
+    // contest single-match semifinals; both finalists win promotion.
+    const provincial = Array.from({ length: 9 }, (_, index) => {
+      const rows = order(world.standings[`third-rsa-${index + 1}`])
+      const eligible = rows.find(row => promotionEligible(world, row.clubId, 2))
+      if (!eligible) throw new Error('Unlicensed South African provincial representatives')
+      return eligible.clubId
+    })
+    const winners: ProStandingRow[] = [], runners: ProStandingRow[] = []
+    for (let group = 0; group < 3; group++) {
+      const teams = provincial.slice(group * 3, group * 3 + 3)
+      const table = new Map(teams.map(id => [id, fresh(id)]))
+      for (let a = 0; a < 3; a++) for (let b = a + 1; b < 3; b++) {
+        round++
+        play(teams[a], teams[b])
+        const result = fixtures.at(-1)!.result!
+        const home = table.get(teams[a])!, away = table.get(teams[b])!
+        home.played++; away.played++
+        home.goalsFor += result.homeGoals; home.goalsAgainst += result.awayGoals
+        away.goalsFor += result.awayGoals; away.goalsAgainst += result.homeGoals
+        if (result.homeGoals > result.awayGoals) { home.won++; away.lost++; home.points += 3 }
+        else if (result.homeGoals < result.awayGoals) { away.won++; home.lost++; away.points += 3 }
+        else { home.drawn++; away.drawn++; home.points++; away.points++ }
+      }
+      const ranked = order([...table.values()])
+      winners.push(ranked[0])
+      runners.push(ranked[1])
+    }
+    const bestRunner = order(runners)[0].clubId
     round++
-    const playIn = play(provincial[7], provincial[8])
-    promotedIds = bracket([...provincial.slice(0, 7), playIn], 2)
+    const semifinalA = play(winners[0].clubId, bestRunner)
+    const semifinalB = play(winners[1].clubId, winners[2].clubId)
+    promotedIds = [semifinalA, semifinalB]
+    round++
+    play(semifinalA, semifinalB)
+
   }
   return { promotedIds, fixtures, readyDate: add(lastDate, 5 + round * 5) }
 }

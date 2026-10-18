@@ -219,17 +219,24 @@ function exchangeGroupedDivisions(world: ProWorldState, associationId: string,
     promotedIds: promoted, relegatedIds: relegated, fixtures: qualification.fixtures })
 }
 
-function exchangeNationalThird(world: ProWorldState, associationId: 'fra' | 'bra'): void {
+function exchangeNationalThird(world: ProWorldState, associationId: 'fra' | 'bra',
+  qualification?: ReturnType<typeof feederQualification>): void {
   const upper = ordered(world.seasonHistory.filter(row => row.competitionId === `second-${associationId}`).at(-1)!.table)
   const lower = ordered(world.seasonHistory.filter(row => row.competitionId === `third-${associationId}`).at(-1)!.table)
   const count = associationId === 'bra' ? 4 : 2
-  const promoted = lower.slice(0, count).map(row => row.clubId)
+  // Brazil Série C promotes the top two of each final group, not simply
+  // the four highest finishers in the opening-stage table.
+  const promoted = associationId === 'bra'
+    ? qualification?.promotedIds ?? (() => { throw new Error('Brazil Série C final groups missing') })()
+    : lower.slice(0, count).map(row => row.clubId)
+  if (promoted.length !== count || new Set(promoted).size !== count)
+    throw new Error(`Invalid ${associationId} national third-tier promotion`)
   const relegated = upper.slice(-count).map(row => row.clubId)
   for (const id of promoted) world.clubs[id].tier = 2
   for (const id of relegated) world.clubs[id].tier = 3
   world.promotionHistory ??= []
   world.promotionHistory.push({ associationId: `${associationId}-2`, seasonId: world.competitions[`second-${associationId}`].seasonId,
-    promotedIds: promoted, relegatedIds: relegated, fixtures: [] })
+    promotedIds: promoted, relegatedIds: relegated, fixtures: qualification?.fixtures ?? [] })
 }
 
 function scheduleScottishSplit(world: ProWorldState, fixtures: ProFixture[]): ProFixture[] {
@@ -311,7 +318,7 @@ function advanceLeaguesTo(world: ProWorldState, targetDate: IsoDate): void {
       }
       const deepResults: { upperTier: 2 | 3; winner: string }[] = []
       let feederResult: ReturnType<typeof feederQualification> | undefined
-      if (league.associationId in GROUPED_THIRD) {
+      if (league.associationId in GROUPED_THIRD || league.associationId === 'bra') {
         const lastDate = batches.slice(2).flat().reduce((latest, fixture) => fixture.kickoffDate > latest ? fixture.kickoffDate : latest, '0000-01-01')
         feederResult = feederQualification(world, league.associationId, lastDate)
         if (targetDate <= feederResult.readyDate) break
@@ -334,8 +341,10 @@ function advanceLeaguesTo(world: ProWorldState, targetDate: IsoDate): void {
       if (lower) exchangeDivisions(world, league.associationId, playoffWinner)
       for (const { upperTier, winner } of deepResults)
         exchangeDeepDivisions(world, league.associationId as 'eng' | 'ger' | 'sco', upperTier, winner)
-      if (feederResult) exchangeGroupedDivisions(world, league.associationId, feederResult)
-      if (league.associationId === 'fra' || league.associationId === 'bra') exchangeNationalThird(world, league.associationId)
+      if (feederResult && league.associationId in GROUPED_THIRD)
+        exchangeGroupedDivisions(world, league.associationId, feederResult)
+      if (league.associationId === 'fra' || league.associationId === 'bra')
+        exchangeNationalThird(world, league.associationId, league.associationId === 'bra' ? feederResult : undefined)
       divisions.forEach(item => fixtureIndex.set(item.id, newProLeagueSeason(world, item, nextYear)))
     }
   }

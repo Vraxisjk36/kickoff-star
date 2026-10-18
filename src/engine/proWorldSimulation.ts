@@ -283,6 +283,27 @@ function exchangeEnglishNationalLeague(world: ProWorldState,
 }
 
 /** The five Regionalliga champions contest four places in the national 3. Liga. */
+/** National 2 regional champions enter France's third tier; three places go back down. */
+function exchangeFrenchNationalTwo(world: ProWorldState): void {
+  const upper = ordered(world.seasonHistory.filter(row => row.competitionId === 'third-fra').at(-1)!.table)
+  const promoted = Array.from({ length: GROUPED_FOURTH.fra.groups }, (_, index) => {
+    const groupId = `fourth-fra-${index + 1}`
+    const group = world.seasonHistory.filter(row => row.competitionId === groupId).at(-1)?.table
+    if (!group || group.length !== GROUPED_FOURTH.fra.clubsPerGroup)
+      throw new Error(`Missing French National 2 group ${index + 1}`)
+    return ordered(group)[0].clubId
+  })
+  const relegated = upper.slice(-GROUPED_FOURTH.fra.promoted).map(row => row.clubId)
+  if (promoted.length !== relegated.length || new Set(promoted).size !== promoted.length)
+    throw new Error('Unbalanced French National 2 promotion')
+  promoted.forEach(id => { world.clubs[id].tier = 3; world.clubs[id].feederGroup = undefined })
+  relegated.forEach((id, index) => { world.clubs[id].tier = 4; world.clubs[id].feederGroup = index + 1 })
+  world.promotionHistory ??= []
+  world.promotionHistory.push({ associationId: 'fra-3',
+    seasonId: world.competitions['third-fra'].seasonId,
+    promotedIds: promoted, relegatedIds: relegated, fixtures: [] })
+}
+
 function exchangeGermanRegionalliga(world: ProWorldState,
   qualification: ReturnType<typeof germanRegionalQualification>): void {
   const upper = ordered(world.seasonHistory.filter(row => row.competitionId === 'third-ger').at(-1)!.table)
@@ -461,6 +482,7 @@ function advanceLeaguesTo(world: ProWorldState, targetDate: IsoDate): void {
         exchangeDeepDivisions(world, league.associationId as 'eng' | 'ger' | 'sco', upperTier, winner)
       if (nationalLeagueResult) exchangeEnglishNationalLeague(world, nationalLeagueResult)
       if (germanRegionalResult) exchangeGermanRegionalliga(world, germanRegionalResult)
+      if (league.associationId === 'fra') exchangeFrenchNationalTwo(world)
       if (scottishRegionalResult) exchangeScottishRegional(world, scottishRegionalResult)
       if (feederResult && league.associationId in GROUPED_THIRD)
         exchangeGroupedDivisions(world, league.associationId, feederResult)

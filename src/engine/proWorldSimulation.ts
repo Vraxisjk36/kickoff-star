@@ -310,13 +310,13 @@ function exchangeEnglishNationalLeague(world: ProWorldState,
 }
 
 /** The five Regionalliga champions contest four places in the national 3. Liga. */
-/** Four Série D regional playoff winners exchange with the four lowest Série C clubs. */
+/** Six Série D promotion qualifiers replace six outgoing clubs in the fixed-size Série C simulation. */
 function exchangeBrazilSerieD(world: ProWorldState,
   qualification: ReturnType<typeof brazilSerieDQualification>): void {
   const third = ordered(world.seasonHistory.filter(row => row.competitionId === 'third-bra').at(-1)!.table)
   const promoted = qualification.promotedIds
   const relegated = third.slice(-GROUPED_FOURTH.bra.promoted).map(row => row.clubId)
-  const vacated = promoted.map(id => world.clubs[id].feederGroup)
+  const vacated = promoted.map(id => world.clubs[id].feederGroup!)
   if (promoted.length !== GROUPED_FOURTH.bra.promoted || relegated.length !== GROUPED_FOURTH.bra.promoted ||
       new Set(promoted).size !== promoted.length || new Set(relegated).size !== relegated.length ||
       promoted.some(id => world.clubs[id].tier !== 4) ||
@@ -324,7 +324,7 @@ function exchangeBrazilSerieD(world: ProWorldState,
       vacated.some(group => !group || group > GROUPED_FOURTH.bra.groups))
     throw new Error('Invalid Brazilian Série D promotions')
   promoted.forEach(id => { world.clubs[id].tier = 3; world.clubs[id].feederGroup = undefined })
-  assignRegionalVacancies(world, relegated, vacated, 4, GROUPED_FOURTH.ger.groups)
+  assignRegionalVacancies(world, relegated, vacated, 4, GROUPED_FOURTH.bra.groups)
   world.promotionHistory ??= []
   world.promotionHistory.push({ associationId: 'bra-3', seasonId: world.competitions['third-bra'].seasonId,
     promotedIds: promoted, relegatedIds: relegated, fixtures: structuredClone(qualification.fixtures) })

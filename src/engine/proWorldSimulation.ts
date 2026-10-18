@@ -212,6 +212,34 @@ function exchangeDeepDivisions(world: ProWorldState, associationId: 'eng' | 'ger
   delete world.promotionPlayoffs![key]
 }
 
+/** Fill precisely the vacant regional places while minimizing home-region
+ * displacement. Permanent geographic affiliation never changes on promotion.
+ */
+function assignRegionalVacancies(world: ProWorldState, ids: string[], vacancies: number[],
+  tier: 3 | 4 | 5, regions: number): void {
+  const available = [...vacancies]
+  if (available.length !== ids.length || available.some(group => group < 1 || group > regions))
+    throw new Error('Invalid regional vacancy allocation')
+  const affinity = (id: string): number => {
+    const club = world.clubs[id]
+    const source = club.homeRegion ?? club.feederGroup ?? 1
+    const count = club.homeRegionCount ?? regions
+    return (source - .5) / count
+  }
+  for (const id of [...ids].sort((a, b) => affinity(a) - affinity(b) || a.localeCompare(b))) {
+    const origin = affinity(id)
+    let index = -1, distance = Infinity
+    available.forEach((group, candidate) => {
+      const delta = Math.abs(origin - (group - .5) / regions)
+      if (delta < distance) { distance = delta; index = candidate }
+    })
+    const [assigned] = available.splice(index, 1)
+    world.clubs[id].tier = tier
+    world.clubs[id].feederGroup = assigned
+  }
+  if (available.length) throw new Error('Unfilled regional vacancies')
+}
+
 function exchangeGroupedDivisions(world: ProWorldState, associationId: string,
   qualification: ReturnType<typeof feederQualification>): void {
   const format = GROUPED_THIRD[associationId]
@@ -230,11 +258,8 @@ function exchangeGroupedDivisions(world: ProWorldState, associationId: string,
     throw new Error(`Invalid ${associationId} grouped third-tier exchange`)
   for (const id of promoted) world.clubs[id].tier = 2
   // Preserve group size by assigning each incoming club to a promoted vacancy.
-  promoted.forEach((id, index) => {
-    const outgoingGroup = world.clubs[id].feederGroup ?? 1
-    world.clubs[relegated[index]].tier = 3
-    world.clubs[relegated[index]].feederGroup = outgoingGroup
-  })
+  const vacancies = promoted.map(id => world.clubs[id].feederGroup ?? 1)
+  assignRegionalVacancies(world, relegated, vacancies, 3, format.groups)
   world.promotionHistory ??= []
   world.promotionHistory.push({ associationId: `${associationId}-2`, seasonId: world.competitions[`second-${associationId}`].seasonId,
     promotedIds: promoted, relegatedIds: relegated, fixtures: qualification.fixtures })
@@ -299,7 +324,7 @@ function exchangeBrazilSerieD(world: ProWorldState,
       vacated.some(group => !group || group > GROUPED_FOURTH.bra.groups))
     throw new Error('Invalid Brazilian Série D promotions')
   promoted.forEach(id => { world.clubs[id].tier = 3; world.clubs[id].feederGroup = undefined })
-  relegated.forEach((id, index) => { world.clubs[id].tier = 4; world.clubs[id].feederGroup = vacated[index] })
+  assignRegionalVacancies(world, relegated, vacated, 4, GROUPED_FOURTH.ger.groups)
   world.promotionHistory ??= []
   world.promotionHistory.push({ associationId: 'bra-3', seasonId: world.competitions['third-bra'].seasonId,
     promotedIds: promoted, relegatedIds: relegated, fixtures: structuredClone(qualification.fixtures) })
@@ -384,7 +409,7 @@ function exchangeFrenchNationalTwo(world: ProWorldState): void {
   if (promoted.length !== relegated.length || new Set(promoted).size !== promoted.length)
     throw new Error('Unbalanced French National 2 promotion')
   promoted.forEach(id => { world.clubs[id].tier = 3; world.clubs[id].feederGroup = undefined })
-  relegated.forEach((id, index) => { world.clubs[id].tier = 4; world.clubs[id].feederGroup = index + 1 })
+  assignRegionalVacancies(world, relegated, [1, 2, 3], 4, GROUPED_FOURTH.fra.groups)
   world.promotionHistory ??= []
   world.promotionHistory.push({ associationId: 'fra-3',
     seasonId: world.competitions['third-fra'].seasonId,
@@ -406,7 +431,7 @@ function exchangeGermanRegionalliga(world: ProWorldState,
   // Assign relegated clubs to the vacated regional places; keep all groups at 18.
   const vacated = promoted.map(id => world.clubs[id].feederGroup ?? 1)
   promoted.forEach(id => { world.clubs[id].tier = 3; world.clubs[id].feederGroup = undefined })
-  relegated.forEach((id, index) => { world.clubs[id].tier = 4; world.clubs[id].feederGroup = vacated[index] })
+  assignRegionalVacancies(world, relegated, vacated as number[], 4, GROUPED_FOURTH.bra.groups)
   world.promotionHistory ??= []
   world.promotionHistory.push({ associationId: 'ger-3',
     seasonId: world.competitions['third-ger'].seasonId,

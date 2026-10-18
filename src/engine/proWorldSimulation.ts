@@ -50,10 +50,19 @@ function play(world: ProWorldState, fixture: ProFixture): void {
  * its deterministic score first and apply the actual human result.
  */
 export function recordHumanProLeagueMatch(source: ProWorldState, country: string,
-  homeId: string, awayId: string, homeGoals: number, awayGoals: number): ProWorldState {
+  homeId: string, awayId: string, homeGoals: number, awayGoals: number, fixtureId?: string): ProWorldState {
   const competitionId = `top-${country}`
-  const fixture = Object.values(source.fixtures).find(game => game.competitionId === competitionId &&
-    game.homeId === homeId && game.awayId === awayId)
+  // Always bind the human result to the current season's exact fixture.
+  // A home/away pair can recur in every season, and Scotland can repeat pairs.
+  const fixture = fixtureId ? source.fixtures[fixtureId] : Object.values(source.fixtures)
+    .filter(game => game.competitionId === competitionId &&
+      game.homeId === homeId && game.awayId === awayId &&
+      game.id.includes(`-${source.competitions[competitionId]?.seasonId}-`))
+    .sort((a, b) => a.kickoffDate.localeCompare(b.kickoffDate))
+    .find(game => !game.result)
+  if (fixture && (fixture.competitionId !== competitionId || fixture.homeId !== homeId ||
+    fixture.awayId !== awayId || !fixture.id.includes(`-${source.competitions[competitionId]?.seasonId}-`)))
+    return source
   if (!fixture || !source.standings[competitionId] ||
       !Number.isInteger(homeGoals) || !Number.isInteger(awayGoals) ||
       homeGoals < 0 || awayGoals < 0) return source

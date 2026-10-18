@@ -15,7 +15,7 @@ for (const country of countries) {
   assert.ok(top && second, `${country}: missing top/second tier`)
   assert.equal(top.entrantIds.length, rules.topFlightClubs)
   assert.equal(second.entrantIds.length, rules.lowerTierClubs)
-  assert.equal(top.format.scheduledRounds, country === 'sco' ? 33 : rules.topFlightMatches)
+  assert.equal(top.format.scheduledRounds, rules.topFlightMatches)
   assert.equal(second.format.scheduledRounds, rules.lowerTierMatches)
   for (const tier of ['top','second'] as const) {
     const id = `${tier}-${country}`
@@ -40,6 +40,9 @@ for (const country of countries) {
   const movement = first.promotionHistory?.find(h => h.associationId === country)
   assert.ok(movement, `${country}: missing top-flight promotion/relegation history`)
   assert.equal(movement.promotedIds.length, movement.relegatedIds.length, `${country}: unbalanced movement`)
+  assert.equal(new Set(movement.promotedIds).size, movement.promotedIds.length, `${country}: duplicate promoted club`)
+  assert.equal(new Set(movement.relegatedIds).size, movement.relegatedIds.length, `${country}: duplicate relegated club`)
+  assert.ok(movement.fixtures.every(f => !!f.result), `${country}: unfinished promotion playoff`)
   assert.ok(movement.promotedIds.every(id => first.competitions[`top-${country}`].entrantIds.includes(id)), `${country}: promoted club missing from top tier`)
   assert.ok(movement.relegatedIds.every(id => first.competitions[`second-${country}`].entrantIds.includes(id)), `${country}: relegated club missing from second tier`)
 }

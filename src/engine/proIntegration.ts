@@ -270,9 +270,12 @@ export function finalizeProMove(state: ProCareerState, player: Player): { state:
     ? { ...player.contract, clubName: club.name, terms: { ...player.contract.terms, weeklyWage: offer.weeklyWage }, signedWeek: player.totalWeeksElapsed ?? 0,
       expiresWeek: (player.totalWeeksElapsed ?? 0) + 88 } : player.contract,
     turnedPro: player.turnedPro ? { ...player.turnedPro, clubName: club.name } : player.turnedPro }
-  return { state: { ...state, associationId: destinationCountry, world: miniWorld,
-    clubWorldIds, resolvedWeek: undefined, backgroundWorld: result.world,
+  const moved: ProCareerState = { ...state, associationId: destinationCountry, world: miniWorld,
+    clubWorldIds, activeCompetitionId: isForeign ? undefined : state.activeCompetitionId,
+    activeSeasonId: isForeign ? undefined : state.activeSeasonId,
+    resolvedWeek: undefined, backgroundWorld: result.world,
     shirtNumber: result.world.players[`career-${player.id}`].shirtNumber,
     residence: { countryId: club.associationId, city: club.homeCity, monthlyRent: housingFor(nextPlayer), hotelUntil: addDays(state.date, 21) },
-    talks: null, marketOffers: [] }, player: nextPlayer }
+    talks: null, marketOffers: [] }
+  return { state: isForeign ? syncPlayableProLeague(moved, result.world) : moved, player: nextPlayer }
 }

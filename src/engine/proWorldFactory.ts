@@ -66,7 +66,7 @@ const namedCities: Record<string, string[]> = {
   usa: ['New York','Los Angeles','Miami','Chicago','Seattle','Atlanta','Dallas','Philadelphia'],
   jpn: ['Tokyo','Osaka','Yokohama','Nagoya','Kobe','Sapporo','Kyoto','Hiroshima'],
 }
-const regionalCityAnchors: Record<string, string[]> = {"esp":["Vigo","Barcelona","Valencia","Seville","Madrid"],"ger":["Cologne","Mannheim","Hamburg","Leipzig","Munich"],"fra":["Lille","Paris","Marseille"],"ita":["Turin","Milan","Genoa","Venice","Bologna","Florence","Rome","Naples","Palermo"],"por":["Braga","Porto","Coimbra","Faro"],"rsa":["Polokwane","Mbombela","Pretoria","Johannesburg","Rustenburg","Bloemfontein","Kimberley","Durban","Cape Town"],"bra":["Manaus","Belem","Fortaleza","Recife","Salvador","Belo Horizonte","Sao Paulo","Porto Alegre"],"sco":["Inverness","Edinburgh"]}
+const regionalCityAnchors: Record<string, string[]> = {"esp":["Vigo","Barcelona","Valencia","Seville","Madrid"],"ger":["Cologne","Mannheim","Hamburg","Leipzig","Munich"],"fra":["Lille","Paris","Marseille"],"ita":["Turin","Milan","Genoa","Venice","Bologna","Florence","Rome","Naples","Palermo"],"por":["Braga","Porto","Coimbra","Faro"],"rsa":["Polokwane","Mbombela","Pretoria","Johannesburg","Rustenburg","Bloemfontein","Kimberley","Durban","Cape Town"],"bra":["Manaus","Belem","Macapa","Sao Luis","Fortaleza","Natal","Joao Pessoa","Recife","Maceio","Aracaju","Salvador","Goiania","Belo Horizonte","Rio de Janeiro","Sao Paulo","Porto Alegre"],"sco":["Inverness","Edinburgh"]}
 const identities = ['Athletic','United','City','Sporting','Rovers','Union','Albion','Wanderers',
   'Olympic','Dynamo','Harbour','Racing','North','South','Eagles','Stars','Central','Lions','Valley','Academia']
 const firstNames = ['Amir','Daniel','Leo','Jamal','Hiro','Thabo','Mateo','Samuel','Yusuf','Kai','André','Rafael','Kofi','Milan','Santiago','Noah']
@@ -224,9 +224,12 @@ export function createProWorld(seed: number, currentDate: IsoDate): ProWorldStat
         identity = { city, name: city + ' ' + identities[i % identities.length] + ' ' + (i + 1) }
       }
       const club: ProClub = { id, associationId: league.associationId, tier, feederGroup,
-        homeRegion: feederGroup,
+        homeRegion: feederGroup ?? (fourthGroups
+          ? 1 + (i % fourthGroups.groups) : grouped
+            ? 1 + (i % grouped.groups) : fifthGroups
+              ? 1 + (i % fifthGroups.groups) : undefined),
         homeRegionCount: grouped && tier === 3 ? grouped.groups : fourthGroups && tier === 4 ? fourthGroups.groups :
-          fifthGroups && tier === 5 ? fifthGroups.groups : undefined,
+          fifthGroups && tier === 5 ? fifthGroups.groups : fourthGroups?.groups ?? grouped?.groups ?? fifthGroups?.groups,
         licenseEligible: true, name: identity.name,
         homeCity: identity.city, stadiumId: `stadium-${id}`, reputation, finances }
       world.clubs[id] = club

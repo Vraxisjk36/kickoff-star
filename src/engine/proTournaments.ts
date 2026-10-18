@@ -1,4 +1,4 @@
-import { LOWER_DIVISIONS, PRO_FIFTH_LEAGUE_PLAN, PRO_GROUPED_FOURTH_LEAGUE_PLAN, PRO_DEEP_LEAGUE_PLAN, PRO_GROUPED_LEAGUE_PLAN, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN, type ProConfederation } from './proLeagueRegistry'
+import { LOWER_DIVISIONS, PRO_FIFTH_LEAGUE_PLAN, PRO_GROUPED_FOURTH_LEAGUE_PLAN, PRO_GROUPED_FIFTH_LEAGUE_PLAN, PRO_DEEP_LEAGUE_PLAN, PRO_GROUPED_LEAGUE_PLAN, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN, type ProConfederation } from './proLeagueRegistry'
 import { proRoll } from './proWorldFactory'
 import type { IsoDate, ProCompetition, ProFixture, ProStandingRow, ProWorldState } from './proWorld'
 import { englandBerths, southAfricaBerths } from './proQualification'
@@ -28,6 +28,7 @@ export function proCompetitionName(id: string): string {
     return `${PRO_LEAGUE_PLAN.find(item => item.associationId === country)?.associationName ?? 'Domestic'} Fourth Division${group ? ` · Group ${group}` : ''}`
   }
   if (id === 'fifth-eng') return 'English National League'
+  if (id.startsWith('fifth-sco-')) return id.endsWith('-1') ? 'Scottish Highland League' : 'Scottish Lowland League'
   if (id === 'conference-uefa') return 'European Conference Series'
   if (id === 'mtn8-rsa') return 'South African Top Eight Cup'
   if (id === 'nations-uefa') return 'European Nations League'
@@ -185,7 +186,8 @@ export function beginDomesticSeason(world: ProWorldState, year: number): void {
     const regionalFourth = PRO_GROUPED_FOURTH_LEAGUE_PLAN.filter(item => item.associationId === id)
       .map(item => [...(world.standings[item.id] ?? [])].sort(tableOrder)[0]?.clubId)
       .filter((entrant): entrant is string => !!entrant)
-    const fifth = PRO_FIFTH_LEAGUE_PLAN.filter(item => item.associationId === id)
+    const fifth = [...PRO_FIFTH_LEAGUE_PLAN, ...PRO_GROUPED_FIFTH_LEAGUE_PLAN]
+      .filter(item => item.associationId === id)
       .flatMap(item => world.competitions[item.id]?.entrantIds ?? [])
     // FA Cup includes National League; EFL Cup remains restricted to the four league levels.
     const cupEntrants = [...new Set([...entrants, ...lower, ...deep, ...grouped, ...fifth, ...regionalFourth])]

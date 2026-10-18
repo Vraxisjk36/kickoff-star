@@ -1,4 +1,5 @@
 import { proRoll } from './proWorldFactory'
+import { promotionEligible } from './proRegionalRules'
 import type { IsoDate, ProFixture, ProWorldState, ProStandingRow } from './proWorld'
 
 const add = (date: IsoDate, days: number) =>
@@ -12,6 +13,8 @@ export function nationalLeagueQualification(world: ProWorldState, lastLeagueDate
   { promotedIds: string[]; fixtures: ProFixture[]; readyDate: IsoDate } {
   const table = rank(world.standings['fifth-eng'])
   if (table.length !== 24) throw new Error('English National League requires 24 clubs')
+  const eligible = table.filter(row => promotionEligible(world,row.clubId,4))
+  if (eligible.length < 7) throw new Error('National League lacks seven eligible promotion candidates')
   const year = world.competitions['fifth-eng'].seasonId
   const fixtures: ProFixture[] = []
   const play = (homeId: string, awayId: string, round: number, match: number): string => {
@@ -24,12 +27,12 @@ export function nationalLeagueQualification(world: ProWorldState, lastLeagueDate
     if (homeGoals !== awayGoals) return homeGoals > awayGoals ? homeId : awayId
     return proRoll(world.seed, `${id}:pens`) < .5 ? homeId : awayId
   }
-  const prelimA = play(table[3].clubId, table[6].clubId, 0, 0)
-  const prelimB = play(table[4].clubId, table[5].clubId, 0, 1)
-  const finalistA = play(table[1].clubId, prelimB, 1, 0)
-  const finalistB = play(table[2].clubId, prelimA, 1, 1)
+  const prelimA = play(eligible[3].clubId, eligible[6].clubId, 0, 0)
+  const prelimB = play(eligible[4].clubId, eligible[5].clubId, 0, 1)
+  const finalistA = play(eligible[1].clubId, prelimB, 1, 0)
+  const finalistB = play(eligible[2].clubId, prelimA, 1, 1)
   const playoffWinner = play(finalistA, finalistB, 2, 0)
-  const promotedIds = [table[0].clubId, playoffWinner]
+  const promotedIds = [eligible[0].clubId, playoffWinner]
   if (new Set(promotedIds).size !== 2) throw new Error('Duplicate National League promotion')
   return { promotedIds, fixtures, readyDate: add(lastLeagueDate, 20) }
 }

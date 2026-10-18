@@ -206,3 +206,42 @@ assert.ok(regionHistory.relegatedIds.every(id =>
   Array.from({ length: 5 }, (_, i) => first.competitions[`fourth-ger-${i + 1}`].entrantIds)
     .some(members => members.includes(id))))
 console.log('German Regionalliga five-group regression passed')
+
+for (let group = 1; group <= 2; group++) {
+  const id = `fifth-sco-${group}`
+  const competition = initial.competitions[id]
+  assert.ok(competition, `Scotland: missing Highland/Lowland group ${group}`)
+  assert.equal(competition.entrantIds.length, 18)
+  assert.equal(competition.format.scheduledRounds, 34)
+  const fixtures = Object.values(initial.fixtures).filter(f => f.competitionId === id)
+  assert.equal(fixtures.length, 306, `Scotland: invalid regional fixtures ${group}`)
+  const scheduled = new Set<string>(), pairs = new Map<string, Set<string>>()
+  for (const game of fixtures) {
+    for (const club of [game.homeId, game.awayId]) {
+      const key = `${club}:${game.kickoffDate}`
+      assert.ok(!scheduled.has(key), `Scotland regional double booking ${key}`)
+      scheduled.add(key)
+    }
+    const pair = [game.homeId, game.awayId].sort().join(':')
+    const homes = pairs.get(pair) ?? new Set<string>()
+    assert.ok(!homes.has(game.homeId), `Scotland repeated regional home fixture ${pair}`)
+    homes.add(game.homeId)
+    pairs.set(pair, homes)
+  }
+  assert.equal(pairs.size, 153)
+  for (const homes of pairs.values()) assert.equal(homes.size, 2)
+  assert.deepEqual(first.competitions[id].entrantIds, resumed.competitions[id].entrantIds,
+    `Scotland regional tier save/resume changed group ${group}`)
+}
+const highlandLowlandHistory = first.promotionHistory?.find(h => h.associationId === 'sco-4')
+assert.ok(highlandLowlandHistory, 'Scotland: fourth/fifth promotion history missing')
+assert.equal(highlandLowlandHistory.fixtures.length, 4)
+assert.ok(highlandLowlandHistory.fixtures.every(f => !!f.result))
+assert.equal(highlandLowlandHistory.promotedIds.length, highlandLowlandHistory.relegatedIds.length)
+assert.ok(highlandLowlandHistory.promotedIds.length <= 1)
+if (highlandLowlandHistory.promotedIds.length) {
+  assert.ok(first.competitions['fourth-sco'].entrantIds.includes(highlandLowlandHistory.promotedIds[0]))
+  assert.ok(['fifth-sco-1', 'fifth-sco-2'].some(id =>
+    first.competitions[id].entrantIds.includes(highlandLowlandHistory.relegatedIds[0])))
+}
+console.log('Highland and Lowland fifth-tier regression passed')

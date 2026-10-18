@@ -34,7 +34,7 @@ export function syncPlayableProLeague(state: ProCareerState, world = state.backg
   const competition = Object.values(world.competitions).find(comp =>
     comp.kind === 'league' && comp.associationId === associationId &&
     comp.entrantIds.includes(playerClubId) &&
-    !comp.id.match(/-(\\d+)$/))
+    !comp.id.match(/-(\d+)$/))
   if (!competition) return state
   const current = state.world.divisions[1]
   const oldTeams = new Map(current.teams.map(team => [state.clubWorldIds![team.id], team]))

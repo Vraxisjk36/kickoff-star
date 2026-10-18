@@ -1,4 +1,4 @@
-import { GROUPED_FOURTH, GROUPED_FIFTH, GROUPED_THIRD, LOWER_DIVISIONS, PRO_GROUPED_FOURTH_LEAGUE_PLAN, PRO_GROUPED_FIFTH_LEAGUE_PLAN, PRO_FIFTH_LEAGUE_PLAN, PRO_DEEP_LEAGUE_PLAN, PRO_GROUPED_LEAGUE_PLAN, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN } from './proLeagueRegistry'
+import { GROUPED_FOURTH, GROUPED_FIFTH, GROUPED_THIRD, LOWER_DIVISIONS, PRO_GROUPED_FOURTH_LEAGUE_PLAN, PRO_GROUPED_FIFTH_LEAGUE_PLAN, PRO_FIFTH_LEAGUE_PLAN, PRO_DEEP_LEAGUE_PLAN, PRO_GROUPED_LEAGUE_PLAN, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN, PRO_PYRAMID_FLOORS } from './proLeagueRegistry'
 import { advancePromotionPlayoff } from './proPromotionPlayoffs'
 import { advanceDeepPlayoff } from './proDeepPlayoffs'
 import { feederQualification } from './proFeederPlayoffs'
@@ -451,6 +451,37 @@ function scheduleScottishSplit(world: ProWorldState, fixtures: ProFixture[]): Pr
   return [...fixtures, ...extra]
 }
 
+/** Assert that promotion/relegation stays inside the frozen pyramid and
+ * that every existing club still has exactly one competition next season.
+ */
+function assertClosedPyramid(world: ProWorldState, associationId: string,
+  divisions: readonly { id: string }[], expectedSizes: readonly number[]): void {
+  const floor = PRO_PYRAMID_FLOORS[associationId]
+  if (!floor) return
+  const entrants = new Set<string>()
+  divisions.forEach((division, index) => {
+    const competition = world.competitions[division.id]
+    if (!competition || competition.entrantIds.length !== expectedSizes[index])
+      throw new Error(`Unbalanced ${associationId} pyramid: ${division.id} changed league size`)
+    for (const id of competition.entrantIds) {
+      const club = world.clubs[id]
+      const tier = division.id.startsWith('top-') ? 1 :
+        division.id.startsWith('second-') ? 2 :
+        division.id.startsWith('third-') ? 3 :
+        division.id.startsWith('fourth-') ? 4 : 5
+      const group = division.id.match(/-(\\d+)$/)?.[1]
+      if (!club || club.associationId !== associationId || club.tier !== tier ||
+          group && club.feederGroup !== Number(group) || entrants.has(id))
+        throw new Error(`Invalid ${associationId} post-promotion membership: ${id} in ${division.id}`)
+      entrants.add(id)
+    }
+  })
+  const clubs = Object.values(world.clubs).filter(club => club.associationId === associationId)
+  if (clubs.length !== entrants.size ||
+      clubs.some(club => !club.tier || club.tier > floor || !entrants.has(club.id)))
+    throw new Error(`Club disappeared or was relegated below ${associationId}'s tier ${floor} floor`)
+}
+
 function advanceLeaguesTo(world: ProWorldState, targetDate: IsoDate): void {
   invalidateTournamentCalendar(world)
   const rosters = new Map<string, ProPlayer[]>()
@@ -556,6 +587,7 @@ function advanceLeaguesTo(world: ProWorldState, targetDate: IsoDate): void {
         brazilFourthResult = brazilSerieDQualification(world, lastDate)
         if (targetDate <= brazilFourthResult.readyDate) break
       }
+      const expectedSizes = divisions.map(item => world.competitions[item.id].entrantIds.length)
       const nextYear = Number(world.competitions[league.id].seasonId) + 1
       divisions.forEach((item, index) => archive(world, item.id, batches[index], rosters, prospects))
       if (lower) exchangeDivisions(world, league.associationId, playoffWinner)
@@ -573,6 +605,7 @@ function advanceLeaguesTo(world: ProWorldState, targetDate: IsoDate): void {
       if (league.associationId === 'fra' || league.associationId === 'bra')
         exchangeNationalThird(world, league.associationId, league.associationId === 'bra' ? feederResult : undefined)
       divisions.forEach(item => fixtureIndex.set(item.id, newProLeagueSeason(world, item, nextYear)))
+      assertClosedPyramid(world, league.associationId, divisions, expectedSizes)
     }
   }
 }

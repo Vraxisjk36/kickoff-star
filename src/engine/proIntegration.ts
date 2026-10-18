@@ -145,7 +145,8 @@ export function advanceLivingWorld(previous: ProCareerState, next: ProCareerStat
   if (!previous.backgroundWorld || !previous.date) return { state: next, player }
   // The youth calendar has 44 playable weeks. Eight off-season weeks pass at
   // rollover, so the professional season begins in August again.
-  const date = addDays(previous.date, next.season > previous.season ? 63 : 7)
+  const date = addDays(previous.date, next.season > previous.season ?
+    (Math.max(0, ...previous.world.divisions[1].fixtures.map(f => f.week)) > 38 ? 7 : 63) : 7)
   let world = advanceProWorldTo(previous.backgroundWorld, date)
   const residence = previous.residence
   let money = player.money ?? 0

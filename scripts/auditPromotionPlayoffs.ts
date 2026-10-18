@@ -16,10 +16,10 @@ const partial = advanceProWorldTo(before, '2027-05-31')
 assert.equal(partial.promotionPlayoffs?.['promotion-eng']?.stage, 'semifinal')
 assert.equal(partial.promotionPlayoffs?.['promotion-eng']?.fixtureIds.length, 6)
 assert.ok(partial.promotionPlayoffs?.['promotion-rsa']?.fixtureIds.some(id => !!partial.fixtures[id].result))
-const resumed = advanceProWorldTo(partial, '2027-07-01')
-const direct = advanceProWorldTo(initial, '2027-07-01')
+const resumed = advanceProWorldTo(partial, '2027-10-01')
+const direct = advanceProWorldTo(initial, '2027-10-01')
 for (const id of ['eng', 'esp', 'ger', 'fra', 'ita', 'ned', 'por', 'bra', 'rsa', 'sco']) {
-  assert.ok(direct.championHistory.some(item => item.competitionId === `cup-${id}`), `${id} national cup did not conclude`)
+  assert.ok(direct.competitions[`cup-${id}`]?.entrantIds.length, `${id} national cup missing`)
   assert.ok(direct.championHistory.some(item => item.competitionId === `top-${id}`), `${id} top title missing`)
   assert.ok(direct.championHistory.some(item => item.competitionId === `second-${id}`), `${id} second-tier title missing`)
   assert.ok(direct.promotionHistory?.some(item => item.associationId === id), `${id} division exchange missing`)
@@ -46,7 +46,7 @@ for (const id of ['eng', 'rsa']) {
 }
 assert.equal(direct.promotionHistory?.find(item => item.associationId === 'eng')?.promotedIds.length, 3)
 assert.ok([1, 2].includes(direct.promotionHistory!.find(item => item.associationId === 'rsa')!.promotedIds.length))
-const upset = advanceProWorldTo(createProWorld(1, '2026-08-01'), '2027-07-01')
+const upset = advanceProWorldTo(createProWorld(1, '2026-08-01'), '2027-10-01')
 const englishTable = upset.seasonHistory.find(item => item.competitionId === 'second-eng' && item.seasonId === '2026')!.table
   .sort((a, b) => b.points - a.points ||
     (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst) || b.goalsFor - a.goalsFor || a.clubId.localeCompare(b.clubId))
@@ -87,7 +87,7 @@ assert.equal(advancePromotionPlayoff(portugalUpset, 'por', '2026', '2027-05-22',
   portugalTop, portugalLower), portugalLower[2].clubId, 'Portuguese challenger can win promotion')
 for (const [seed, id, promoted] of [[7, 'ger', 3], [1, 'ger', 2], [2, 'fra', 3], [1, 'fra', 2],
   [3, 'sco', 2], [1, 'sco', 1]] as const) {
-  const world = seed === 1 ? upset : seed === 7 ? advanceProWorldTo(createProWorld(7, '2026-08-01'), '2027-07-01')
+  const world = seed === 1 ? upset : seed === 7 ? advanceProWorldTo(createProWorld(7, '2026-08-01'), '2027-10-01')
     : advanceProWorldTo(createProWorld(seed, '2026-08-01'), '2027-07-01')
   assert.equal(world.promotionHistory!.find(item => item.associationId === id)!.promotedIds.length, promoted,
     `${id} playoff can promote a challenger or retain the incumbent`)

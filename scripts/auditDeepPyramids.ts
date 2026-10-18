@@ -13,7 +13,7 @@ for (const [country, divisions] of Object.entries(groups)) for (const [level, co
   assert.ok(comp.entrantIds.every(id => !seed.clubs[id].name.includes('undefined')))
 }
 const mid = advanceProWorldTo(seed, '2027-01-02')
-for (const [country, expected] of [['eng', 92], ['sco', 42], ['ger', 56]] as const) {
+for (const [country, expected] of [['eng', 116], ['sco', 78], ['ger', 61]] as const) {
   assert.equal(mid.competitions[`cup-${country}`].entrantIds.length, expected, `${country} cup missing lower clubs`)
   assert.ok(mid.competitions[`cup-${country}`].entrantIds.every(id => !!mid.clubs[id]))
 }
@@ -52,10 +52,16 @@ for (const country of Object.keys(groups)) {
     for (const player of Object.values(legacy.players).filter(item => item.clubId === club.id)) delete legacy.players[player.id]
     for (const prospect of Object.values(legacy.academyProspects).filter(item => item.clubId === club.id)) delete legacy.academyProspects[prospect.id]
   }
-  for (const [level] of groups[country as keyof typeof groups]) {
-    const id = `${level}-${country}`
+  // Mimic a save from before ANY regional or national deep tier was added.
+  // Leaving fifth/region competitions while deleting their clubs would model
+  // a corrupted save, not an authentic legacy save.
+  const missingIds = Object.keys(legacy.competitions).filter(id =>
+    ['third-', 'fourth-', 'fifth-'].some(prefix =>
+      id === `${prefix}${country}` || id.startsWith(`${prefix}${country}-`)))
+  for (const id of missingIds) {
     delete legacy.competitions[id]; delete legacy.standings[id]
-    for (const game of Object.values(legacy.fixtures).filter(item => item.competitionId === id)) delete legacy.fixtures[game.id]
+    for (const game of Object.values(legacy.fixtures).filter(item => item.competitionId === id))
+      delete legacy.fixtures[game.id]
   }
 }
 const hydrated = advanceProWorldTo(legacy, '2026-08-02')

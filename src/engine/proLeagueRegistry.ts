@@ -94,6 +94,15 @@ export const PRO_GROUPED_FOURTH_LEAGUE_PLAN: readonly ProLeaguePlan[] = PRO_LEAG
   .flatMap(league => Array.from({ length: GROUPED_FOURTH[league.associationId].groups }, (_, group) =>
     ({ ...league, id: `fourth-${league.associationId}-${group + 1}`, mode: 'simulated' as const })))
 
+/** Scottish Highland and Lowland feeder leagues beneath League Two. */
+export const GROUPED_FIFTH: Readonly<Record<string, { groups: number; clubsPerGroup: number }>> = {
+  sco: { groups: 2, clubsPerGroup: 18 },
+}
+export const PRO_GROUPED_FIFTH_LEAGUE_PLAN: readonly ProLeaguePlan[] = PRO_LEAGUE_PLAN
+  .filter(league => league.associationId in GROUPED_FIFTH)
+  .flatMap(league => Array.from({ length: GROUPED_FIFTH[league.associationId].groups }, (_, group) =>
+    ({ ...league, id: `fifth-${league.associationId}-${group + 1}`, mode: 'simulated' as const })))
+
 /** Distinct regional tables; member clubs keep their region when divisions exchange. */
 export const GROUPED_THIRD: Readonly<Record<string, { groups: number; clubsPerGroup: number; promoted: number }>> = {
   esp: { groups: 2, clubsPerGroup: 20, promoted: 4 },

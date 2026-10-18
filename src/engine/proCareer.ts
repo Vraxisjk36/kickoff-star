@@ -11,6 +11,8 @@ import { PRO_INTERACTIVE_COUNTRIES } from './proLeagueRegistry'
 export interface ProPayStatement { season: number; month: string; gross: number; bonus: number; estimatedWithholding: number; agentFee: number; housing: number; net: number }
 export interface ProMarketOffer { teamId: string; worldClubId: string; weeklyWage: number; expiresWeek: number }
 
+export interface ProSeasonRecord { season: number; associationId: string; clubName: string; leaguePosition: number; clubs: number; appearances: number; goals: number; assists: number; leagueChampion: boolean }
+
 export interface ProCareerState {
   world: LeagueWorld
   associationId?: string
@@ -19,6 +21,7 @@ export interface ProCareerState {
   welcomed: boolean
   /** Career ends at age 38 after the final senior season. */
   retired?: boolean
+  seasonRecords?: ProSeasonRecord[]
   trainedWeek?: number
   /** Matchday resolution is persisted before advancing so a reload cannot replay a result. */
   resolvedWeek?: number
@@ -129,13 +132,28 @@ export function advanceProWeek(state: ProCareerState, player: Player): { state: 
   }
   const nextWeek = state.week + 1
   const seasonEnd = nextWeek > 44
-  if (seasonEnd) world = resetSchoolLeagueSeason(world)
+  let seasonRecords = state.seasonRecords ?? []
+  if (seasonEnd) {
+    const division = world.divisions[1]
+    const ranking = [...division.standings].sort((a, b) => b.points - a.points ||
+      (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst) ||
+      b.goalsFor - a.goalsFor || a.teamId.localeCompare(b.teamId))
+    const position = ranking.findIndex(row => row.teamId === world.playerTeamId) + 1
+    const clubName = division.teams.find(team => team.id === world.playerTeamId)?.name ?? 'Unknown club'
+    seasonRecords = [...seasonRecords, {
+      season: state.season, associationId: state.associationId ?? 'eng', clubName,
+      leaguePosition: position, clubs: division.teams.length,
+      appearances: player.seasonAppearances ?? 0, goals: player.seasonGoals ?? 0,
+      assists: player.seasonAssists ?? 0, leagueChampion: position === 1,
+    }].slice(-30)
+    world = resetSchoolLeagueSeason(world)
+  }
   world.kind = 'pro'
   const wage = player.contract?.terms.weeklyWage ?? 1200
   const pay = state.backgroundWorld ? 0 : netWage(wage, player.agentId)
   const injury = player.injury && player.injury.weeksRemaining > 1 ? { ...player.injury, weeksRemaining: player.injury.weeksRemaining - 1 } : null
   return {
-    state: { ...state, world, season: seasonEnd ? state.season + 1 : state.season, week: seasonEnd ? 1 : nextWeek, resolvedWeek: undefined, trainedWeek: undefined,
+    state: { ...state, world, seasonRecords, season: seasonEnd ? state.season + 1 : state.season, week: seasonEnd ? 1 : nextWeek, resolvedWeek: undefined, trainedWeek: undefined,
       retired: seasonEnd && player.careerClock.ageYears + 1 >= 38 ? true : state.retired },
     player: { ...player, injury, suspensionMatches: Math.max(0, (player.suspensionMatches ?? 0) - (round !== null ? 1 : 0)), totalWeeksElapsed: (player.totalWeeksElapsed ?? 0) + 1, money: (player.money ?? 0) + pay,
       careerEarnings: (player.careerEarnings ?? 0) + wage, fitness: { stamina: Math.min(100, player.fitness.stamina + 18) },

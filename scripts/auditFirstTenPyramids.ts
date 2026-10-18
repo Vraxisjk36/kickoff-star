@@ -160,3 +160,13 @@ assert.deepEqual(first.competitions['fifth-eng'].entrantIds, resumed.competition
 assert.deepEqual(first.standings['fifth-eng'], resumed.standings['fifth-eng'],
   'England: fifth-tier save/resume changed standings')
 console.log('English fifth-tier and cross-pyramid regression passed')
+
+const faCup = first.competitions['cup-eng']
+const eflCup = first.competitions['league-cup-eng']
+assert.ok(faCup && eflCup, 'English domestic cups missing')
+const nationalLeagueMembers = new Set(first.competitions['fifth-eng'].entrantIds)
+assert.ok(nationalLeagueMembers.size === 24)
+assert.ok([...nationalLeagueMembers].every(id => faCup.entrantIds.includes(id)),
+  'English FA Cup must contain National League entrants')
+assert.ok([...nationalLeagueMembers].every(id => !eflCup.entrantIds.includes(id)),
+  'English EFL Cup must exclude National League entrants')

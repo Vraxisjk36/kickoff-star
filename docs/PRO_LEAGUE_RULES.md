@@ -2,6 +2,24 @@
 
 The existing school game and playable pro UI remain in place. This page describes the simulated world. The 30 “playable” labels in the registry are planned career destinations; full match interaction currently exists for the English pro chapter only. See [the 30-country pyramid plan](PRO_COUNTRY_PYRAMID_PLAN.md).
 
+## Regional competition rules update — October 2026
+
+The ten-country professional pyramids are **closed at their current bottom division**. No club may move into an unimplemented lower tier. Existing-tier promotion exchanges preserve the number of clubs in each table and the club's stable identity.
+
+The regional qualification engines currently apply:
+- Spain: five Segunda Federación champions plus five cross-group two-legged playoff winners.
+- Italy: nine Serie D group champions, subject to promotion eligibility.
+- Germany: Regionalliga West and Südwest champions qualify directly, a third rotating direct berth and a two-legged playoff for the final promotion place.
+- France: three National 2 regional representatives ascend into the national third level.
+- Portugal: four regional series, two promotion groups of four, top two of each promoted, plus a champion playoff.
+- South Africa: nine provincial champions, national round-robin groups of three, semifinals determining two promotion places.
+- Brazil: the 2026 Série D first phase contains 16 groups of six; four advance per group into two-legged knockouts; four semifinalists plus two additional playoff winners earn six promotion slots.
+- England: National League one direct and one six-team playoff place; Scotland: Highland/Lowland two-stage promotion playoffs; Netherlands: semi-professional third-tier competition retains its controlled promotion boundary.
+
+Clubs have a permanent geographic region and geographic reference grid for reallocating relegated sides into the closest available regional vacancy. New fictional clubs are seeded with region-specific home cities. Licensing and parent/reserve relationships are explicit club fields: an unlicensed side or a reserve seeking to occupy its parent's level is ineligible. Existing saves treat missing eligibility fields as independent/licensed; without actual parent linkage data the game cannot infer real-world reserve ownership.
+
+**Limitations.** The world freezes league sizes. Accordingly, Brazil's six Série D promotions displace six Série C clubs even though real-life Série C expansion/relegation rules differ. Portugal's maintenance playoffs and relegation into unimplemented district leagues, regional streams within each South African province, formal federation licensing checks, and precise travel-distance based national redraws remain approximations rather than exhaustive official regulations. These are not reasons to construct more domestic divisions, but must not be misrepresented as official rules.
+
 | Area | Implemented | Remaining rules work |
 | --- | --- | --- |
 | World leagues | 100 top divisions with persistent fixtures, tables, title archives, finances and squads | Most association formats are provisional double round robins; exact calendars and tiebreakers need federation review. |

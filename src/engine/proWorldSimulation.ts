@@ -358,35 +358,8 @@ function exchangeRegionalFourth(world: ProWorldState, country: 'esp' | 'ita' | '
   // not by its position in a random array. No group may grow or shrink.
   const fourthVacancies = promoted.map(id => world.clubs[id].feederGroup!)
   const thirdVacancies = relegated.map(id => world.clubs[id].feederGroup!)
-  const assign = (ids: string[], vacancies: number[], destination: 3 | 4,
-    groupCount: number): void => {
-    const places = [...vacancies]
-    if (places.some(group => !group || group < 1 || group > groupCount))
-      throw new Error(`Invalid ${country} region vacancy`)
-    // A stable minimum-travel-first placement; existing group labels are
-    // kept only as a fallback for saves predating geographical affiliation.
-    for (const id of [...ids].sort((a, b) => {
-      const ar = world.clubs[a].homeRegion ?? world.clubs[a].feederGroup ?? 1
-      const br = world.clubs[b].homeRegion ?? world.clubs[b].feederGroup ?? 1
-      return ar - br || a.localeCompare(b)
-    })) {
-      const club = world.clubs[id]
-      const sourceGroup = club.homeRegion ?? club.feederGroup ?? 1
-      const sourceCount = club.homeRegionCount ?? (club.tier === 4 ? format.groups : third.groups)
-      const normalized = (sourceGroup - .5) / sourceCount
-      let best = 0, bestDistance = Infinity
-      for (let i = 0; i < places.length; i++) {
-        const distance = Math.abs(normalized - (places[i] - .5) / groupCount)
-        if (distance < bestDistance) { best = i; bestDistance = distance }
-      }
-      const [group] = places.splice(best, 1)
-      club.tier = destination
-      club.feederGroup = group
-    }
-    if (places.length) throw new Error(`Unfilled ${country} regional vacancies`)
-  }
-  assign(promoted, thirdVacancies, 3, third.groups)
-  assign(relegated, fourthVacancies, 4, format.groups)
+  assignRegionalVacancies(world, promoted, thirdVacancies, 3, third.groups)
+  assignRegionalVacancies(world, relegated, fourthVacancies, 4, format.groups)
   world.promotionHistory ??= []
   world.promotionHistory.push({ associationId: `${country}-3`,
     seasonId: world.competitions[`second-${country}`].seasonId,

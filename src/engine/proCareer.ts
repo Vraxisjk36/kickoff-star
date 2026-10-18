@@ -133,18 +133,19 @@ export function resolveProMatch(state: ProCareerState, player: Player, result: {
   const line: MatchLine = { playerId: player.id, name: player.name, position: player.position, teamId: state.world.playerTeamId,
     minutes: result.minutes, started: player.squadRole === 'starting-xi', rating: result.rating, goals: result.goals, assists: result.assists,
     saves: 0, tackles: 0, interceptions: 0, keyPasses: 0, yellowCards: result.yellowCards, redCards: result.redCarded ? 1 : 0 }
-  const world = recordPlayerMatchResult(state.world, result.opponent.id, result.scored, result.conceded, result.home, result.goals, line, state.season, state.week)
+  const scheduled = proFixture(state)
+  if (!scheduled) throw new Error('No scheduled professional fixture for this week')
+  const world = recordPlayerMatchResult(state.world, result.opponent.id, result.scored,
+    result.conceded, result.home, result.goals, line, state.season, state.week, scheduled.id)
   const record = world.divisions[1].matchRecords!.at(-1)!
   const humanClub = state.clubWorldIds?.[state.world.playerTeamId]
   const opponentClub = state.clubWorldIds?.[result.opponent.id]
-  const playedFixture = state.world.divisions[1].fixtures.find(fixture =>
-    !fixture.played && fixture.homeTeamId === (result.home ? state.world.playerTeamId : result.opponent.id) &&
-    fixture.awayTeamId === (result.home ? result.opponent.id : state.world.playerTeamId))
+
   const backgroundWorld = state.backgroundWorld && humanClub && opponentClub
     ? recordHumanProLeagueMatch(state.backgroundWorld, state.associationId ?? 'eng',
       result.home ? humanClub : opponentClub, result.home ? opponentClub : humanClub,
       result.home ? result.scored : result.conceded, result.home ? result.conceded : result.scored,
-      playedFixture?.id, state.activeCompetitionId)
+      scheduled.id, state.activeCompetitionId)
     : state.backgroundWorld
   return { state: { ...state, world, backgroundWorld, resolvedWeek: state.week },
     record: { ...record, competitionId: 'proLeague', season: state.season, week: state.week } }

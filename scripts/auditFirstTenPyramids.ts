@@ -32,7 +32,8 @@ for (const country of countries) {
         played.set(club, played.get(club)! + 1)
       }
     }
-    for (const count of played.values()) assert.equal(count, comp.format.scheduledRounds, `${id}: wrong match count`)
+    const regularRounds = id === 'top-sco' ? 33 : comp.format.scheduledRounds
+    for (const count of played.values()) assert.equal(count, regularRounds, `${id}: wrong match count`)
     assert.deepEqual(first.competitions[id].entrantIds, resumed.competitions[id].entrantIds, `${id}: save/resume changed entrants`)
     assert.deepEqual(first.standings[id], resumed.standings[id], `${id}: save/resume changed standings`)
     assert.ok(first.championHistory.some(h => h.competitionId === id), `${id}: missing season champion`)
@@ -103,7 +104,7 @@ for (const [country, expectedMatches] of [['esp', 12], ['ita', 14]] as const) {
   }
 }
 
-const scottishSplitWorld = advanceProWorldTo(initial, '2027-04-15')
+const scottishSplitWorld = advanceProWorldTo(initial, '2027-05-15')
 const splitFixtures = Object.values(scottishSplitWorld.fixtures).filter(f =>
   f.competitionId === 'top-sco' && f.id.includes('-split-'))
 assert.equal(splitFixtures.length, 30, 'Scotland: split must schedule 30 matches')
@@ -123,3 +124,39 @@ for (const fixture of splitFixtures) {
 assert.equal(splitClubs.size, 12, 'Scotland: split must include all 12 clubs')
 for (const opponents of splitClubs.values())
   assert.equal(opponents.size, 5, 'Scotland: each club must meet five distinct split opponents')
+
+const fifth = initial.competitions['fifth-eng']
+assert.ok(fifth, 'England: missing National League')
+assert.equal(fifth.entrantIds.length, 24, 'England: National League needs 24 clubs')
+assert.equal(fifth.format.scheduledRounds, 46)
+const fifthFixtures = Object.values(initial.fixtures).filter(f => f.competitionId === 'fifth-eng')
+assert.equal(fifthFixtures.length, 24 * 46 / 2, 'England: incorrect National League fixtures')
+const fifthPairs = new Map<string, typeof fifthFixtures>()
+const fifthOccupied = new Set<string>()
+for (const fixture of fifthFixtures) {
+  for (const club of [fixture.homeId, fixture.awayId]) {
+    const key = `${club}:${fixture.kickoffDate}`
+    assert.ok(!fifthOccupied.has(key), `England fifth tier double-booked ${key}`)
+    fifthOccupied.add(key)
+  }
+  const key = [fixture.homeId, fixture.awayId].sort().join(':')
+  fifthPairs.set(key, [...(fifthPairs.get(key) ?? []), fixture])
+}
+assert.equal(fifthPairs.size, 276, 'England National League requires every opponent pairing')
+for (const ties of fifthPairs.values()) {
+  assert.equal(ties.length, 2)
+  assert.equal(ties[0].homeId, ties[1].awayId, 'England National League return fixtures')
+}
+const fifthHistory = first.promotionHistory?.find(h => h.associationId === 'eng-4')
+assert.ok(fifthHistory, 'England: National League promotion missing')
+assert.equal(fifthHistory.promotedIds.length, 2)
+assert.equal(fifthHistory.relegatedIds.length, 2)
+assert.equal(fifthHistory.fixtures.length, 5, 'England: playoff needs five games')
+assert.ok(fifthHistory.fixtures.every(f => !!f.result))
+assert.ok(fifthHistory.promotedIds.every(id => first.competitions['fourth-eng'].entrantIds.includes(id)))
+assert.ok(fifthHistory.relegatedIds.every(id => first.competitions['fifth-eng'].entrantIds.includes(id)))
+assert.deepEqual(first.competitions['fifth-eng'].entrantIds, resumed.competitions['fifth-eng'].entrantIds,
+  'England: fifth-tier save/resume changed entrants')
+assert.deepEqual(first.standings['fifth-eng'], resumed.standings['fifth-eng'],
+  'England: fifth-tier save/resume changed standings')
+console.log('English fifth-tier and cross-pyramid regression passed')

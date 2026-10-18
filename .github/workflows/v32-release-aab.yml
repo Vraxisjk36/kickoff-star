@@ -8,6 +8,19 @@ on:
     branches: [codex/v32-v4-unified]
 
 jobs:
+  pyramid-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Verify every modeled pro pyramid
+        run: npm run audit:pro-pyramids
+
   release-aab:
     runs-on: ubuntu-latest
     timeout-minutes: 20

@@ -17,7 +17,7 @@ export interface ProClub {
   id: ProWorldId
   associationId: ProWorldId
   /** Missing on older saves and therefore interpreted as the top division. */
-  tier?: 1 | 2
+  tier?: 1 | 2 | 3 | 4
   name: string
   homeCity: string
   stadiumId: ProWorldId

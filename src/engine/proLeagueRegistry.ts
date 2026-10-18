@@ -66,6 +66,18 @@ export const PRO_LOWER_LEAGUE_PLAN: readonly ProLeaguePlan[] = PRO_LEAGUE_PLAN
   .filter(league => league.associationId in LOWER_DIVISIONS)
   .map(league => ({ ...league, id: `second-${league.associationId}`, mode: 'simulated' }))
 
+/** National lower flights whose club membership can be modelled as one table. */
+export const DEEP_DIVISIONS: Readonly<Record<string, { third: number; fourth?: number }>> = {
+  eng: { third: 24, fourth: 24 }, ger: { third: 20 }, sco: { third: 10, fourth: 10 },
+}
+export const PRO_DEEP_LEAGUE_PLAN: readonly ProLeaguePlan[] = PRO_LEAGUE_PLAN
+  .filter(league => league.associationId in DEEP_DIVISIONS)
+  .flatMap(league => [
+    { ...league, id: `third-${league.associationId}`, mode: 'simulated' as const },
+    ...(DEEP_DIVISIONS[league.associationId].fourth
+      ? [{ ...league, id: `fourth-${league.associationId}`, mode: 'simulated' as const }] : []),
+  ])
+
 export function validateProLeaguePlan(leagues: readonly ProLeaguePlan[] = PRO_LEAGUE_PLAN): string[] {
   const issues: string[] = []
   if (leagues.length !== 100) issues.push(`Expected 100 leagues; found ${leagues.length}`)

@@ -6,7 +6,7 @@ import { completeProTransfer } from '../src/engine/proTransfers'
 import { assessProDeal } from '../src/engine/proClubFinance'
 import { validateCalendarProfile } from '../src/engine/proCalendar'
 import { readSave, writeSave, SAVE_SCHEMA_VERSION, EMPTY_CUPS } from '../src/engine/save'
-import { PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN, validateProLeaguePlan } from '../src/engine/proLeagueRegistry'
+import { PRO_DEEP_LEAGUE_PLAN, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN, validateProLeaguePlan } from '../src/engine/proLeagueRegistry'
 import { PRO_SATELLITE_ASSOCIATIONS } from '../src/engine/proSatelliteRegistry'
 
 const world = createProWorld(2051, '2026-01-01')
@@ -16,7 +16,7 @@ assert.equal(PRO_SATELLITE_ASSOCIATIONS.length, 118)
 assert.equal(new Set([...PRO_LEAGUE_PLAN.map(item => item.associationId), ...PRO_SATELLITE_ASSOCIATIONS.map(item => item.id)]).size, 218)
 assert.ok(Object.keys(world.associations).length >= 200)
 assert.equal(Object.values(world.associations).filter(item => item.confederation === 'caf').length, 54)
-assert.equal(Object.keys(world.competitions).length, 100 + PRO_LOWER_LEAGUE_PLAN.length)
+assert.equal(Object.keys(world.competitions).length, 100 + PRO_LOWER_LEAGUE_PLAN.length + PRO_DEEP_LEAGUE_PLAN.length)
 assert.ok(Object.keys(world.players).length > 25_000)
 const initial = JSON.stringify(world)
 assert.ok(initial.length < 32 * 1024 * 1024)
@@ -24,9 +24,9 @@ assert.ok(initial.length < 32 * 1024 * 1024)
 for (const competition of Object.values(world.competitions)) {
   const fixtures = Object.values(world.fixtures).filter(fixture => fixture.competitionId === competition.id)
   const n = competition.entrantIds.length
-  assert.equal(fixtures.length, competition.id === 'top-sco' ? 198 : n * (n - 1) * (competition.id === 'second-sco' ? 2 : 1), `${competition.id} fixture count`)
+  assert.equal(fixtures.length, competition.id === 'top-sco' ? 198 : n * (n - 1) * (competition.associationId === 'sco' ? 2 : 1), `${competition.id} fixture count`)
   const pairs = new Set(fixtures.map(fixture => `${fixture.homeId}:${fixture.awayId}`))
-  assert.equal(pairs.size, competition.id === 'top-sco' ? 132 : competition.id === 'second-sco' ? fixtures.length / 2 : fixtures.length,
+  assert.equal(pairs.size, competition.id === 'top-sco' ? 132 : competition.associationId === 'sco' ? fixtures.length / 2 : fixtures.length,
     `${competition.id} repeated home/away tie`)
   const clubDates = new Set<string>()
   for (const fixture of fixtures) for (const id of [fixture.homeId, fixture.awayId]) {
@@ -78,6 +78,8 @@ assert.equal(twentyYears.championHistory.filter(record => record.competitionId.s
   100 * 20 + 17, 'every league season archived; Brazil 2026 begins in January')
 assert.ok(twentyYears.championHistory.filter(record => record.competitionId.startsWith('second-')).length >=
   PRO_LOWER_LEAGUE_PLAN.length * 20, 'every lower-division season archived')
+assert.ok(twentyYears.championHistory.filter(record => record.competitionId.startsWith('third-') || record.competitionId.startsWith('fourth-')).length >=
+  PRO_DEEP_LEAGUE_PLAN.length * 20, 'every national feeder season archived')
 assert.ok(twentyYears.seasonHistory.length <= 220 * 9)
 assert.ok(twentyYears.recentEvents.length <= 240)
 assert.equal(Object.values(twentyYears.players).filter(candidate => candidate.clubId).length,

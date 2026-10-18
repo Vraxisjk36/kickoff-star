@@ -1,6 +1,7 @@
-import { LOWER_DIVISIONS, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN } from './proLeagueRegistry'
+import { LOWER_DIVISIONS, PRO_DEEP_LEAGUE_PLAN, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN } from './proLeagueRegistry'
 import { advancePromotionPlayoff } from './proPromotionPlayoffs'
-import { createAcademyIntake, hydrateLowerDivisions, hydrateNewBackgroundLeagues, newProLeagueSeason, proRoll } from './proWorldFactory'
+import { advanceDeepPlayoff } from './proDeepPlayoffs'
+import { createAcademyIntake, hydrateDeepDivisions, hydrateLowerDivisions, hydrateNewBackgroundLeagues, newProLeagueSeason, proRoll } from './proWorldFactory'
 import { ageOf, growOrDecline, nextShirtNumber, seasonalInjury, shouldRetire, signBackgroundReplacement } from './proLifecycle'
 import { advanceTournamentsTo, beginClubWorldSeason, beginContinentalSeason, beginNationsLeague, beginWorldQualifiers, beginDomesticSeason, beginNationalSeason, beginWorldSeason, beginSouthAfricanTopEight, invalidateTournamentCalendar } from './proTournaments'
 import type { IsoDate, ProClub, ProFixture, ProPlayer, ProStandingRow, ProWorldState } from './proWorld'
@@ -167,6 +168,36 @@ function exchangeDivisions(world: ProWorldState, associationId: string, playoffW
     details: { action: 'promotion-relegation', associationId, promoted: promoted.length, relegated: relegated.length } })
 }
 
+function exchangeDeepDivisions(world: ProWorldState, associationId: 'eng' | 'ger' | 'sco', upperTier: 2 | 3,
+  playoffWinner: string): void {
+  const upperId = `${upperTier === 2 ? 'second' : 'third'}-${associationId}`
+  const lowerId = `${upperTier === 2 ? 'third' : 'fourth'}-${associationId}`
+  const upper = ordered(world.seasonHistory.filter(row => row.competitionId === upperId).at(-1)!.table)
+  const lower = ordered(world.seasonHistory.filter(row => row.competitionId === lowerId).at(-1)!.table)
+  const direct = associationId === 'eng' ? upperTier === 2 ? 2 : 3 : associationId === 'ger' ? 2 : 1
+  const demoted = associationId === 'eng' ? upperTier === 2 ? 3 : 4 : associationId === 'ger' ? 2 : 1
+  const promoted = lower.slice(0, direct).map(row => row.clubId)
+  const relegated = upper.slice(-demoted).map(row => row.clubId)
+  const incumbent = associationId === 'ger' ? upper.at(-3)!.clubId : associationId === 'sco' ? upper.at(-2)!.clubId : null
+  if (incumbent !== playoffWinner) {
+    promoted.push(playoffWinner)
+    if (incumbent) relegated.push(incumbent)
+  }
+  if (promoted.length !== relegated.length || new Set(promoted).size !== promoted.length || new Set(relegated).size !== relegated.length)
+    throw new Error(`Invalid ${associationId} tier ${upperTier} exchange`)
+  for (const id of promoted) world.clubs[id].tier = upperTier
+  for (const id of relegated) world.clubs[id].tier = upperTier + 1 as 3 | 4
+  const key = `promotion-${associationId}-${upperTier}`
+  const state = world.promotionPlayoffs![key]
+  const fixtures = state.fixtureIds.map(id => world.fixtures[id])
+  world.promotionHistory ??= []
+  world.promotionHistory.push({ associationId: `${associationId}-${upperTier}`,
+    seasonId: world.competitions[upperId].seasonId, promotedIds: promoted, relegatedIds: relegated,
+    fixtures: structuredClone(fixtures) })
+  for (const fixture of fixtures) delete world.fixtures[fixture.id]
+  delete world.promotionPlayoffs![key]
+}
+
 function scheduleScottishSplit(world: ProWorldState, fixtures: ProFixture[]): ProFixture[] {
   const competition = world.competitions['top-sco']
   if (competition.splitScheduled || fixtures.length !== 198 || !fixtures.every(fixture => fixture.result)) return fixtures
@@ -213,7 +244,8 @@ function advanceLeaguesTo(world: ProWorldState, targetDate: IsoDate): void {
   }
   for (const league of PRO_LEAGUE_PLAN) {
     const lower = PRO_LOWER_LEAGUE_PLAN.find(item => item.associationId === league.associationId)
-    const divisions = lower ? [league, lower] : [league]
+    const divisions = [league, ...(lower ? [lower] : []),
+      ...PRO_DEEP_LEAGUE_PLAN.filter(item => item.associationId === league.associationId)]
     for (let season = 0; season < 60; season++) {
       const batches = divisions.map(item => (fixtureIndex.get(item.id) ?? [])
         .sort((a, b) => a.kickoffDate.localeCompare(b.kickoffDate) || a.id.localeCompare(b.id)))
@@ -242,9 +274,25 @@ function advanceLeaguesTo(world: ProWorldState, targetDate: IsoDate): void {
           lastDate, targetDate, world.standings[league.id], world.standings[lower!.id]) ?? undefined
         if (!playoffWinner) break
       }
+      const deepResults: { upperTier: 2 | 3; winner: string }[] = []
+      if (['eng', 'ger', 'sco'].includes(league.associationId)) {
+        const lastDate = batches.flat().reduce((latest, fixture) => fixture.kickoffDate > latest ? fixture.kickoffDate : latest, '0000-01-01')
+        for (const upperTier of ([2, 3] as const)) {
+          const upper = divisions.find(item => item.id === `${upperTier === 2 ? 'second' : 'third'}-${league.associationId}`)
+          const next = divisions.find(item => item.id === `${upperTier === 2 ? 'third' : 'fourth'}-${league.associationId}`)
+          if (!upper || !next) continue
+          const winner = advanceDeepPlayoff(world, league.associationId as 'eng' | 'ger' | 'sco', upperTier,
+            world.competitions[upper.id].seasonId, lastDate, targetDate, world.standings[upper.id], world.standings[next.id])
+          if (!winner) break
+          deepResults.push({ upperTier, winner })
+        }
+        if (deepResults.length !== divisions.length - 2) break
+      }
       const nextYear = Number(world.competitions[league.id].seasonId) + 1
       divisions.forEach((item, index) => archive(world, item.id, batches[index], rosters, prospects))
       if (lower) exchangeDivisions(world, league.associationId, playoffWinner)
+      for (const { upperTier, winner } of deepResults)
+        exchangeDeepDivisions(world, league.associationId as 'eng' | 'ger' | 'sco', upperTier, winner)
       divisions.forEach(item => fixtureIndex.set(item.id, newProLeagueSeason(world, item, nextYear)))
     }
   }
@@ -266,6 +314,7 @@ export function advanceProWorldTo(source: ProWorldState, targetDate: IsoDate): P
   world.loans ??= {}
   hydrateNewBackgroundLeagues(world)
   hydrateLowerDivisions(world)
+  hydrateDeepDivisions(world)
   const milestones: { date: IsoDate; kind: 'national' | 'continental' | 'summer-cups' }[] = []
   for (let year = Number(source.currentDate.slice(0, 4)); year <= Number(targetDate.slice(0, 4)); year++) {
     milestones.push({ date: `${year}-01-01`, kind: 'national' }, { date: `${year}-07-01`, kind: 'summer-cups' }, { date: `${year}-09-01`, kind: 'continental' })

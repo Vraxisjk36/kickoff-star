@@ -129,6 +129,8 @@ export default function Career({ onExitToMenu }: { onExitToMenu?: () => void }) 
 
   if (!calendar || !player) return null
 
+  if (player.proCareer?.retired) return <CareerEnd player={player} onMenu={() => onExitToMenu?.()} />
+
   if (player.turnedPro) {
     return player.proCareer?.welcomed
       ? <ProCareer onExitToMenu={() => onExitToMenu?.()} />

@@ -64,7 +64,7 @@ assert.equal(awayAfter.goalsAgainst, awayBefore.goalsAgainst+4)
 assert.equal(recordHumanProLeagueMatch(updated,'esp',firstFixture.homeId,
   firstFixture.awayId,4,1), updated, 'Replaying human result should be idempotent')
 const correction = recordHumanProLeagueMatch(updated,'esp',firstFixture.homeId,
-  firstFixture.awayId,0,2)
+  firstFixture.awayId,0,2,firstFixture.id)
 assert.equal(correction.standings['top-esp'].find(row=>row.clubId===firstFixture.homeId)!.points,homeBefore.points)
 assert.equal(correction.standings['top-esp'].find(row=>row.clubId===firstFixture.awayId)!.points,awayBefore.points+3)
 console.log('Phase 2: human national-league result reconciled, corrected and saved deterministically')

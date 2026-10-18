@@ -44,3 +44,11 @@ for (const country of countries) {
   assert.ok(movement.relegatedIds.every(id => first.competitions[`second-${country}`].entrantIds.includes(id)), `${country}: relegated club missing from second tier`)
 }
 console.log('First-ten top/second pyramid regression passed')
+
+const brazilFeeder = first.promotionHistory?.find(h => h.associationId === 'bra-2')
+assert.ok(brazilFeeder, 'Brazil Série C promotion missing')
+assert.equal(brazilFeeder.promotedIds.length, 4)
+assert.ok(brazilFeeder.fixtures.length >= 12, 'Brazil Série C final-group fixtures missing')
+assert.ok(brazilFeeder.fixtures.every(f => !!f.result), 'Brazil Série C final-group result missing')
+assert.ok(brazilFeeder.promotedIds.every(id => first.competitions['second-bra'].entrantIds.includes(id)),
+  'Brazil Série C winner missing from next Série B')

@@ -1,4 +1,4 @@
-import { DEEP_DIVISIONS, GROUPED_THIRD, LOWER_DIVISIONS, PRO_DEEP_LEAGUE_PLAN, PRO_GROUPED_LEAGUE_PLAN, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN, type ProLeaguePlan } from './proLeagueRegistry'
+import { DEEP_DIVISIONS, FIFTH_DIVISIONS, GROUPED_THIRD, LOWER_DIVISIONS, PRO_FIFTH_LEAGUE_PLAN, PRO_DEEP_LEAGUE_PLAN, PRO_GROUPED_LEAGUE_PLAN, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN, type ProLeaguePlan } from './proLeagueRegistry'
 import { createEmptyProWorld, type IsoDate, type ProAcademyProspect, type ProClub, type ProCompetition, type ProFixture,
   type ProPlayer, type ProWorldState } from './proWorld'
 import { isInPeriod, type SeasonCalendarProfile } from './proCalendar'
@@ -110,7 +110,7 @@ export function createAcademyIntake(club: ProClub, seed: number, year: number): 
 }
 
 export function newProLeagueSeason(world: ProWorldState, league: ProLeaguePlan, startYear: number): ProFixture[] {
-  const tier = league.id.startsWith('second-') ? 2 : league.id.startsWith('third-') ? 3 : league.id.startsWith('fourth-') ? 4 : 1
+  const tier = league.id.startsWith('second-') ? 2 : league.id.startsWith('third-') ? 3 : league.id.startsWith('fourth-') ? 4 : league.id.startsWith('fifth-') ? 5 : 1
   const lower = tier > 1
   const group = league.id.match(/^third-[a-z]+-(\d+)$/)?.[1]
   const clubIds = Object.values(world.clubs).filter(club => club.associationId === league.associationId &&
@@ -179,11 +179,11 @@ export function createProWorld(seed: number, currentDate: IsoDate): ProWorldStat
     const secondCount = LOWER_DIVISIONS[league.associationId]?.clubs ?? 0
     const grouped = GROUPED_THIRD[league.associationId]
     const thirdCount = (deep?.third ?? 0) + (grouped ? grouped.groups * grouped.clubsPerGroup : 0)
-    const clubCount = topCount + secondCount + thirdCount + (deep?.fourth ?? 0)
+    const clubCount = topCount + secondCount + thirdCount + (deep?.fourth ?? 0) + (FIFTH_DIVISIONS[league.associationId] ?? 0)
     for (let i = 0; i < clubCount; i++) {
       const id = `club-${league.associationId}-${padded(i + 1)}`
       const identity = clubName(league, i)
-      const tier = i < topCount ? 1 : i < topCount + secondCount ? 2 : i < topCount + secondCount + thirdCount ? 3 : 4
+      const tier = i < topCount ? 1 : i < topCount + secondCount ? 2 : i < topCount + secondCount + thirdCount ? 3 : i < topCount + secondCount + thirdCount + (deep?.fourth ?? 0) ? 4 : 5
       const offset = tier === 1 ? i : tier === 2 ? i - topCount : tier === 3 ? i - topCount - secondCount : i - topCount - secondCount - deep!.third
       const reputation = Math.max(35, Math.min(89, leagueStrength[league.confederation] + (tier === 1 ? 13 : -7 - (tier - 2) * 9) - offset * 1.25
         + Math.floor(proRoll(seed, `${id}:rep`) * 7) - 3))
@@ -222,6 +222,8 @@ export function createProWorld(seed: number, currentDate: IsoDate): ProWorldStat
       newProLeagueSeason(world, deeper, startYear)
     for (const grouped of PRO_GROUPED_LEAGUE_PLAN.filter(item => item.associationId === league.associationId))
       newProLeagueSeason(world, grouped, startYear)
+    for (const fifth of PRO_FIFTH_LEAGUE_PLAN.filter(item => item.associationId === league.associationId))
+      newProLeagueSeason(world, fifth, startYear)
   }
   return world
 }
@@ -315,6 +317,36 @@ export function hydrateDeepDivisions(world: ProWorldState): void {
 }
 
 /** Add the grouped feeders to existing saves while retaining every played result. */
+/** Supply the new English National League to old saves, without touching previous fixtures. */
+export function hydrateFifthDivisions(world: ProWorldState): void {
+  const missing = PRO_FIFTH_LEAGUE_PLAN.filter(league => !world.competitions[league.id])
+  if (!missing.length) return
+  const generated = createProWorld(world.seed, world.currentDate)
+  for (const league of missing) {
+    const id = league.associationId
+    const templates = Object.values(generated.clubs).filter(club => club.associationId === id && club.tier === 5)
+    let serial = Math.max(0, ...Object.values(world.clubs).filter(club => club.associationId === id)
+      .map(club => Number(club.id.split('-').at(-1)) || 0))
+    for (const template of templates) {
+      const clubId = world.clubs[template.id] ? `club-${id}-${padded(++serial)}` : template.id
+      const stadiumId = `stadium-${clubId}`
+      world.clubs[clubId] = { ...structuredClone(template), id: clubId, stadiumId,
+        finances: { ...structuredClone(template.finances), clubId } }
+      world.stadiums[stadiumId] = { ...generated.stadiums[template.stadiumId], id: stadiumId }
+      world.managers[`manager-${clubId}`] = { ...generated.managers[`manager-${template.id}`], id: `manager-${clubId}`, clubId }
+      for (const player of Object.values(generated.players).filter(item => item.clubId === template.id)) {
+        const playerId = player.id.replace(template.id, clubId)
+        world.players[playerId] = { ...player, id: playerId, clubId }
+      }
+      for (const prospect of Object.values(generated.academyProspects).filter(item => item.clubId === template.id)) {
+        const prospectId = prospect.id.replace(template.id, clubId)
+        world.academyProspects[prospectId] = { ...prospect, id: prospectId, clubId }
+      }
+    }
+    newProLeagueSeason(world, league, Number(world.competitions[`top-${id}`].seasonId))
+  }
+}
+
 export function hydrateGroupedDivisions(world: ProWorldState): void {
   const missing = PRO_GROUPED_LEAGUE_PLAN.filter(league => !world.competitions[league.id])
   if (!missing.length) return

@@ -23,13 +23,35 @@ export function feederQualification(world: ProWorldState, country: string, lastD
     if (homeGoals !== awayGoals) return homeGoals > awayGoals ? homeId : awayId
     return proRoll(world.seed, `${id}:penalties`) < .5 ? homeId : awayId
   }
-  const bracket = (teams: string[], finalists = 1): string[] => {
+  const bracket = (teams: string[], finalists = 1, twoLegged = false): string[] => {
+    if (teams.length < finalists || teams.length % finalists !== 0 ||
+        new Set(teams).size !== teams.length)
+      throw new Error(`Invalid ${country} feeder playoff bracket`)
     let current = [...teams]
     while (current.length > finalists) {
       round++
-      const next: string[] = []
+      const ties: Array<[string, string]> = []
       for (let index = 0; index < current.length / 2; index++)
-        next.push(play(current[index], current[current.length - index - 1]))
+        ties.push([current[index], current[current.length - index - 1]])
+      const firstLeg = ties.map(([home, away]) => {
+        play(home, away)
+        return fixtures.at(-1)!.result!
+      })
+      if (twoLegged) round++
+      const next = ties.map(([home, away], index) => {
+        if (!twoLegged) {
+          const score = firstLeg[index]
+          if (score.homeGoals !== score.awayGoals)
+            return score.homeGoals > score.awayGoals ? home : away
+          return proRoll(world.seed, `feeder-${country}-${year}-${round}-${home}-${away}-pens`) < .5 ? home : away
+        }
+        play(away, home)
+        const secondLeg = fixtures.at(-1)!.result!
+        const homeAggregate = firstLeg[index].homeGoals + secondLeg.awayGoals
+        const awayAggregate = firstLeg[index].awayGoals + secondLeg.homeGoals
+        if (homeAggregate !== awayAggregate) return homeAggregate > awayAggregate ? home : away
+        return proRoll(world.seed, `feeder-${country}-${year}-${round}-${home}-${away}-pens`) < .5 ? home : away
+      })
       current = next
     }
     return current
@@ -78,13 +100,13 @@ export function feederQualification(world: ProWorldState, country: string, lastD
   } else if (country === 'esp') {
     const groups = [1, 2].map(index => order(world.standings[`third-esp-${index}`]))
     promotedIds = groups.map(rows => rows[0].clubId)
-    for (const rows of groups) promotedIds.push(...bracket(rows.slice(1, 5).map(row => row.clubId)))
+    for (const rows of groups) promotedIds.push(...bracket(rows.slice(1, 5).map(row => row.clubId), 1, true))
   } else if (country === 'ita') {
     const groups = [1, 2, 3].map(index => order(world.standings[`third-ita-${index}`]))
     promotedIds = groups.map(rows => rows[0].clubId)
     const candidates = groups.flatMap(rows => rows.slice(1, 5)).sort((a, b) => b.points / b.played - a.points / a.played || a.clubId.localeCompare(b.clubId))
       .slice(0, 8).map(row => row.clubId)
-    promotedIds.push(...bracket(candidates))
+    promotedIds.push(...bracket(candidates, 1, true))
   } else if (country === 'por') {
     const groups = [1, 2].map(index => order(world.standings[`third-por-${index}`]).slice(0, 4))
     promotedIds = phase(groups.flat().map(row => row.clubId)).slice(0, 2).map(row => row.clubId)

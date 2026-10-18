@@ -504,7 +504,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   ensureProCareer: () => {
     const { player } = getState()
     if (!player?.turnedPro || player.proCareer) return
-    setState({ player: { ...player, proCareer: createProCareer(player.turnedPro.clubName, player.contract ? Math.min(6, Math.max(3, Math.round(player.contract.terms.weeklyWage / 500))) : 4) } })
+    setState({ player: { ...player, proCareer: createProCareer(player.turnedPro.clubName, player.contract ? Math.min(6, Math.max(3, Math.round(player.contract.terms.weeklyWage / 500))) : 4, player.turnedPro.countryId ?? 'eng') } })
     void getState().saveCurrent()
   },
   acknowledgeProSigning: () => {
@@ -646,7 +646,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const terms = { weeklyWage: wage, years: 2, appearanceFee: Math.round(wage * .08), goalBonus: Math.round(wage * .12), signingBonus: wage * 2 }
     setState({ player: { ...player, proTrial: undefined, trialWeekCompleted: 3, squadRole: player.proTrial.points >= 6 ? 'starting-xi' : 'bench', squad: generateSquad(prestige),
       careerClock: { ...player.careerClock, ageYears: 18, phase: 'academy' }, agentId: player.agentId ?? 'independent',
-      contract: { clubName, terms, signedWeek: 0, expiresWeek: 88 }, turnedPro: { clubName, weekSigned: 0 },
+      contract: { clubName, terms, signedWeek: 0, expiresWeek: 88 }, turnedPro: { clubName, weekSigned: 0, countryId: associationId },
       proCareer: createProCareer(clubName, prestige, associationId), money: (player.money ?? 0) + terms.signingBonus } })
     void getState().saveCurrent()
   },
@@ -1068,10 +1068,12 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
         return
       }
       if (dealKind === 'professional') {
+        const country = player.contractOffers.find(offer => offer.clubId === player.negotiation?.clubId)?.countryId ??
+          player.academyCountryId ?? 'eng'
         // The win state, now earned through the same five stages as everything
         // else rather than a single tap.
         setState({
-          player: { ...signed, turnedPro: { clubName, weekSigned: week }, proCareer: createProCareer(clubName, prestige), squadRole: 'bench', squad: generateSquad(Math.min(8, prestige)), contractOffers: [] },
+          player: { ...signed, turnedPro: { clubName, weekSigned: week, countryId: country }, proCareer: createProCareer(clubName, prestige, country), squadRole: 'bench', squad: generateSquad(Math.min(8, prestige)), contractOffers: [] },
           negotiationBeat: outcome.beat,
         })
         getState().runAchievementCheck()

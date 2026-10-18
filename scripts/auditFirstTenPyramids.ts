@@ -102,3 +102,24 @@ for (const [country, expectedMatches] of [['esp', 12], ['ita', 14]] as const) {
     assert.equal(games[0].homeId, games[1].awayId, `${country}: playoff return leg must reverse venue`)
   }
 }
+
+const scottishSplitWorld = advanceProWorldTo(initial, '2027-05-01')
+const splitFixtures = Object.values(scottishSplitWorld.fixtures).filter(f =>
+  f.competitionId === 'top-sco' && f.id.includes('-split-'))
+assert.equal(splitFixtures.length, 30, 'Scotland: split must schedule 30 matches')
+const splitClubs = new Map<string, Set<string>>()
+const splitDates = new Set<string>()
+for (const fixture of splitFixtures) {
+  for (const [club, opponent] of [[fixture.homeId, fixture.awayId], [fixture.awayId, fixture.homeId]]) {
+    const opponents = splitClubs.get(club) ?? new Set<string>()
+    assert.ok(!opponents.has(opponent), `Scotland: duplicate split opponent ${club} / ${opponent}`)
+    opponents.add(opponent)
+    splitClubs.set(club, opponents)
+    const dateKey = `${club}:${fixture.kickoffDate}`
+    assert.ok(!splitDates.has(dateKey), `Scotland: club double booked on split date ${dateKey}`)
+    splitDates.add(dateKey)
+  }
+}
+assert.equal(splitClubs.size, 12, 'Scotland: split must include all 12 clubs')
+for (const opponents of splitClubs.values())
+  assert.equal(opponents.size, 5, 'Scotland: each club must meet five distinct split opponents')

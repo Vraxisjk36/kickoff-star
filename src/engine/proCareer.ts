@@ -134,12 +134,11 @@ export function resolveProMatch(state: ProCareerState, player: Player, result: {
   const playedFixture = state.world.divisions[1].fixtures.find(fixture =>
     !fixture.played && fixture.homeTeamId === (result.home ? state.world.playerTeamId : result.opponent.id) &&
     fixture.awayTeamId === (result.home ? result.opponent.id : state.world.playerTeamId))
-  const backgroundWorld = state.backgroundWorld && humanClub && opponentClub &&
-    (state.activeCompetitionId ?? `top-${state.associationId ?? 'eng'}`) === `top-${state.associationId ?? 'eng'}`
+  const backgroundWorld = state.backgroundWorld && humanClub && opponentClub
     ? recordHumanProLeagueMatch(state.backgroundWorld, state.associationId ?? 'eng',
       result.home ? humanClub : opponentClub, result.home ? opponentClub : humanClub,
       result.home ? result.scored : result.conceded, result.home ? result.conceded : result.scored,
-      playedFixture?.id)
+      playedFixture?.id, state.activeCompetitionId)
     : state.backgroundWorld
   return { state: { ...state, world, backgroundWorld, resolvedWeek: state.week },
     record: { ...record, competitionId: 'proLeague', season: state.season, week: state.week } }

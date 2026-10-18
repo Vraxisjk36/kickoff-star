@@ -34,6 +34,12 @@ for (const country of countries) {
     }
     const regularRounds = id === 'top-sco' ? 33 : comp.format.scheduledRounds
     for (const count of played.values()) assert.equal(count, regularRounds, `${id}: wrong match count`)
+    if (id === 'top-sco') for (const clubId of comp.entrantIds) {
+      const home = fixtures.filter(f => f.homeId === clubId).length
+      const away = fixtures.filter(f => f.awayId === clubId).length
+      assert.ok(home >= 16 && home <= 17 && away >= 16 && away <= 17,
+        `Scotland: pre-split fixtures imbalanced for ${clubId}: ${home} home, ${away} away`)
+    }
     assert.deepEqual(first.competitions[id].entrantIds, resumed.competitions[id].entrantIds, `${id}: save/resume changed entrants`)
     assert.deepEqual(first.standings[id], resumed.standings[id], `${id}: save/resume changed standings`)
     assert.ok(first.championHistory.some(h => h.competitionId === id), `${id}: missing season champion`)

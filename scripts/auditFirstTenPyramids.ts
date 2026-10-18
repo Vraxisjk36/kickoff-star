@@ -245,3 +245,42 @@ if (highlandLowlandHistory.promotedIds.length) {
     first.competitions[id].entrantIds.includes(highlandLowlandHistory.relegatedIds[0])))
 }
 console.log('Highland and Lowland fifth-tier regression passed')
+
+const dutchThird = initial.competitions['third-ned']
+assert.ok(dutchThird, 'Netherlands: Tweede Divisie missing')
+assert.equal(dutchThird.entrantIds.length, 18)
+assert.equal(dutchThird.format.scheduledRounds, 34)
+assert.equal(Object.values(initial.fixtures).filter(f => f.competitionId === 'third-ned').length, 306)
+assert.deepEqual(first.competitions['third-ned'].entrantIds, resumed.competitions['third-ned'].entrantIds,
+  'Netherlands: Tweede Divisie save/resume drift')
+for (let group = 1; group <= 3; group++) {
+  const id = `fourth-fra-${group}`
+  const comp = initial.competitions[id]
+  assert.ok(comp, `France: missing National 2 group ${group}`)
+  assert.equal(comp.entrantIds.length, 16)
+  assert.equal(comp.format.scheduledRounds, 30)
+  const fixtures = Object.values(initial.fixtures).filter(f => f.competitionId === id)
+  assert.equal(fixtures.length, 240)
+  const clubs = new Set(comp.entrantIds)
+  const visits = new Map<string, Set<string>>()
+  for (const fixture of fixtures) {
+    assert.ok(clubs.has(fixture.homeId) && clubs.has(fixture.awayId))
+    const key = [fixture.homeId, fixture.awayId].sort().join(':')
+    const homes = visits.get(key) ?? new Set<string>()
+    assert.ok(!homes.has(fixture.homeId), `France: repeated home pairing ${key}`)
+    homes.add(fixture.homeId)
+    visits.set(key, homes)
+  }
+  assert.equal(visits.size, 120)
+  for (const homes of visits.values()) assert.equal(homes.size, 2)
+  assert.deepEqual(first.competitions[id].entrantIds, resumed.competitions[id].entrantIds,
+    `France: National 2 regional save/resume drift ${group}`)
+}
+const franceNationalTwo = first.promotionHistory?.find(h => h.associationId === 'fra-3')
+assert.ok(franceNationalTwo, 'France: National 2 promotion history missing')
+assert.equal(franceNationalTwo.promotedIds.length, 3)
+assert.equal(franceNationalTwo.relegatedIds.length, 3)
+assert.ok(franceNationalTwo.promotedIds.every(id => first.competitions['third-fra'].entrantIds.includes(id)))
+assert.ok(franceNationalTwo.relegatedIds.every(id => ['fourth-fra-1','fourth-fra-2','fourth-fra-3']
+  .some(group => first.competitions[group].entrantIds.includes(id))))
+console.log('French National 2 and Dutch Tweede Divisie audit passed')

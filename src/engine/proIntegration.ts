@@ -15,10 +15,69 @@ import { computeCurrentAbility, toOvr } from './rating'
 import { recordTournamentResult, proCompetitionName } from './proTournaments'
 import type { ProFixture } from './proWorld'
 import type { MatchRecord } from './matchLedger'
+import { generateTeam } from './teams'
+import type { LeagueWorld, Division } from './league'
 
 const addDays = (date: string, days: number): string => new Date(Date.parse(`${date}T00:00:00Z`) + days * 86400000).toISOString().slice(0, 10)
 const monthIndex = (date: string) => Number(date.slice(0, 4)) * 12 + Number(date.slice(5, 7)) - 1
 function housingFor(player: Player): number { return Math.max(260, Math.round((player.contract?.terms.weeklyWage ?? 1000) * 52 / 12 * .22)) }
+
+/** Use the persistent federation competition as the playable match-calendar
+ * source. Local team IDs remain stable, while fixture IDs and opponents match
+ * the real world exactly. Also works after promotion and relegation.
+ */
+export function syncPlayableProLeague(state: ProCareerState, world = state.backgroundWorld): ProCareerState {
+  if (!world || !state.clubWorldIds) return state
+  const associationId = state.associationId ?? 'eng'
+  const playerClubId = state.clubWorldIds[state.world.playerTeamId]
+  if (!playerClubId) return state
+  const competition = Object.values(world.competitions).find(comp =>
+    comp.kind === 'league' && comp.associationId === associationId &&
+    comp.entrantIds.includes(playerClubId) &&
+    !comp.id.match(/-(\\d+)$/))
+  if (!competition) return state
+  const current = state.world.divisions[1]
+  const oldTeams = new Map(current.teams.map(team => [state.clubWorldIds![team.id], team]))
+  const teams = competition.entrantIds.map((clubId, index) => {
+    const club = world.clubs[clubId]
+    const existing = oldTeams.get(clubId)
+    const generated = existing ?? generateTeam(Math.max(3, Math.min(8, Math.round(club.reputation / 14))))
+    return { ...generated, name: club.name,
+      short: club.name.split(' ').map(word => word[0]).join('').slice(0, 3).toUpperCase(),
+      id: existing?.id ?? `career-club-${clubId}-${index}` }
+  })
+  const clubWorldIds = Object.fromEntries(teams.map((team, index) =>
+    [team.id, competition.entrantIds[index]]))
+  const reverse = new Map(teams.map((team, index) =>
+    [competition.entrantIds[index], team.id]))
+  const orderedFixtures = Object.values(world.fixtures).filter(fixture =>
+    fixture.competitionId === competition.id &&
+    fixture.id.includes(`-${competition.seasonId}-`))
+    .sort((a, b) => a.kickoffDate.localeCompare(b.kickoffDate) || a.id.localeCompare(b.id))
+  const dates = [...new Set(orderedFixtures.map(fixture => fixture.kickoffDate))]
+  const played = new Map(current.fixtures.filter(fixture => fixture.played)
+    .map(fixture => [fixture.id, fixture]))
+  const fixtures = orderedFixtures.map(fixture => {
+    const recorded = played.get(fixture.id)
+    return { id: fixture.id, week: dates.indexOf(fixture.kickoffDate) + 1,
+      homeTeamId: reverse.get(fixture.homeId)!, awayTeamId: reverse.get(fixture.awayId)!,
+      played: recorded?.played ?? false, homeGoals: recorded?.homeGoals ?? null,
+      awayGoals: recorded?.awayGoals ?? null }
+  }).filter(fixture => fixture.homeTeamId && fixture.awayTeamId)
+  const sameSeason = state.activeSeasonId === competition.seasonId &&
+    state.activeCompetitionId === competition.id
+  const previous = new Map(sameSeason ? current.standings.map(row => [row.teamId, row]) : [])
+  const standings = teams.map(team => previous.get(team.id) ?? {
+    teamId: team.id, teamName: team.name, teamShort: team.short,
+    played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, points: 0 })
+  const division: Division = { ...current, teams, standings, fixtures,
+    matchRecords: sameSeason ? current.matchRecords : [], tier: 1 }
+  const leagues: LeagueWorld = { ...state.world, kind: 'pro',
+    playerTeamId: reverse.get(playerClubId) ?? state.world.playerTeamId,
+    divisions: { ...state.world.divisions, 1: division } }
+  return { ...state, world: leagues, clubWorldIds,
+    activeCompetitionId: competition.id, activeSeasonId: competition.seasonId }
+}
 
 /** Attach the recorded club to the living world without touching the youth save. */
 export function attachProWorld(state: ProCareerState, player: Player): ProCareerState {
@@ -43,7 +102,7 @@ export function attachProWorld(state: ProCareerState, player: Player): ProCareer
     potential: Math.max(45, Math.min(94, Math.round(player.potential * 4.4))), clubId: club.id, annualWage, shirtNumber, origin: 'senior' }
   club.finances.committedAnnualWages += annualWage
   const residence = state.residence ?? { countryId: club.associationId, city: club.homeCity, monthlyRent: housingFor(player), hotelUntil: addDays(date, 21) }
-  return { ...state, backgroundWorld: world, clubWorldIds, date, shirtNumber, residence, payStatements: state.payStatements ?? [], pendingBonus: state.pendingBonus ?? 0, news: state.news ?? [] }
+  return syncPlayableProLeague({ ...state, backgroundWorld: world, clubWorldIds, date, shirtNumber, residence, payStatements: state.payStatements ?? [], pendingBonus: state.pendingBonus ?? 0, news: state.news ?? [] })
 }
 
 /** The next dated cup tie for the player's club, before the next weekly tick. */

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useCareerStore } from '../store/careerStore'
-import { proFixture } from '../engine/proCareer'
+import { proFixture, PRO_CAREER_DESTINATIONS } from '../engine/proCareer'
 import { playerForMatch } from '../engine/selection'
 import type { HubTab } from '../components/navItems'
 import WeeklyHub from './WeeklyHub'
@@ -38,7 +38,8 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
     id: cupClub.id, name: cupClub.name, short: cupClub.name.split(' ').map(word => word[0]).join('').slice(0, 3).toUpperCase() }
     : division.teams.find(t => t.id === (home ? fixture?.awayTeamId : fixture?.homeTeamId))
   const matchReady = !!cup || !!fixture && pro.resolvedWeek !== pro.week
-  const label = cup ? cupLabel(cup) : 'Professional League'
+  const destination = PRO_CAREER_DESTINATIONS.find(item => item.id === (pro.associationId ?? 'eng'))
+  const label = cup ? cupLabel(cup) : `${destination?.name ?? 'Professional'} Premier Division`
   // WeeklyHub's familiar frame owns the six destinations; professional content
   // replaces only the inner panels. The school calendar is never advanced here.
   const calendar = { currentWeek: { weekNumber: pro.week, seasonYear: pro.season, events: [] }, history: [] } as NonNullable<ReturnType<typeof useCareerStore.getState>['calendar']>

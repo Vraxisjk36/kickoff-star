@@ -431,7 +431,7 @@ function exchangeGermanRegionalliga(world: ProWorldState,
   // Assign relegated clubs to the vacated regional places; keep all groups at 18.
   const vacated = promoted.map(id => world.clubs[id].feederGroup ?? 1)
   promoted.forEach(id => { world.clubs[id].tier = 3; world.clubs[id].feederGroup = undefined })
-  assignRegionalVacancies(world, relegated, vacated as number[], 4, GROUPED_FOURTH.bra.groups)
+  assignRegionalVacancies(world, relegated, vacated as number[], 4, GROUPED_FOURTH.ger.groups)
   world.promotionHistory ??= []
   world.promotionHistory.push({ associationId: 'ger-3',
     seasonId: world.competitions['third-ger'].seasonId,

@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict'
-import { createProCareer, proRound, proTrialClubs, PRO_CAREER_DESTINATIONS } from '../src/engine/proCareer'
+import type { Player } from '../src/types/player'
+import type { ProWorldState } from '../src/engine/proWorld'
+import { createProCareer, advanceProWeek, proRound, proTrialClubs, PRO_CAREER_DESTINATIONS } from '../src/engine/proCareer'
 import { plannedClubCount, createProWorld } from '../src/engine/proWorldFactory'
 import { recordHumanProLeagueMatch } from '../src/engine/proWorldSimulation'
 import { PRO_INTERACTIVE_COUNTRIES, canStartInteractiveProCareer } from '../src/engine/proLeagueRegistry'
@@ -64,3 +66,25 @@ const correction = recordHumanProLeagueMatch(updated,'esp',firstFixture.homeId,
 assert.equal(correction.standings['top-esp'].find(row=>row.clubId===firstFixture.homeId)!.points,homeBefore.points)
 assert.equal(correction.standings['top-esp'].find(row=>row.clubId===firstFixture.awayId)!.points,awayBefore.points+3)
 console.log('Phase 2: human national-league result reconciled, corrected and saved deterministically')
+
+let seniorCareer = createProCareer('South London Blue',5,'eng')
+seniorCareer.backgroundWorld = {} as ProWorldState // salary-accounting stub; no living-world advancement
+let seniorPlayer = {
+  id:'phase2-retirement',name:'Pro Career Tester',careerClock:{ageYears:37,phase:'academy'},
+  position:'CM',fitness:{stamina:100},money:0,careerEarnings:0,
+  totalWeeksElapsed:0,seasonAppearances:29,seasonGoals:6,seasonAssists:11,
+} as unknown as Player
+for(let i=0;i<44;i++){
+  const result=advanceProWeek(seniorCareer,seniorPlayer)
+  seniorCareer=result.state
+  seniorPlayer=result.player
+}
+assert.equal(seniorCareer.retired,true,'Age-38 retirement did not trigger')
+assert.equal(seniorPlayer.careerClock.ageYears,38)
+assert.equal(seniorCareer.seasonRecords?.length,1)
+assert.equal(seniorCareer.seasonRecords?.[0].appearances,29)
+assert.equal(seniorCareer.seasonRecords?.[0].goals,6)
+assert.equal(seniorCareer.seasonRecords?.[0].assists,11)
+assert.equal(advanceProWeek(seniorCareer,seniorPlayer).state,seniorCareer,
+  'Retired career may not advance')
+console.log('Phase 2: senior season archive and retirement lifecycle passed')

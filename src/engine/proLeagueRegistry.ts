@@ -79,6 +79,12 @@ export const PRO_DEEP_LEAGUE_PLAN: readonly ProLeaguePlan[] = PRO_LEAGUE_PLAN
       ? [{ ...league, id: `fourth-${league.associationId}`, mode: 'simulated' as const }] : []),
   ])
 
+/** National feeder below England's League Two; retains stable IDs in saved careers. */
+export const FIFTH_DIVISIONS: Readonly<Record<string, number>> = { eng: 24 }
+export const PRO_FIFTH_LEAGUE_PLAN: readonly ProLeaguePlan[] = PRO_LEAGUE_PLAN
+  .filter(league => league.associationId in FIFTH_DIVISIONS)
+  .map(league => ({ ...league, id: `fifth-${league.associationId}`, mode: 'simulated' }))
+
 /** Distinct regional tables; member clubs keep their region when divisions exchange. */
 export const GROUPED_THIRD: Readonly<Record<string, { groups: number; clubsPerGroup: number; promoted: number }>> = {
   esp: { groups: 2, clubsPerGroup: 20, promoted: 4 },

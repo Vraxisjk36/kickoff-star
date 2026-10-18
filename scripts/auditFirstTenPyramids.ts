@@ -55,3 +55,28 @@ assert.ok(brazilFeeder.fixtures.length >= 12, 'Brazil Série C final-group fixtu
 assert.ok(brazilFeeder.fixtures.every(f => !!f.result), 'Brazil Série C final-group result missing')
 assert.ok(brazilFeeder.promotedIds.every(id => first.competitions['second-bra'].entrantIds.includes(id)),
   'Brazil Série C winner missing from next Série B')
+
+for (const [country, expectedTeams, expectedGames] of [['bra', 8, 24], ['por', 8, 56]] as const) {
+  const history = first.promotionHistory?.find(h => h.associationId === `${country}-2`)
+  assert.ok(history, `${country}: missing feeder history`)
+  // Brazil: two groups of four, double round robin (12 games each).
+  // Portugal: one eight-team final phase, double round robin (56 games).
+  assert.equal(history.fixtures.length, expectedGames, `${country}: wrong feeder fixture count`)
+  const entrants = new Set(history.fixtures.flatMap(f => [f.homeId, f.awayId]))
+  assert.equal(entrants.size, expectedTeams, `${country}: feeder entrants`)
+  const occupied = new Set<string>()
+  const pairings = new Map<string, { home: string; away: string }[]>()
+  for (const fixture of history.fixtures) {
+    for (const id of [fixture.homeId, fixture.awayId]) {
+      const key = `${fixture.kickoffDate}:${id}`
+      assert.ok(!occupied.has(key), `${country}: feeder club double booked ${key}`)
+      occupied.add(key)
+    }
+    const pair = [fixture.homeId, fixture.awayId].sort().join(':')
+    pairings.set(pair, [...(pairings.get(pair) ?? []), { home: fixture.homeId, away: fixture.awayId }])
+  }
+  for (const games of pairings.values()) {
+    assert.equal(games.length, 2, `${country}: feeder teams must meet twice`)
+    assert.equal(games[0].home, games[1].away, `${country}: feeder return leg must reverse venue`)
+  }
+}

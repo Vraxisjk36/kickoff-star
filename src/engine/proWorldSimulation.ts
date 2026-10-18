@@ -6,6 +6,7 @@ import { nationalLeagueQualification } from './proFifthPlayoffs'
 import { germanRegionalQualification } from './proGermanRegionalliga'
 import { scottishRegionalQualification } from './proScottishRegional'
 import { brazilSerieDQualification } from './proBrazilSerieD'
+import { spanishSegundaFederacion, italianSerieD, portugueseCampeonato, southAfricaProvincial } from './proRegionalRules'
 import { createAcademyIntake, hydrateDeepDivisions, hydrateFifthDivisions, hydrateGroupedFourthDivisions, hydrateGroupedFifthDivisions, hydrateGroupedDivisions, hydrateLowerDivisions, hydrateNewBackgroundLeagues, createProWorld, newProLeagueSeason, proRoll } from './proWorldFactory'
 import { ageOf, growOrDecline, nextShirtNumber, seasonalInjury, shouldRetire, signBackgroundReplacement } from './proLifecycle'
 import { advanceTournamentsTo, beginClubWorldSeason, beginContinentalSeason, beginNationsLeague, beginWorldQualifiers, beginDomesticSeason, beginNationalSeason, beginWorldSeason, beginSouthAfricanTopEight, invalidateTournamentCalendar } from './proTournaments'
@@ -308,53 +309,63 @@ function exchangeBrazilSerieD(world: ProWorldState,
  * grouped third tier. Real geography remains abstracted, but group sizes,
  * movement, club identities, and deterministic season histories stay correct.
  */
-function exchangeRegionalFourth(world: ProWorldState, country: 'esp' | 'ita' | 'por' | 'rsa'): void {
+function exchangeRegionalFourth(world: ProWorldState, country: 'esp' | 'ita' | 'por' | 'rsa',
+  qualification: { promotedIds: string[]; fixtures: ProFixture[] }): void {
   const format = GROUPED_FOURTH[country]
   const third = GROUPED_THIRD[country]
-  if (!format || !third || format.promoted % format.groups !== 0 ||
-      format.promoted % third.groups !== 0)
-    throw new Error(`Unsupported ${country} fourth-tier promotion layout`)
-  const perFourth = format.promoted / format.groups
-  const perThird = format.promoted / third.groups
-  const promoted: string[] = []
-  const originalFourthGroups: number[] = []
-  for (let group = 1; group <= format.groups; group++) {
-    const history = world.seasonHistory.filter(row =>
-      row.competitionId === `fourth-${country}-${group}`).at(-1)
-    if (!history || history.table.length !== format.clubsPerGroup)
-      throw new Error(`Missing ${country} fourth-tier group ${group}`)
-    for (const row of ordered(history.table).slice(0, perFourth)) {
-      promoted.push(row.clubId)
-      originalFourthGroups.push(group)
-    }
-  }
-  const relegated: string[] = []
-  for (let group = 1; group <= third.groups; group++) {
-    const history = world.seasonHistory.filter(row =>
-      row.competitionId === `third-${country}-${group}`).at(-1)
-    if (!history || history.table.length !== third.clubsPerGroup)
-      throw new Error(`Missing ${country} third-tier group ${group}`)
-    relegated.push(...ordered(history.table).slice(-perThird).map(row => row.clubId))
-  }
+  const promoted = qualification.promotedIds
+  const relegated = Array.from({ length: third.groups }, (_, index) => {
+    const rows = world.seasonHistory.filter(record =>
+      record.competitionId === `third-${country}-${index + 1}`).at(-1)?.table
+    if (!rows || rows.length !== third.clubsPerGroup)
+      throw new Error(`Missing ${country} regional third-tier group ${index + 1}`)
+    return ordered(rows).slice(-(format.promoted / third.groups)).map(row => row.clubId)
+  }).flat()
   if (promoted.length !== format.promoted || relegated.length !== format.promoted ||
       new Set(promoted).size !== promoted.length || new Set(relegated).size !== relegated.length ||
-      promoted.some(id => world.clubs[id].tier !== 4) ||
-      relegated.some(id => world.clubs[id].tier !== 3))
+      promoted.some(id => world.clubs[id]?.tier !== 4) ||
+      relegated.some(id => world.clubs[id]?.tier !== 3))
     throw new Error(`Invalid ${country} regional promotion exchange`)
-  promoted.forEach((id, index) => {
-    world.clubs[id].tier = 3
-    world.clubs[id].feederGroup = Math.floor(index / perThird) + 1
-  })
-  relegated.forEach((id, index) => {
-    world.clubs[id].tier = 4
-    world.clubs[id].feederGroup = originalFourthGroups[index]
-  })
+
+  // Each promoted club leaves a fourth-tier vacancy in its own geographical
+  // group, while each relegated third-tier club leaves a third-tier vacancy.
+  // Reassign those vacancies by the club's permanent geographic affiliation,
+  // not by its position in a random array. No group may grow or shrink.
+  const fourthVacancies = promoted.map(id => world.clubs[id].feederGroup!)
+  const thirdVacancies = relegated.map(id => world.clubs[id].feederGroup!)
+  const assign = (ids: string[], vacancies: number[], destination: 3 | 4,
+    groupCount: number): void => {
+    const places = [...vacancies]
+    if (places.some(group => !group || group < 1 || group > groupCount))
+      throw new Error(`Invalid ${country} region vacancy`)
+    // A stable minimum-travel-first placement; existing group labels are
+    // kept only as a fallback for saves predating geographical affiliation.
+    for (const id of [...ids].sort((a, b) => {
+      const ar = world.clubs[a].homeRegion ?? world.clubs[a].feederGroup ?? 1
+      const br = world.clubs[b].homeRegion ?? world.clubs[b].feederGroup ?? 1
+      return ar - br || a.localeCompare(b)
+    })) {
+      const club = world.clubs[id]
+      const sourceGroup = club.homeRegion ?? club.feederGroup ?? 1
+      const sourceCount = club.homeRegionCount ?? (club.tier === 4 ? format.groups : third.groups)
+      const normalized = (sourceGroup - .5) / sourceCount
+      let best = 0, bestDistance = Infinity
+      for (let i = 0; i < places.length; i++) {
+        const distance = Math.abs(normalized - (places[i] - .5) / groupCount)
+        if (distance < bestDistance) { best = i; bestDistance = distance }
+      }
+      const [group] = places.splice(best, 1)
+      club.tier = destination
+      club.feederGroup = group
+    }
+    if (places.length) throw new Error(`Unfilled ${country} regional vacancies`)
+  }
+  assign(promoted, thirdVacancies, 3, third.groups)
+  assign(relegated, fourthVacancies, 4, format.groups)
   world.promotionHistory ??= []
-  world.promotionHistory.push({
-    associationId: `${country}-3`,
+  world.promotionHistory.push({ associationId: `${country}-3`,
     seasonId: world.competitions[`second-${country}`].seasonId,
-    promotedIds: promoted, relegatedIds: relegated, fixtures: [],
-  })
+    promotedIds: promoted, relegatedIds: relegated, fixtures: structuredClone(qualification.fixtures) })
 }
 
 /** National 2 regional champions enter France's third tier; three places go back down. */
@@ -543,6 +554,7 @@ function advanceLeaguesTo(world: ProWorldState, targetDate: IsoDate): void {
       let germanRegionalResult: ReturnType<typeof germanRegionalQualification> | undefined
       let scottishRegionalResult: ReturnType<typeof scottishRegionalQualification> | undefined
       let brazilFourthResult: ReturnType<typeof brazilSerieDQualification> | undefined
+      let regionalResult: {promotedIds: string[]; fixtures: ProFixture[]; readyDate: IsoDate} | undefined
       let feederResult: ReturnType<typeof feederQualification> | undefined
       if (league.associationId in GROUPED_THIRD || league.associationId === 'bra') {
         const lastDate = batches.slice(2).flat().reduce((latest, fixture) => fixture.kickoffDate > latest ? fixture.kickoffDate : latest, '0000-01-01')
@@ -588,6 +600,18 @@ function advanceLeaguesTo(world: ProWorldState, targetDate: IsoDate): void {
         if (targetDate <= brazilFourthResult.readyDate) break
       }
       const expectedSizes = divisions.map(item => world.competitions[item.id].entrantIds.length)
+      if (['esp', 'ita', 'por', 'rsa'].includes(league.associationId)) {
+        const lastDate = batches.flat().reduce((latest, fixture) =>
+          fixture.kickoffDate > latest ? fixture.kickoffDate : latest, '0000-01-01')
+        regionalResult = league.associationId === 'esp'
+          ? spanishSegundaFederacion(world, lastDate)
+          : league.associationId === 'ita'
+            ? italianSerieD(world)
+            : league.associationId === 'por'
+              ? portugueseCampeonato(world, lastDate)
+              : southAfricaProvincial(world)
+        if (targetDate <= regionalResult.readyDate) break
+      }
       const nextYear = Number(world.competitions[league.id].seasonId) + 1
       divisions.forEach((item, index) => archive(world, item.id, batches[index], rosters, prospects))
       if (lower) exchangeDivisions(world, league.associationId, playoffWinner)
@@ -596,8 +620,8 @@ function advanceLeaguesTo(world: ProWorldState, targetDate: IsoDate): void {
       if (nationalLeagueResult) exchangeEnglishNationalLeague(world, nationalLeagueResult)
       if (germanRegionalResult) exchangeGermanRegionalliga(world, germanRegionalResult)
       if (league.associationId === 'fra') exchangeFrenchNationalTwo(world)
-      if (['esp', 'ita', 'por', 'rsa'].includes(league.associationId))
-        exchangeRegionalFourth(world, league.associationId as 'esp' | 'ita' | 'por' | 'rsa')
+      if (regionalResult && ['esp', 'ita', 'por', 'rsa'].includes(league.associationId))
+        exchangeRegionalFourth(world, league.associationId as 'esp' | 'ita' | 'por' | 'rsa', regionalResult)
       if (scottishRegionalResult) exchangeScottishRegional(world, scottishRegionalResult)
       if (brazilFourthResult) exchangeBrazilSerieD(world, brazilFourthResult)
       if (feederResult && league.associationId in GROUPED_THIRD)

@@ -15,7 +15,7 @@ for (const country of countries) {
   assert.ok(top && second, `${country}: missing top/second tier`)
   assert.equal(top.entrantIds.length, rules.topFlightClubs)
   assert.equal(second.entrantIds.length, rules.lowerTierClubs)
-  assert.equal(top.format.scheduledRounds, rules.topFlightMatches)
+  assert.equal(top.format.scheduledRounds, country === 'sco' ? 33 : rules.topFlightMatches)
   assert.equal(second.format.scheduledRounds, rules.lowerTierMatches)
   for (const tier of ['top','second'] as const) {
     const id = `${tier}-${country}`

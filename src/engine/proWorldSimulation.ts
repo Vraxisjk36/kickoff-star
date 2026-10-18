@@ -45,6 +45,48 @@ function play(world: ProWorldState, fixture: ProFixture): void {
       homeGoals, awayGoals } })
 }
 
+/** Reconcile the human player's completed league match into the persistent
+ * world table. If the background sim already processed this fixture, reverse
+ * its deterministic score first and apply the actual human result.
+ */
+export function recordHumanProLeagueMatch(source: ProWorldState, country: string,
+  homeId: string, awayId: string, homeGoals: number, awayGoals: number): ProWorldState {
+  const competitionId = `top-${country}`
+  const fixture = Object.values(source.fixtures).find(game => game.competitionId === competitionId &&
+    game.homeId === homeId && game.awayId === awayId)
+  if (!fixture || !source.standings[competitionId] ||
+      !Number.isInteger(homeGoals) || !Number.isInteger(awayGoals) ||
+      homeGoals < 0 || awayGoals < 0) return source
+  if (fixture.result?.homeGoals === homeGoals && fixture.result.awayGoals === awayGoals) return source
+
+  const standings = source.standings[competitionId].map(row => ({ ...row }))
+  const home = standings.find(row => row.clubId === homeId)
+  const away = standings.find(row => row.clubId === awayId)
+  if (!home || !away) return source
+  const apply = (h: number, a: number, weight: 1 | -1) => {
+    home.played += weight; away.played += weight
+    home.goalsFor += h * weight; home.goalsAgainst += a * weight
+    away.goalsFor += a * weight; away.goalsAgainst += h * weight
+    if (h > a) { home.won += weight; away.lost += weight; home.points += 3 * weight }
+    else if (a > h) { away.won += weight; home.lost += weight; away.points += 3 * weight }
+    else { home.drawn += weight; away.drawn += weight; home.points += weight; away.points += weight }
+  }
+  if (fixture.result) apply(fixture.result.homeGoals, fixture.result.awayGoals, -1)
+  apply(homeGoals, awayGoals, 1)
+  if (standings.some(row => row.played < 0 || row.won < 0 || row.drawn < 0 ||
+    row.lost < 0 || row.points < 0 || row.goalsFor < 0 || row.goalsAgainst < 0))
+    throw new Error('Human match reconciliation corrupted professional standings')
+  const newFixture = { ...fixture, result: { homeGoals, awayGoals } }
+  const events = source.recentEvents.filter(event => event.id !== `event-${fixture.id}`)
+  events.push({ id: `event-${fixture.id}`, date: fixture.kickoffDate, kind: 'match',
+    subjectIds: [homeId, awayId], details: { competitionId, homeGoals, awayGoals, playedByHuman: true } })
+  return { ...source,
+    fixtures: { ...source.fixtures, [fixture.id]: newFixture },
+    standings: { ...source.standings, [competitionId]: standings },
+    recentEvents: events.slice(-240),
+  }
+}
+
 function seasonFinances(world: ProWorldState, club: ProClub, roster: ProPlayer[], rank: number, leagueSize: number,
   nextYear: number, archiveDate: IsoDate, prospects: Map<string, string[]>): ProPlayer[] {
   const finance = club.finances

@@ -254,17 +254,22 @@ function scheduleScottishSplit(world: ProWorldState, fixtures: ProFixture[]): Pr
   const finalDate = fixtures.reduce((latest, fixture) => fixture.kickoffDate > latest ? fixture.kickoffDate : latest, '0000-01-01')
   const extra: ProFixture[] = []
   groups.forEach((group, half) => {
-    const teams = group.map(row => row.clubId)
+    const rotation = group.map(row => row.clubId)
+    if (rotation.length !== 6 || new Set(rotation).size !== 6)
+      throw new Error('Scottish split requires six distinct clubs in each half')
+    // A single round-robin within each half: five matches per club, each
+    // opponent exactly once. The fixed first club is the circle-method pivot.
     for (let round = 0; round < 5; round++) {
-      const rotated = [teams[0], ...teams.slice(1 + round), ...teams.slice(1, 1 + round)]
       for (let pair = 0; pair < 3; pair++) {
-        const homeId = (round + pair) % 2 ? rotated[pair] : rotated[5 - pair]
-        const awayId = (round + pair) % 2 ? rotated[5 - pair] : rotated[pair]
+        const a = rotation[pair], b = rotation[5 - pair]
+        const homeId = (round + pair) % 2 ? a : b
+        const awayId = (round + pair) % 2 ? b : a
         const id = `fixture-top-sco-${competition.seasonId}-split-${half}-${round}-${pair}`
         const kickoffDate = new Date(Date.parse(`${finalDate}T00:00:00Z`) + (round + 1) * 7 * 86_400_000).toISOString().slice(0, 10)
         world.fixtures[id] = { id, competitionId: 'top-sco', kickoffDate, homeId, awayId }
         extra.push(world.fixtures[id])
       }
+      rotation.splice(1, 0, rotation.pop()!)
     }
   })
   competition.splitScheduled = true

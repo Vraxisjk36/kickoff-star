@@ -1,4 +1,5 @@
 import { proRoll } from './proWorldFactory'
+import { promotionEligible } from './proRegionalRules'
 import type { IsoDate, ProFixture, ProStandingRow, ProWorldState } from './proWorld'
 
 const add = (date: IsoDate, days: number) =>
@@ -16,7 +17,9 @@ export function germanRegionalQualification(world: ProWorldState, lastDate: IsoD
   const winners = Array.from({ length: 5 }, (_, group) => {
     const standings = world.standings[`fourth-ger-${group + 1}`]
     if (!standings || standings.length !== 18) throw new Error('Incomplete German Regionalliga groups')
-    return ordered(standings)[0].clubId
+    const eligible = ordered(standings).find(row => promotionEligible(world, row.clubId, 3))
+    if (!eligible) throw new Error('No licensed German regional champion')
+    return eligible.clubId
   })
   // DFB 2026/27: West and Südwest are guaranteed direct berths. The third
   // automatic berth rotates through Nord, Nordost and Bayern, with the

@@ -6,6 +6,7 @@ import type { MatchLine, MatchRecord } from './matchLedger'
 import { netWage } from './agents'
 import type { ProWorldState } from './proWorld'
 import { plannedClubCount } from './proWorldFactory'
+import { recordHumanProLeagueMatch } from './proWorldSimulation'
 import { PRO_INTERACTIVE_COUNTRIES } from './proLeagueRegistry'
 
 export interface ProPayStatement { season: number; month: string; gross: number; bonus: number; estimatedWithholding: number; agentFee: number; housing: number; net: number }
@@ -120,7 +121,15 @@ export function resolveProMatch(state: ProCareerState, player: Player, result: {
     saves: 0, tackles: 0, interceptions: 0, keyPasses: 0, yellowCards: result.yellowCards, redCards: result.redCarded ? 1 : 0 }
   const world = recordPlayerMatchResult(state.world, result.opponent.id, result.scored, result.conceded, result.home, result.goals, line, state.season, state.week)
   const record = world.divisions[1].matchRecords!.at(-1)!
-  return { state: { ...state, world, resolvedWeek: state.week }, record: { ...record, competitionId: 'proLeague', season: state.season, week: state.week } }
+  const humanClub = state.clubWorldIds?.[state.world.playerTeamId]
+  const opponentClub = state.clubWorldIds?.[result.opponent.id]
+  const backgroundWorld = state.backgroundWorld && humanClub && opponentClub
+    ? recordHumanProLeagueMatch(state.backgroundWorld, state.associationId ?? 'eng',
+      result.home ? humanClub : opponentClub, result.home ? opponentClub : humanClub,
+      result.home ? result.scored : result.conceded, result.home ? result.conceded : result.scored)
+    : state.backgroundWorld
+  return { state: { ...state, world, backgroundWorld, resolvedWeek: state.week },
+    record: { ...record, competitionId: 'proLeague', season: state.season, week: state.week } }
 }
 
 export function advanceProWeek(state: ProCareerState, player: Player): { state: ProCareerState; player: Player } {

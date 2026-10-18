@@ -290,10 +290,10 @@ function exchangeBrazilSerieD(world: ProWorldState,
   qualification: ReturnType<typeof brazilSerieDQualification>): void {
   const third = ordered(world.seasonHistory.filter(row => row.competitionId === 'third-bra').at(-1)!.table)
   const promoted = qualification.promotedIds
-  const relegated = third.slice(-4).map(row => row.clubId)
+  const relegated = third.slice(-GROUPED_FOURTH.bra.promoted).map(row => row.clubId)
   const vacated = promoted.map(id => world.clubs[id].feederGroup)
-  if (promoted.length !== 4 || relegated.length !== 4 ||
-      new Set(promoted).size !== 4 || new Set(relegated).size !== 4 ||
+  if (promoted.length !== GROUPED_FOURTH.bra.promoted || relegated.length !== GROUPED_FOURTH.bra.promoted ||
+      new Set(promoted).size !== promoted.length || new Set(relegated).size !== relegated.length ||
       promoted.some(id => world.clubs[id].tier !== 4) ||
       relegated.some(id => world.clubs[id].tier !== 3) ||
       vacated.some(group => !group || group > GROUPED_FOURTH.bra.groups))

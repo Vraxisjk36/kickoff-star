@@ -50,8 +50,9 @@ function play(world: ProWorldState, fixture: ProFixture): void {
  * its deterministic score first and apply the actual human result.
  */
 export function recordHumanProLeagueMatch(source: ProWorldState, country: string,
-  homeId: string, awayId: string, homeGoals: number, awayGoals: number, fixtureId?: string): ProWorldState {
-  const competitionId = `top-${country}`
+  homeId: string, awayId: string, homeGoals: number, awayGoals: number,
+  fixtureId?: string, activeCompetitionId?: string): ProWorldState {
+  const competitionId = activeCompetitionId ?? `top-${country}`
   // Always bind the human result to the current season's exact fixture.
   // A home/away pair can recur in every season, and Scotland can repeat pairs.
   const fixture = fixtureId ? source.fixtures[fixtureId] : Object.values(source.fixtures)

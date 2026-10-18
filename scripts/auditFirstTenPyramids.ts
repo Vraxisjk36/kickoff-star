@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { createProWorld } from '../src/engine/proWorldFactory'
 import { advanceProWorldTo } from '../src/engine/proWorldSimulation'
 import { VERIFIED_PRO_RULES } from '../src/engine/proRulebook'
+import { PRO_PYRAMID_FLOORS } from '../src/engine/proLeagueRegistry'
 
 /** First-ten regression gate: division identities, league fixtures, season movement. */
 const countries = ['eng','esp','ger','fra','ita','ned','por','bra','rsa','sco'] as const
@@ -347,3 +348,22 @@ for (const { country, groups, clubs, promotions } of regionalFourthCases) {
   }
 }
 console.log('All grouped fourth-tier fixture and promotion exchange audits passed')
+
+for (const country of countries) {
+  const floor = PRO_PYRAMID_FLOORS[country]
+  assert.ok(floor >= 3 && floor <= 5, `${country}: missing frozen bottom tier`)
+  const allClubs = Object.values(first.clubs).filter(club => club.associationId === country)
+  assert.ok(allClubs.every(club => !!club.tier && club.tier <= floor),
+    `${country}: club fell below the frozen pyramid`)
+  assert.equal(allClubs.length, Object.values(initial.clubs).filter(club =>
+    club.associationId === country).length, `${country}: clubs lost at pyramid floor`)
+  const floorCompetitions = Object.values(first.competitions).filter(comp =>
+    comp.associationId === country && comp.kind === 'league' &&
+    comp.id.startsWith(`${['top','second','third','fourth','fifth'][floor - 1]}-`))
+  assert.ok(floorCompetitions.length >= 1, `${country}: bottom division missing`)
+  const bottomClubs = new Set(floorCompetitions.flatMap(comp => comp.entrantIds))
+  assert.ok(bottomClubs.size > 0, `${country}: no clubs in frozen floor`)
+  assert.ok([...bottomClubs].every(id => first.clubs[id].tier === floor),
+    `${country}: incorrect bottom-tier membership`)
+}
+console.log('All ten hard-stop pyramid floors retained clubs and active lowest leagues')

@@ -153,6 +153,14 @@ function exchangeDivisions(world: ProWorldState, associationId: string, playoffW
       relegated = [...relegated, top.at(-2)!.clubId]
     }
   }
+  // Never silently duplicate a promoted side, swap unequal numbers of clubs,
+  // or move a club that was not in the completed division.
+  if (promoted.length !== relegated.length ||
+      new Set(promoted).size !== promoted.length ||
+      new Set(relegated).size !== relegated.length ||
+      promoted.some(id => !second.some(row => row.clubId === id)) ||
+      relegated.some(id => !top.some(row => row.clubId === id)))
+    throw new Error(`Invalid ${associationId} top-flight promotion/relegation exchange`)
   for (const id of relegated) world.clubs[id].tier = 2
   for (const id of promoted) world.clubs[id].tier = 1
   const playoff = world.promotionPlayoffs?.[`promotion-${associationId}`]

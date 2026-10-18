@@ -20,6 +20,8 @@ jobs:
       - run: npm ci
       - name: Verify every modeled pro pyramid
         run: npm run audit:pro-pyramids
+      - name: Verify ten-country professional careers
+        run: npm run audit:pro-career
 
   release-aab:
     runs-on: ubuntu-latest

@@ -35,14 +35,28 @@ export function feederQualification(world: ProWorldState, country: string, lastD
     return current
   }
   const phase = (teams: string[]): ProStandingRow[] => {
+    if (teams.length < 2 || teams.length % 2 !== 0 || new Set(teams).size !== teams.length)
+      throw new Error('Feeder group requires distinct, even-numbered entrants')
     const table = new Map(teams.map(id => [id, fresh(id)]))
-    for (let leg = 0; leg < 2; leg++) for (let matchRound = 0; matchRound < teams.length - 1; matchRound++) {
-      round = leg * (teams.length - 1) + matchRound + 1
-      const rotating = [...teams]
-      for (let turn = 0; turn < matchRound; turn++) rotating.splice(1, 0, rotating.pop()!)
+    // Circle-method schedule: each pair meets once per leg, with the second
+    // leg reversing venues. Unlike rotating the same input for each round,
+    // this guarantees no duplicate pairings or clubs playing twice in a round.
+    const rotation = [...teams]
+    const firstLeg: Array<Array<[string, string]>> = []
+    for (let matchRound = 0; matchRound < teams.length - 1; matchRound++) {
+      const games: Array<[string, string]> = []
       for (let pair = 0; pair < teams.length / 2; pair++) {
-        const homeId = rotating[leg ? rotating.length - pair - 1 : pair]
-        const awayId = rotating[leg ? pair : rotating.length - pair - 1]
+        const a = rotation[pair], b = rotation[rotation.length - 1 - pair]
+        games.push((matchRound + pair) % 2 === 0 ? [a, b] : [b, a])
+      }
+      firstLeg.push(games)
+      rotation.splice(1, 0, rotation.pop()!)
+    }
+    for (let leg = 0; leg < 2; leg++) for (let matchRound = 0; matchRound < firstLeg.length; matchRound++) {
+      round++
+      for (const [a, b] of firstLeg[matchRound]) {
+        const homeId = leg === 0 ? a : b
+        const awayId = leg === 0 ? b : a
         play(homeId, awayId)
         const result = fixtures.at(-1)!.result!
         const home = table.get(homeId)!, away = table.get(awayId)!

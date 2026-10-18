@@ -154,8 +154,19 @@ export function newProLeagueSeason(world: ProWorldState, league: ProLeaguePlan, 
       const away = arr[arr.length - 1 - pair]
       const [h, a] = (week + pair) % 2 === 0 ? [home, away] : [away, home]
       const reverse = scottishLower ? Math.floor(round / (clubIds.length - 1)) % 2 === 1 : !firstLeg
-      const homeId = reverse ? a : h
-      const awayId = reverse ? h : a
+      let homeId = reverse ? a : h
+      let awayId = reverse ? h : a
+      if (scottishSplit && round >= 22) {
+        // The third Premiership round robin must balance 16/17 home matches.
+        // Reusing first-leg orientations produces 11-home/22-away extremes.
+        const firstIndex = clubIds.indexOf(home)
+        const secondIndex = clubIds.indexOf(away)
+        const distance = (secondIndex - firstIndex + clubIds.length) % clubIds.length
+        const firstHosts = distance < clubIds.length / 2 ||
+          distance === clubIds.length / 2 && firstIndex % 2 === 0
+        homeId = firstHosts ? home : away
+        awayId = firstHosts ? away : home
+      }
       const id = `fixture-${league.id}-${startYear}-${round + 1}-${pair + 1}`
       const fixture = { id, competitionId, kickoffDate: iso(kickoff), homeId, awayId } satisfies ProFixture
       world.fixtures[id] = fixture

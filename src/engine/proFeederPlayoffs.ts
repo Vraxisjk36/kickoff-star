@@ -93,23 +93,24 @@ export function feederQualification(world: ProWorldState, country: string, lastD
     }
     return order([...table.values()])
   }
+  const qualified = (rows: ProStandingRow[]) => order(rows).filter(row => promotionEligible(world, row.clubId, 2))
   let promotedIds: string[]
   if (country === 'bra') {
-    const ranked = order(world.standings['third-bra']).slice(0, 8).map(row => row.clubId)
+    const ranked = qualified(world.standings['third-bra']).slice(0, 8).map(row => row.clubId)
     const groups = [[ranked[0], ranked[3], ranked[4], ranked[7]], [ranked[1], ranked[2], ranked[5], ranked[6]]]
     promotedIds = groups.flatMap(teams => phase(teams).slice(0, 2).map(row => row.clubId))
   } else if (country === 'esp') {
-    const groups = [1, 2].map(index => order(world.standings[`third-esp-${index}`]))
+    const groups = [1, 2].map(index => qualified(world.standings[`third-esp-${index}`]))
     promotedIds = groups.map(rows => rows[0].clubId)
     for (const rows of groups) promotedIds.push(...bracket(rows.slice(1, 5).map(row => row.clubId), 1, true))
   } else if (country === 'ita') {
-    const groups = [1, 2, 3].map(index => order(world.standings[`third-ita-${index}`]))
+    const groups = [1, 2, 3].map(index => qualified(world.standings[`third-ita-${index}`]))
     promotedIds = groups.map(rows => rows[0].clubId)
     const candidates = groups.flatMap(rows => rows.slice(1, 5)).sort((a, b) => b.points / b.played - a.points / a.played || a.clubId.localeCompare(b.clubId))
       .slice(0, 8).map(row => row.clubId)
     promotedIds.push(...bracket(candidates, 1, true))
   } else if (country === 'por') {
-    const groups = [1, 2].map(index => order(world.standings[`third-por-${index}`]).slice(0, 4))
+    const groups = [1, 2].map(index => qualified(world.standings[`third-por-${index}`]).slice(0, 4))
     promotedIds = phase(groups.flat().map(row => row.clubId)).slice(0, 2).map(row => row.clubId)
   } else {
     // SAFA ABC Motsepe national qualifiers: nine province champions in

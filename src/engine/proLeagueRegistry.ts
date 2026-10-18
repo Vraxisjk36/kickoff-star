@@ -69,7 +69,7 @@ export const PRO_LOWER_LEAGUE_PLAN: readonly ProLeaguePlan[] = PRO_LEAGUE_PLAN
 /** National lower flights whose club membership can be modelled as one table. */
 export const DEEP_DIVISIONS: Readonly<Record<string, { third: number; fourth?: number }>> = {
   eng: { third: 24, fourth: 24 }, ger: { third: 20 }, sco: { third: 10, fourth: 10 },
-  fra: { third: 18 }, bra: { third: 20 },
+  fra: { third: 18 }, bra: { third: 20 }, ned: { third: 18 },
 }
 export const PRO_DEEP_LEAGUE_PLAN: readonly ProLeaguePlan[] = PRO_LEAGUE_PLAN
   .filter(league => league.associationId in DEEP_DIVISIONS)
@@ -88,6 +88,7 @@ export const PRO_FIFTH_LEAGUE_PLAN: readonly ProLeaguePlan[] = PRO_LEAGUE_PLAN
 /** Regionalliga groups beneath the national German third tier. */
 export const GROUPED_FOURTH: Readonly<Record<string, { groups: number; clubsPerGroup: number; promoted: number }>> = {
   ger: { groups: 5, clubsPerGroup: 18, promoted: 4 },
+  fra: { groups: 3, clubsPerGroup: 16, promoted: 3 },
 }
 export const PRO_GROUPED_FOURTH_LEAGUE_PLAN: readonly ProLeaguePlan[] = PRO_LEAGUE_PLAN
   .filter(league => league.associationId in GROUPED_FOURTH)

@@ -1,5 +1,5 @@
 import type { Player } from '../types/player'
-import type { ProCareerState, ProMarketOffer, ProPayStatement } from './proCareer'
+import { createProCareer, type ProCareerState, type ProMarketOffer, type ProPayStatement } from './proCareer'
 import { createProWorld } from './proWorldFactory'
 import { advanceProWorldTo } from './proWorldSimulation'
 import { gameWithholdingBps } from './proContracts'
@@ -7,6 +7,7 @@ import { getAgent } from './agents'
 import { assessProDeal } from './proClubFinance'
 import { completeProTransfer } from './proTransfers'
 import { registrationOpen } from './proMovement'
+import { PRO_INTERACTIVE_COUNTRIES } from './proLeagueRegistry'
 import { returnProLoan } from './proMovement'
 import { nextShirtNumber } from './proLifecycle'
 import { gatherProNews } from './proNews'
@@ -125,19 +126,39 @@ export function advanceLivingWorld(previous: ProCareerState, next: ProCareerStat
 
 export function generateMarketOffers(state: ProCareerState, player: Player): ProMarketOffer[] {
   const world = state.backgroundWorld
-  if (!world || !state.clubWorldIds || !state.date || !registrationOpen(state.associationId ?? 'eng', state.date)) return []
+  if (!world || !state.clubWorldIds || !state.date) return []
+  const homeCountry = state.associationId ?? 'eng'
+  if (!registrationOpen(homeCountry, state.date)) return []
   const base = player.contract?.terms.weeklyWage ?? 1200
-  return state.world.divisions[1].teams.filter(team => team.id !== state.world.playerTeamId)
-    .map(team => {
-      const worldClubId = state.clubWorldIds![team.id]
-      const club = world.clubs[worldClubId]
-      const weeklyWage = Math.round(base * (1 + (team.prestige - 4) * .055))
-      const annualWage = weeklyWage * 52
-      const affordable = assessProDeal(club.finances, { annualWage, probableAnnualBonuses: Math.round(annualWage * .1),
-        annualTransferCost: 0, annualAgentFee: Math.round(annualWage * .05), upfrontTransferPayment: annualWage * 2,
-        signingBonus: weeklyWage, role: 'rotation' }).affordable
-      return affordable ? { teamId: team.id, worldClubId, weeklyWage, expiresWeek: (player.totalWeeksElapsed ?? 0) + 5 } : null
-    }).filter((offer): offer is ProMarketOffer => offer !== null).slice(0, 3)
+  const currentWorldClubId = state.clubWorldIds[state.world.playerTeamId]
+  // Active professional countries only, top divisions only. Cross-border
+  // registrations must be open on both ends.
+  const targets = PRO_INTERACTIVE_COUNTRIES.flatMap(country => {
+    if (!registrationOpen(country, state.date)) return []
+    // To avoid discarding matchdays when changing leagues, international
+    // offers occur around the opening of the professional season.
+    if (country !== homeCountry && state.week > 3) return []
+    return world.competitions[`top-${country}`]?.entrantIds ?? []
+  }).filter(id => id !== currentWorldClubId)
+  const candidates = targets.map((id): (ProMarketOffer & { foreign: boolean; score: number }) | null => {
+    const club = world.clubs[id]
+    const localTeam = Object.entries(state.clubWorldIds!).find(([, worldId]) => worldId === id)?.[0]
+    const weeklyWage = Math.max(350, Math.round(base * (1 + (club.reputation - 58) * .012)))
+    const annualWage = weeklyWage * 52
+    const affordable = assessProDeal(club.finances, { annualWage, probableAnnualBonuses: Math.round(annualWage * .1),
+      annualTransferCost: 0, annualAgentFee: Math.round(annualWage * .05), upfrontTransferPayment: annualWage * 2,
+      signingBonus: weeklyWage, role: 'rotation' }).affordable
+    return affordable ? { teamId: localTeam ?? id, worldClubId: id, weeklyWage,
+      expiresWeek: (player.totalWeeksElapsed ?? 0) + 5, foreign: club.associationId !== homeCountry,
+      score: Math.abs(club.reputation - 58) + id.length % 7 } : null
+  }).filter((offer): offer is ProMarketOffer & { foreign: boolean; score: number } => offer !== null)
+    .sort((a, b) => a.score - b.score || a.worldClubId.localeCompare(b.worldClubId))
+  // Always include at least one domestic opportunity if possible.
+  const domestic = candidates.filter(item => !item.foreign).slice(0, 1)
+  const abroad = candidates.filter(item => item.foreign).slice(0, 2)
+  return [...domestic, ...abroad, ...candidates.filter(item => !domestic.includes(item) && !abroad.includes(item))]
+    .slice(0, 3).map(({ teamId, worldClubId, weeklyWage, expiresWeek }) =>
+      ({ teamId, worldClubId, weeklyWage, expiresWeek }))
 }
 
 export function finalizeProMove(state: ProCareerState, player: Player): { state: ProCareerState; player: Player } | null {

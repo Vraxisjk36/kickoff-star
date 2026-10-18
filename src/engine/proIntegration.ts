@@ -171,12 +171,29 @@ export function finalizeProMove(state: ProCareerState, player: Player): { state:
     upfrontTransferPayment: annualWage * 2, signingBonus: offer.weeklyWage, role: 'rotation' }, state.date)
   if (!result.ok) return null
   const club = result.world.clubs[offer.worldClubId]
-  const team = state.world.divisions[1].teams.find(candidate => candidate.id === offer.teamId)!
+  const destinationCountry = club.associationId
+  const isForeign = destinationCountry !== (state.associationId ?? 'eng')
+  const local = state.world.divisions[1].teams.find(candidate => candidate.id === offer.teamId)
+  const rebuilt = isForeign ? createProCareer(club.name, Math.max(3, Math.min(6, Math.round(club.reputation / 14))), destinationCountry) : null
+  const team = rebuilt?.world.divisions[1].teams[0] ?? local
+  if (!team) return null
+  const miniWorld = rebuilt?.world ?? { ...state.world, playerTeamId: team.id }
+  // The new career's match roster is mapped to the real destination league,
+  // with the purchased club at index zero. Existing world fixtures stay intact.
+  const destinationIds = result.world.competitions[`top-${destinationCountry}`]?.entrantIds ?? []
+  const mappedIds = isForeign
+    ? [club.id, ...destinationIds.filter(id => id !== club.id)]
+    : []
+  if (isForeign && mappedIds.length !== miniWorld.divisions[1].teams.length) return null
+  const clubWorldIds = isForeign
+    ? Object.fromEntries(miniWorld.divisions[1].teams.map((entry, index) => [entry.id, mappedIds[index]]))
+    : state.clubWorldIds
   const nextPlayer = { ...player, squadRole: 'bench' as const, contract: player.contract
-    ? { ...player.contract, clubName: team.name, terms: { ...player.contract.terms, weeklyWage: offer.weeklyWage }, signedWeek: player.totalWeeksElapsed ?? 0,
+    ? { ...player.contract, clubName: club.name, terms: { ...player.contract.terms, weeklyWage: offer.weeklyWage }, signedWeek: player.totalWeeksElapsed ?? 0,
       expiresWeek: (player.totalWeeksElapsed ?? 0) + 88 } : player.contract,
-    turnedPro: player.turnedPro ? { ...player.turnedPro, clubName: team.name } : player.turnedPro }
-  return { state: { ...state, world: { ...state.world, playerTeamId: team.id }, backgroundWorld: result.world,
+    turnedPro: player.turnedPro ? { ...player.turnedPro, clubName: club.name } : player.turnedPro }
+  return { state: { ...state, associationId: destinationCountry, world: miniWorld,
+    clubWorldIds, resolvedWeek: undefined, backgroundWorld: result.world,
     shirtNumber: result.world.players[`career-${player.id}`].shirtNumber,
     residence: { countryId: club.associationId, city: club.homeCity, monthlyRent: housingFor(nextPlayer), hotelUntil: addDays(state.date, 21) },
     talks: null, marketOffers: [] }, player: nextPlayer }

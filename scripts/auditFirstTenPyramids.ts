@@ -367,3 +367,18 @@ for (const country of countries) {
     `${country}: incorrect bottom-tier membership`)
 }
 console.log('All ten hard-stop pyramid floors retained clubs and active lowest leagues')
+
+for (const [country, fixtures] of [['esp', 20], ['por', 24], ['ita', 0], ['rsa', 0]] as const) {
+  const history = first.promotionHistory?.find(h => h.associationId === `${country}-3`)
+  assert.ok(history, `${country}: missing fourth-tier promotion archive`)
+  assert.equal(history.fixtures.length, fixtures, `${country}: wrong authentic promotion phase fixture count`)
+  assert.ok(history.fixtures.every(f => !!f.result), `${country}: unfinished regional qualification tie`)
+}
+for (const id of Object.keys(first.clubs)) {
+  const club = first.clubs[id]
+  if (club.associationId in PRO_PYRAMID_FLOORS &&
+      club.homeRegion && club.homeRegionCount) {
+    assert.ok(club.homeRegion >= 1 && club.homeRegion <= club.homeRegionCount,
+      `Invalid permanent geographic region for ${id}`)
+  }
+}

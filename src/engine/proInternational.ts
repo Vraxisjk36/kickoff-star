@@ -86,12 +86,17 @@ export function completeSeniorInternational(state: ProCareerState, player: Playe
     assists: international!.assists + (caps ? result.assists : 0),
     fixtures: [...international!.fixtures, record].slice(-120),
   }
+  const careerByCompetition = player.careerByCompetition
+  const internationalStats = careerByCompetition?.international ?? { appearances: 0, goals: 0, assists: 0 }
   return { state: { ...state, international: nextInternational },
-    player: { ...player, career: player.career ? { ...player.career,
-      international: { appearances: (player.career.international?.appearances ?? 0) + caps,
-        goals: (player.career.international?.goals ?? 0) + (caps ? result.goals : 0),
-        assists: (player.career.international?.assists ?? 0) + (caps ? result.assists : 0) },
-    } : player.career } }
+    player: { ...player,
+      careerByCompetition: careerByCompetition ? { ...careerByCompetition,
+        international: { appearances: internationalStats.appearances + caps,
+          goals: internationalStats.goals + (caps ? result.goals : 0),
+          assists: internationalStats.assists + (caps ? result.assists : 0) } }
+        : player.careerByCompetition,
+    } }
+
 }
 export function forfeitSeniorInternational(state: ProCareerState): ProCareerState {
   const pending = state.international?.pending

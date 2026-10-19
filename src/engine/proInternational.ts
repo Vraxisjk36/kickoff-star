@@ -57,15 +57,11 @@ export function scheduleSeniorInternational(state: ProCareerState, player: Playe
   const international = state.international ?? { nationId, caps: 0, goals: 0, assists: 0, starts: 0, fixtures: [] }
   if (international.pending || international.fixtures.some(f => f.season === state.season && f.week === state.week))
     return state
-  const choices = NATIONS.filter(item => item.id !== nationId &&
-    Math.abs(item.strength - nation.strength) <= 2)
-  const position = (state.season * 17 + state.week * 3 + nationId.charCodeAt(0)) % choices.length
-  const opponent = choices[position]
+  const draw = internationalTournamentFixture(nationId, state.season, state.week, international.fixtures)
+  if (!draw) return state
   const pending: SeniorInternationalFixture = {
     id: `senior-int-${nationId}-${state.season}-${state.week}`,
-    nationId, opponentId: opponent.id, season: state.season, week: state.week,
-    home: (state.season + state.week) % 2 === 0,
-    competition: state.week === 25 ? 'qualifier' : 'friendly',
+    nationId, season: state.season, week: state.week, ...draw,
   }
   return { ...state, international: { ...international, pending, lastSelectionSeason: state.season } }
 }

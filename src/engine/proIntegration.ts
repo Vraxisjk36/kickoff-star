@@ -252,7 +252,7 @@ export function releaseExpiredProContract(state: ProCareerState, player: Player)
   const proPlayer = world.players[playerId]
   const clubId = proPlayer?.clubId
   if (!proPlayer || !clubId || !world.clubs[clubId]) {
-    return { state: { ...state, freeAgentSinceWeek: elapsed, marketOffers: [], talks: null },
+    return { state: { ...state, freeAgentSinceWeek: elapsed, clubObjective: undefined, marketOffers: [], talks: null },
       player: { ...player, contract: null, squadRole: 'bench' } }
   }
   const club = world.clubs[clubId]
@@ -275,7 +275,7 @@ export function releaseExpiredProContract(state: ProCareerState, player: Player)
   }
   return {
     state: { ...state, backgroundWorld: updatedWorld, freeAgentSinceWeek: elapsed,
-      marketOffers: [], talks: null, loan: null },
+      clubObjective: undefined, marketOffers: [], talks: null, loan: null },
     player: { ...player, contract: null, squadRole: 'bench' },
   }
 }
@@ -388,7 +388,7 @@ export function finalizeProMove(state: ProCareerState, player: Player): { state:
       signedWeek: player.totalWeeksElapsed ?? 0, expiresWeek: (player.totalWeeksElapsed ?? 0) + 104 },
     turnedPro: player.turnedPro ? { ...player.turnedPro, clubName: club.name } : player.turnedPro }
   const moved: ProCareerState = { ...state, associationId: destinationCountry, world: miniWorld,
-    clubWorldIds, freeAgentSinceWeek: undefined,
+    clubWorldIds, freeAgentSinceWeek: undefined, clubObjective: undefined,
     activeCompetitionId: needsRebuild ? undefined : state.activeCompetitionId,
     activeSeasonId: needsRebuild ? undefined : state.activeSeasonId,
     resolvedWeek: undefined, backgroundWorld: result.world,

@@ -8,6 +8,7 @@ import type { ProWorldState } from './proWorld'
 import { plannedClubCount } from './proWorldFactory'
 import { recordHumanProLeagueMatch } from './proWorldSimulation'
 import { PRO_INTERACTIVE_COUNTRIES } from './proLeagueRegistry'
+import { scheduleSeniorInternational, forfeitSeniorInternational, type SeniorInternationalCareer } from './proInternational'
 
 export interface ProPayStatement { season: number; month: string; gross: number; bonus: number; estimatedWithholding: number; agentFee: number; housing: number; net: number }
 export interface ProMarketOffer { teamId: string; worldClubId: string; weeklyWage: number; expiresWeek: number }
@@ -40,6 +41,7 @@ export interface ProCareerState {
   lastRenewalWeek?: number
   /** Persisted unattached status after an expired contract; career still advances. */
   freeAgentSinceWeek?: number
+  international?: SeniorInternationalCareer
   trainedWeek?: number
   /** Matchday resolution is persisted before advancing so a reload cannot replay a result. */
   resolvedWeek?: number
@@ -217,8 +219,8 @@ export function advanceProWeek(state: ProCareerState, player: Player): { state: 
   const coachTrust = seasonEnd ? Math.max(0, Math.min(100, (player.coachTrust ?? 50) +
     (starts >= 24 ? 5 : starts >= 10 ? 1 : -6))) : player.coachTrust
   return {
-    state: { ...state, world, seasonRecords, clubObjective, season: seasonEnd ? state.season + 1 : state.season, week: seasonEnd ? 1 : nextWeek, resolvedWeek: undefined, trainedWeek: undefined,
-      retired: seasonEnd && player.careerClock.ageYears + 1 >= 38 ? true : state.retired },
+    state: scheduleSeniorInternational({ ...forfeitSeniorInternational(state), world, seasonRecords, clubObjective, season: seasonEnd ? state.season + 1 : state.season, week: seasonEnd ? 1 : nextWeek, resolvedWeek: undefined, trainedWeek: undefined,
+      retired: seasonEnd && player.careerClock.ageYears + 1 >= 38 ? true : state.retired }, player),
     player: { ...player, injury, reputation, coachTrust, suspensionMatches: Math.max(0, (player.suspensionMatches ?? 0) - (round !== null ? 1 : 0)), totalWeeksElapsed: (player.totalWeeksElapsed ?? 0) + 1, money: (player.money ?? 0) + pay,
       careerEarnings: (player.careerEarnings ?? 0) + (state.backgroundWorld ? 0 : wage), fitness: { stamina: Math.min(100, player.fitness.stamina + 18) },
       seasonAppearances: seasonEnd ? 0 : player.seasonAppearances, seasonGoals: seasonEnd ? 0 : player.seasonGoals, seasonAssists: seasonEnd ? 0 : player.seasonAssists,

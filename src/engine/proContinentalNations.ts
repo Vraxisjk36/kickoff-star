@@ -84,7 +84,7 @@ export function continentalNationsProgress(nationId:string,season:number,week:nu
       if(year===season && window>week)continue
       for(const pair of continentalRound(nationId,year,window)){
         const {homeId,awayId}=pair
-        const record=records.find(r=>r.season===year&&r.week===window&&
+        const record=records.find(r=>r.minutes>0&&r.season===year&&r.week===window&&
           r.competition==='continental'&&
           ((r.nationId===homeId&&r.opponentId===awayId&&r.home)||
           (r.nationId===awayId&&r.opponentId===homeId&&!r.home)))

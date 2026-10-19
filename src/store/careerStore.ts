@@ -532,8 +532,9 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   },
   completeProMatch: (result) => {
     const { player } = getState()
-    if (!player?.proCareer || player.proCareer.resolvedWeek === player.proCareer.week || !player.proCareer.world.divisions[1].teams.some(team => team.id === result.opponent.id)) return
-    const fixture = player.proCareer.world.divisions[1].fixtures.find(f => !f.played && f.week === proRound(player.proCareer!.week, player.proCareer!.world.divisions[1].teams.length) && f.homeTeamId === (result.home ? player.proCareer!.world.playerTeamId : result.opponent.id) && f.awayTeamId === (result.home ? result.opponent.id : player.proCareer!.world.playerTeamId))
+    if (!player?.proCareer || player.proCareer.freeAgentSinceWeek !== undefined || player.proCareer.resolvedWeek === player.proCareer.week || !player.proCareer.world.divisions[1].teams.some(team => team.id === result.opponent.id)) return
+    const fixture = player.proCareer.world.divisions[1].fixtures.find(f => !f.played && f.week === proRound(player.proCareer!.week, player.proCareer!.world.divisions[1].teams.length,
+      Math.max(0, ...player.proCareer!.world.divisions[1].fixtures.map(item => item.week))) && f.homeTeamId === (result.home ? player.proCareer!.world.playerTeamId : result.opponent.id) && f.awayTeamId === (result.home ? result.opponent.id : player.proCareer!.world.playerTeamId))
     if (!fixture) return
     const resolved = resolveProMatch(player.proCareer, player, result)
     const earned = (player.contract?.terms.appearanceFee ?? 0) + result.goals * (player.contract?.terms.goalBonus ?? 0)
@@ -555,7 +556,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   },
   completeProCupMatch: (fixtureId, result) => {
     const { player } = getState()
-    if (!player?.proCareer?.backgroundWorld) return
+    if (!player?.proCareer?.backgroundWorld || player.proCareer.freeAgentSinceWeek !== undefined) return
     const resolved = resolveProCup(player.proCareer, player, fixtureId, result)
     if (!resolved) return
     const earned = (player.contract?.terms.appearanceFee ?? 0) + result.goals * (player.contract?.terms.goalBonus ?? 0)
@@ -601,7 +602,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const pro = player?.proCareer
     if (!player || !pro || pro.talks) return
     const offer = pro.marketOffers?.find(item => item.teamId === teamId && item.expiresWeek > player.totalWeeksElapsed)
-    if (!offer || !pro.date || !registrationOpen(pro.associationId ?? 'eng', pro.date)) return
+    if (!offer || !pro.date || (pro.freeAgentSinceWeek === undefined && !registrationOpen(pro.associationId ?? 'eng', pro.date))) return
     setState({ player: { ...player, proCareer: { ...pro, talks: { offer, readyWeek: player.totalWeeksElapsed + 2, countered: false }, marketOffers: [] } } })
     void getState().saveCurrent()
   },

@@ -1,5 +1,5 @@
 import type { Player } from '../types/player'
-import { createProCareer, type ProCareerState, type ProMarketOffer, type ProPayStatement } from './proCareer'
+import { createProCareer, type ProCareerState, type ProClubObjective, type ProMarketOffer, type ProPayStatement } from './proCareer'
 import { createProWorld } from './proWorldFactory'
 import { advanceProWorldTo } from './proWorldSimulation'
 import { gameWithholdingBps } from './proContracts'
@@ -21,6 +21,32 @@ import type { LeagueWorld, Division } from './league'
 const addDays = (date: string, days: number): string => new Date(Date.parse(`${date}T00:00:00Z`) + days * 86400000).toISOString().slice(0, 10)
 const monthIndex = (date: string) => Number(date.slice(0, 4)) * 12 + Number(date.slice(5, 7)) - 1
 function housingFor(player: Player): number { return Math.max(260, Math.round((player.contract?.terms.weeklyWage ?? 1000) * 52 / 12 * .22)) }
+
+/** Club board expectations use relative reputation within the actual division.
+ * They remain attached to a club/season; promotion generates a new objective.
+ */
+export function generateClubObjective(state: ProCareerState, world = state.backgroundWorld): ProClubObjective | undefined {
+  if (!world || !state.clubWorldIds) return undefined
+  const worldClubId = state.clubWorldIds[state.world.playerTeamId]
+  const competition = Object.values(world.competitions).find(comp =>
+    comp.kind === 'league' && comp.entrantIds.includes(worldClubId))
+  if (!competition) return undefined
+  const participants = competition.entrantIds
+    .map(id => world.clubs[id])
+    .filter((club): club is NonNullable<typeof club> => !!club)
+    .sort((a, b) => b.reputation - a.reputation || a.id.localeCompare(b.id))
+  const expectedRank = participants.findIndex(club => club.id === worldClubId) + 1
+  const count = competition.entrantIds.length
+  if (!expectedRank || !count) return undefined
+  const type = expectedRank <= Math.max(2, Math.round(count * .12)) ? 'title'
+    : expectedRank <= Math.round(count * .3) ? 'continental'
+    : expectedRank <= Math.round(count * .65) ? 'top-half' : 'survival'
+  const targetPosition = type === 'title' ? Math.max(1, Math.round(count * .12))
+    : type === 'continental' ? Math.max(3, Math.round(count * .28))
+      : type === 'top-half' ? Math.ceil(count / 2) : Math.max(1, count - Math.max(2, Math.floor(count * .16)))
+  return { seasonId: competition.seasonId, competitionId: competition.id, clubId: worldClubId,
+    type, targetPosition, boardConfidence: 60 }
+}
 
 /** Use the persistent federation competition as the playable match-calendar
  * source. Local team IDs remain stable, while fixture IDs and opponents match
@@ -74,8 +100,13 @@ export function syncPlayableProLeague(state: ProCareerState, world = state.backg
   const leagues: LeagueWorld = { ...state.world, kind: 'pro',
     playerTeamId: reverse.get(playerClubId) ?? state.world.playerTeamId,
     divisions: { ...state.world.divisions, 1: division } }
-  return { ...state, world: leagues, clubWorldIds,
+  const selected = { ...state, world: leagues, clubWorldIds,
     activeCompetitionId: competition.id, activeSeasonId: competition.seasonId }
+  const existing = state.clubObjective
+  const clubObjective = existing && existing.seasonId === competition.seasonId &&
+    existing.competitionId === competition.id && existing.clubId === playerClubId
+    ? existing : generateClubObjective(selected, world)
+  return { ...selected, clubObjective }
 }
 
 /** Attach the recorded club to the living world without touching the youth save. */

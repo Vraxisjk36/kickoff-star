@@ -30,8 +30,8 @@ function hash(input: string): number {
   for (const char of input) h = Math.imul(h ^ char.charCodeAt(0),16777619)
   return h >>> 0
 }
-function group(position: string): string {
-  const p=position.toUpperCase()
+function group(position: string | null | undefined): string {
+  const p=(position ?? 'CM').toUpperCase()
   if (p.includes('GK')) return 'GK'
   if (['CB','LB','RB','LWB','RWB','DF'].some(token=>p.includes(token))) return 'DF'
   if (['DM','CM','AM','MF'].some(token=>p.includes(token))) return 'MF'
@@ -74,13 +74,14 @@ export function selectSeniorNationalSquad(nationId:string, season:number, week:n
   let playerSelected=false
   if(calledUp && careerPlayer?.nationality===nationId && careerPlayer.turnedPro &&
     !careerPlayer.injury?.weeksRemaining) {
-    const role=group(careerPlayer.position)
+    const playerPosition=careerPlayer.position ?? 'CM'
+    const role=group(playerPosition)
     const idx=members.findLastIndex(member=>group(member.position)===role)
     if(idx>=0){
       const id=`career-${careerPlayer.id}`
       const existing=members.findIndex(member=>member.id===id)
       if(existing>=0)members.splice(existing,1,synthetic(nationId,SHAPE[existing],existing))
-      members[idx]={id,name:careerPlayer.name,position:careerPlayer.position,
+      members[idx]={id,name:careerPlayer.name,position:playerPosition,
         overall:Math.max(35,Math.min(99,Math.round((careerPlayer.reputation ?? 55)*.55+40))),
         clubId:world?.players[id]?.clubId ?? null,source:'career'}
       playerSelected=true

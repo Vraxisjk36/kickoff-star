@@ -144,6 +144,23 @@ export function internationalProgress(nationId: string, cycle: number,
     championId: winner(medal.final, score(medal.final, cycle, 'final', 0, records), cycle),
   }
 }
+/** Current qualifying table only: never leak results of matches still in the future. */
+export function visibleQualifyingTable(nationId: string, currentSeason: number, currentWeek: number,
+  records: readonly SeniorInternationalRecord[] = []): TournamentStanding[] {
+  const cycle = internationalCycle(currentSeason)
+  const group = INTERNATIONAL_GROUPS.find(group => group.includes(nationId))
+  if (!group) return []
+  const games = Array.from({ length: 6 }, (_, round) => {
+    const season = cycle + Math.floor(round / 3)
+    const week = INTERNATIONAL_WINDOWS[round % 3]
+    if (season > currentSeason || season === currentSeason && week > currentWeek) return []
+    return roundRobin(group, round).map(pair => ({
+      pair, goals: score(pair, cycle, 'qualifier', round, records),
+    }))
+  }).flat()
+  return standings(group, games)
+}
+
 export function internationalTournamentFixture(nationId: string, season: number, week: number,
   records: readonly SeniorInternationalRecord[] = []):
   Pick<SeniorInternationalFixture, 'opponentId' | 'home' | 'competition'> | null {

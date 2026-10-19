@@ -184,15 +184,17 @@ export function advanceProWeek(state: ProCareerState, player: Player): { state: 
       b.goalsFor - a.goalsFor || a.teamId.localeCompare(b.teamId))
     const position = ranking.findIndex(row => row.teamId === world.playerTeamId) + 1
     const clubName = division.teams.find(team => team.id === world.playerTeamId)?.name ?? 'Unknown club'
-    const objectiveMet = !!clubObjective && position > 0 && position <= clubObjective.targetPosition
+    const objectiveMet = state.freeAgentSinceWeek === undefined && !!clubObjective && position > 0 && position <= clubObjective.targetPosition
     if (clubObjective) clubObjective = { ...clubObjective, boardConfidence: Math.max(0,
       Math.min(100, clubObjective.boardConfidence + (objectiveMet ? 15 : -18))),
       lastReviewedSeason: clubObjective.seasonId }
     seasonRecords = [...seasonRecords, {
-      season: state.season, associationId: state.associationId ?? 'eng', clubName,
-      leaguePosition: position, clubs: division.teams.length,
+      season: state.season, associationId: state.associationId ?? 'eng',
+      clubName: state.freeAgentSinceWeek === undefined ? clubName : 'Free agent',
+      leaguePosition: state.freeAgentSinceWeek === undefined ? position : 0, clubs: division.teams.length,
       appearances: player.seasonAppearances ?? 0, goals: player.seasonGoals ?? 0,
-      assists: player.seasonAssists ?? 0, leagueChampion: position === 1,
+      assists: player.seasonAssists ?? 0,
+      leagueChampion: state.freeAgentSinceWeek === undefined && position === 1,
       objectiveMet, boardConfidence: clubObjective?.boardConfidence,
     }].slice(-30)
     world = resetSchoolLeagueSeason(world)

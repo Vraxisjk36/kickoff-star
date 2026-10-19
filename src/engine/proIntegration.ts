@@ -234,6 +234,49 @@ export function advanceLivingWorld(previous: ProCareerState, next: ProCareerStat
 /** Two-year contract extension, offered during the final 26 weeks.
  * Wage increases must fit the club's available senior squad budget.
  */
+/** On the first week after expiry, release the human player into free
+ * agency. Preserve their club history, but detach from the squad and remove
+ * committed wages. Idempotent across loading and subsequent weekly ticks.
+ */
+export function releaseExpiredProContract(state: ProCareerState, player: Player):
+  { state: ProCareerState; player: Player } {
+  const expiry = player.contract?.expiresWeek
+  const elapsed = player.totalWeeksElapsed ?? 0
+  if (expiry === undefined || elapsed < expiry || state.freeAgentSinceWeek !== undefined ||
+      !state.backgroundWorld || !state.clubWorldIds || state.loan) return { state, player }
+  const playerId = `career-${player.id}`
+  const world = state.backgroundWorld
+  const proPlayer = world.players[playerId]
+  const clubId = proPlayer?.clubId
+  if (!proPlayer || !clubId || !world.clubs[clubId]) {
+    return { state: { ...state, freeAgentSinceWeek: elapsed, marketOffers: [], talks: null },
+      player: { ...player, contract: null, squadRole: 'bench' } }
+  }
+  const club = world.clubs[clubId]
+  const updatedWorld: ProWorldState = {
+    ...world,
+    players: { ...world.players, [playerId]: { ...proPlayer, clubId: null, annualWage: 0 } },
+    clubs: { ...world.clubs, [clubId]: {
+      ...club, finances: {
+        ...club.finances,
+        committedAnnualWages: Math.max(0, club.finances.committedAnnualWages - proPlayer.annualWage),
+      },
+    } },
+    recentEvents: [...world.recentEvents, {
+      id: `event-contract-expired-${playerId}-${elapsed}`,
+      date: state.date ?? world.currentDate,
+      kind: 'contract' as const,
+      subjectIds: [playerId, clubId],
+      details: { status: 'free-agent', expiredAtWeek: expiry },
+    }].slice(-240),
+  }
+  return {
+    state: { ...state, backgroundWorld: updatedWorld, freeAgentSinceWeek: elapsed,
+      marketOffers: [], talks: null, loan: null },
+    player: { ...player, contract: null, squadRole: 'bench' },
+  }
+}
+
 export function offerProRenewal(state: ProCareerState, player: Player):
   { state: ProCareerState; player: Player } | null {
   const contract = player.contract
@@ -241,6 +284,7 @@ export function offerProRenewal(state: ProCareerState, player: Player):
   const clubId = state.clubWorldIds?.[state.world.playerTeamId]
   const elapsed = player.totalWeeksElapsed ?? 0
   if (!contract || !world || !clubId || state.loan || state.retired ||
+      state.freeAgentSinceWeek !== undefined ||
       state.lastRenewalWeek === elapsed || state.talks ||
       contract.expiresWeek - elapsed > 26 ||
       contract.expiresWeek - elapsed < -4) return null
@@ -268,18 +312,19 @@ export function offerProRenewal(state: ProCareerState, player: Player):
 export function generateMarketOffers(state: ProCareerState, player: Player): ProMarketOffer[] {
   const world = state.backgroundWorld
   if (!world || !state.clubWorldIds || !state.date) return []
+  const freeAgent = state.freeAgentSinceWeek !== undefined
   const homeCountry = state.associationId ?? 'eng'
   const offerDate = state.date
-  if (!registrationOpen(homeCountry, offerDate)) return []
+  if (!freeAgent && !registrationOpen(homeCountry, offerDate)) return []
   const base = player.contract?.terms.weeklyWage ?? 1200
   const currentWorldClubId = state.clubWorldIds[state.world.playerTeamId]
   // Active professional countries only, top divisions only. Cross-border
   // registrations must be open on both ends.
   const targets = PRO_INTERACTIVE_COUNTRIES.flatMap(country => {
-    if (!registrationOpen(country, offerDate)) return []
+    if (!freeAgent && !registrationOpen(country, offerDate)) return []
     // To avoid discarding matchdays when changing leagues, international
     // offers occur around the opening of the professional season.
-    if (country !== homeCountry && state.week > 3) return []
+    if (!freeAgent && country !== homeCountry && state.week > 3) return []
     return world.competitions[`top-${country}`]?.entrantIds ?? []
   }).filter(id => id !== currentWorldClubId)
   const candidates = targets.map((id): (ProMarketOffer & { foreign: boolean; score: number }) | null => {
@@ -310,33 +355,39 @@ export function finalizeProMove(state: ProCareerState, player: Player): { state:
   const annualWage = offer.weeklyWage * 52
   const result = completeProTransfer(state.backgroundWorld, `career-${player.id}`, offer.worldClubId, {
     annualWage, probableAnnualBonuses: Math.round(annualWage * .1), annualTransferCost: 0, annualAgentFee: Math.round(annualWage * .05),
-    upfrontTransferPayment: annualWage * 2, signingBonus: offer.weeklyWage, role: 'rotation' }, state.date)
+    upfrontTransferPayment: state.freeAgentSinceWeek !== undefined ? 0 : annualWage * 2,
+    signingBonus: offer.weeklyWage, role: 'rotation' }, state.date)
   if (!result.ok) return null
   const club = result.world.clubs[offer.worldClubId]
   const destinationCountry = club.associationId
   const isForeign = destinationCountry !== (state.associationId ?? 'eng')
   const local = state.world.divisions[1].teams.find(candidate => candidate.id === offer.teamId)
-  const rebuilt = isForeign ? createProCareer(club.name, Math.max(3, Math.min(6, Math.round(club.reputation / 14))), destinationCountry) : null
+  const needsRebuild = isForeign || !local
+  const rebuilt = needsRebuild ? createProCareer(club.name, Math.max(3, Math.min(6, Math.round(club.reputation / 14))), destinationCountry) : null
   const team = rebuilt?.world.divisions[1].teams[0] ?? local
   if (!team) return null
   const miniWorld = rebuilt?.world ?? { ...state.world, playerTeamId: team.id }
   // The new career's match roster is mapped to the real destination league,
   // with the purchased club at index zero. Existing world fixtures stay intact.
   const destinationIds = result.world.competitions[`top-${destinationCountry}`]?.entrantIds ?? []
-  const mappedIds = isForeign
+  const mappedIds = needsRebuild
     ? [club.id, ...destinationIds.filter(id => id !== club.id)]
     : []
-  if (isForeign && mappedIds.length !== miniWorld.divisions[1].teams.length) return null
-  const clubWorldIds = isForeign
+  if (needsRebuild && mappedIds.length !== miniWorld.divisions[1].teams.length) return null
+  const clubWorldIds = needsRebuild
     ? Object.fromEntries(miniWorld.divisions[1].teams.map((entry, index) => [entry.id, mappedIds[index]]))
     : state.clubWorldIds
   const nextPlayer = { ...player, squadRole: 'bench' as const, contract: player.contract
     ? { ...player.contract, clubName: club.name, terms: { ...player.contract.terms, weeklyWage: offer.weeklyWage }, signedWeek: player.totalWeeksElapsed ?? 0,
-      expiresWeek: (player.totalWeeksElapsed ?? 0) + 88 } : player.contract,
+      expiresWeek: (player.totalWeeksElapsed ?? 0) + 88 }
+    : { clubName: club.name, terms: { weeklyWage: offer.weeklyWage, years: 2, signingBonus: offer.weeklyWage,
+      appearanceFee: Math.round(offer.weeklyWage * .08), goalBonus: Math.round(offer.weeklyWage * .15) },
+      signedWeek: player.totalWeeksElapsed ?? 0, expiresWeek: (player.totalWeeksElapsed ?? 0) + 104 },
     turnedPro: player.turnedPro ? { ...player.turnedPro, clubName: club.name } : player.turnedPro }
   const moved: ProCareerState = { ...state, associationId: destinationCountry, world: miniWorld,
-    clubWorldIds, activeCompetitionId: isForeign ? undefined : state.activeCompetitionId,
-    activeSeasonId: isForeign ? undefined : state.activeSeasonId,
+    clubWorldIds, freeAgentSinceWeek: undefined,
+    activeCompetitionId: needsRebuild ? undefined : state.activeCompetitionId,
+    activeSeasonId: needsRebuild ? undefined : state.activeSeasonId,
     resolvedWeek: undefined, backgroundWorld: result.world,
     shirtNumber: result.world.players[`career-${player.id}`].shirtNumber,
     residence: { countryId: club.associationId, city: club.homeCity, monthlyRent: housingFor(nextPlayer), hotelUntil: addDays(state.date, 21) },

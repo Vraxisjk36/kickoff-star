@@ -25,6 +25,7 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
   const nextOpponent = division.teams.find(t => t.id === (nextFixture?.homeTeamId === club.id ? nextFixture?.awayTeamId : nextFixture?.homeTeamId))
   const train = useCareerStore(s => s.trainProCareer)
   const requestOffers = useCareerStore(s => s.requestProOffers)
+  const requestRenewal = useCareerStore(s => s.requestProRenewal)
   const openTalks = useCareerStore(s => s.openProTransferTalks)
   const counterTalks = useCareerStore(s => s.counterProTransferTalks)
   const signMove = useCareerStore(s => s.signProTransfer)
@@ -61,6 +62,16 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
         <p className="text-xs text-ks-muted mt-2">Expectations reset when you join a new club or your division changes.</p>
       </div>)}
       {cards('YOUR CONTRACT', <>{stat('Country', (pro.associationId ?? 'eng').toUpperCase())}{stat('Division', pro.activeCompetitionId ? proCompetitionName(pro.activeCompetitionId) : 'Professional League')}{stat('Parent club', player.contract?.clubName ?? club.name)}{stat('Gross weekly wage', `${moneySymbol}${(player.contract?.terms.weeklyWage ?? 1200).toLocaleString()}`)}{stat('Appearance fee', `£${player.contract?.terms.appearanceFee ?? 0}`)}{stat('Goal bonus', `£${player.contract?.terms.goalBonus ?? 0}`)}{stat('Contract end', `Week ${player.contract?.expiresWeek ?? '—'}`)}{stat('Squad role', player.squadRole ?? 'First team squad')}{pro.loan && <p className="text-ks-gold text-xs mt-3">On loan at {club.name}. Your parent club retains your contract until the end of the season.</p>}</>)}
+      {player.contract && cards('CONTRACT RENEWAL', <div>
+        {stat('Weeks remaining', Math.max(0, player.contract.expiresWeek - (player.totalWeeksElapsed ?? 0)))}
+        {stat('Board confidence', pro.clubObjective?.boardConfidence ?? 60)}
+        <p className="text-xs text-ks-muted mt-2">Extensions are considered in the final 26 weeks of a deal. Club finances and board confidence determine the offer.</p>
+        <button className="mt-3 text-ks-gold text-xs disabled:opacity-35"
+          disabled={player.contract.expiresWeek - (player.totalWeeksElapsed ?? 0) > 26 ||
+            (pro.clubObjective?.boardConfidence ?? 60) < 30 || !!pro.loan ||
+            pro.lastRenewalWeek === player.totalWeeksElapsed}
+          onClick={() => requestRenewal()}>REQUEST TWO-YEAR EXTENSION →</button>
+      </div>)}
       {cards('TRANSFER DESK', <div><p className="text-ks-muted text-xs mb-3">Talks take two weeks. Club budgets and the registration window control which moves can happen.</p>{stat('Registration', windowOpen ? 'Open' : 'Closed')}
         {pro.talks ? <div className="mt-3 text-ks-ink text-sm"><b>{offerName(pro.talks.offer.worldClubId, pro.talks.offer.teamId)}</b><p className="text-ks-muted text-xs mt-1">£{pro.talks.offer.weeklyWage.toLocaleString()}/week · {pro.talks.readyWeek > player.totalWeeksElapsed ? `${pro.talks.readyWeek - player.totalWeeksElapsed} week(s) to terms` : 'terms ready to sign'}</p><div className="flex gap-3 mt-3"><button disabled={pro.talks.readyWeek > player.totalWeeksElapsed} onClick={() => signMove()} className="text-ks-gold text-xs disabled:opacity-35">SIGN DEAL →</button><button disabled={pro.talks.readyWeek > player.totalWeeksElapsed || pro.talks.countered} onClick={counterTalks} className="text-ks-muted text-xs disabled:opacity-35">ASK FOR 5% MORE</button></div></div> : <><button disabled={!windowOpen || !!pro.loan} onClick={requestOffers} className="text-ks-gold text-xs mt-3 disabled:opacity-35">ASK AGENT FOR OFFERS →</button>{pro.marketOffers?.map(offer => <button key={offer.teamId} onClick={() => openTalks(offer.teamId)} className="block w-full text-left border-t border-ks-border/50 py-3 text-xs text-ks-ink">{offerName(offer.worldClubId, offer.teamId)}<span className="float-right text-ks-gold">£{offer.weeklyWage.toLocaleString()}/wk →</span></button>)}</>}
         {windowOpen && !pro.loan && player.squadRole !== 'starting-xi' && <div className="border-t border-ks-border mt-4 pt-3"><p className="text-ks-muted text-xs">Need senior minutes? A temporary loan keeps your parent contract.</p>{division.teams.filter(team => team.id !== club.id).slice(0, 2).map(team => <button key={team.id} onClick={() => acceptLoan(team.id)} className="block text-ks-gold text-xs mt-2">REQUEST LOAN · {team.name} →</button>)}</div>}

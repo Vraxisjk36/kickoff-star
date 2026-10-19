@@ -6,7 +6,7 @@ import { plannedClubCount, createProWorld } from '../src/engine/proWorldFactory'
 import { recordHumanProLeagueMatch } from '../src/engine/proWorldSimulation'
 import { syncPlayableProLeague, offerProRenewal, releaseExpiredProContract, generateMarketOffers, finalizeProMove } from '../src/engine/proIntegration'
 import { scheduleSeniorInternational, completeSeniorInternational, forfeitSeniorInternational } from '../src/engine/proInternational'
-import { INTERNATIONAL_GROUPS, INTERNATIONAL_WINDOWS, internationalCycle, internationalTournamentFixture, internationalProgress } from '../src/engine/proInternationalTournament'
+import { INTERNATIONAL_GROUPS, INTERNATIONAL_WINDOWS, internationalCycle, internationalTournamentFixture, internationalProgress, visibleQualifyingTable } from '../src/engine/proInternationalTournament'
 import { NATIONS } from '../src/engine/nations'
 import { PRO_INTERACTIVE_COUNTRIES, canStartInteractiveProCareer } from '../src/engine/proLeagueRegistry'
 
@@ -323,6 +323,12 @@ const winningRsaResults = INTERNATIONAL_WINDOWS.flatMap((week, round) => [1,2].m
     competition:'qualifier' as const,season,week,home:scheduled.home,
     scored:8,conceded:0,goals:0,assists:0,rating:7.5,minutes:90 }
 }))
+const beforeKickoff=visibleQualifyingTable('rsa',1,1)
+assert.ok(beforeKickoff.every(row=>row.played===0),'Do not reveal future qualification results')
+const midQualifying=visibleQualifyingTable('rsa',1,25,winningRsaResults)
+assert.ok(midQualifying.every(row=>row.played===2))
+const afterQualifying=visibleQualifyingTable('rsa',2,37,winningRsaResults)
+assert.ok(afterQualifying.every(row=>row.played===6))
 const qualifyingWin = internationalProgress('rsa',1,winningRsaResults)
 assert.equal(qualifyingWin.qualified,true,'Six emphatic qualifying victories must earn a finals berth')
 assert.equal(qualifyingWin.qualifiers.find(r=>r.nationId==='rsa')?.points,18)

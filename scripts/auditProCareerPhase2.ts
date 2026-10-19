@@ -4,7 +4,7 @@ import type { ProWorldState } from '../src/engine/proWorld'
 import { createProCareer, advanceProWeek, professionalSeasonWeeks, proRound, proTrialClubs, PRO_CAREER_DESTINATIONS } from '../src/engine/proCareer'
 import { plannedClubCount, createProWorld } from '../src/engine/proWorldFactory'
 import { recordHumanProLeagueMatch } from '../src/engine/proWorldSimulation'
-import { syncPlayableProLeague, offerProRenewal } from '../src/engine/proIntegration'
+import { syncPlayableProLeague, offerProRenewal, releaseExpiredProContract, generateMarketOffers, finalizeProMove } from '../src/engine/proIntegration'
 import { PRO_INTERACTIVE_COUNTRIES, canStartInteractiveProCareer } from '../src/engine/proLeagueRegistry'
 
 assert.equal(PRO_INTERACTIVE_COUNTRIES.length, 10, 'Phase 2 must permit ten professional destinations')
@@ -197,3 +197,43 @@ assert.equal(offerProRenewal(renewable.state,renewable.player),null,
   'New 104-week contract cannot immediately renew again')
 assert.ok(syncPlayableProLeague(renewable.state).clubObjective)
 console.log('Phase 2: club board objectives and affordable senior contract extensions passed')
+
+const expiryWorld = structuredClone(objectiveWorld)
+const expireClub = expiryWorld.clubs[objectiveClub]
+const originalCommitment = expireClub.finances.committedAnnualWages
+const expiringPlayer = { ...renewalPlayer, totalWeeksElapsed: 110,
+  contract: { ...renewalPlayer.contract!, expiresWeek: 110 } } as Player
+const expiringCareer = { ...withBoard, backgroundWorld: expiryWorld, date: expiryWorld.currentDate }
+const released = releaseExpiredProContract(expiringCareer, expiringPlayer)
+assert.equal(released.state.freeAgentSinceWeek, 110)
+assert.equal(released.player.contract, null)
+assert.equal(released.state.backgroundWorld!.players['career-contract-test'].clubId, null)
+assert.equal(released.state.backgroundWorld!.players['career-contract-test'].annualWage, 0)
+assert.equal(released.state.backgroundWorld!.clubs[objectiveClub].finances.committedAnnualWages,
+  Math.max(0,originalCommitment - 52000))
+assert.equal(releaseExpiredProContract(released.state,released.player).state,released.state,
+  'Free-agent release must be idempotent after reload')
+assert.equal((advanceProWeek(released.state,{...released.player,careerClock:{
+  ageYears:24,phase:'academy'},fitness:{stamina:100},seasonAppearances:0,
+  seasonGoals:0,seasonAssists:0,reputation:40,coachTrust:55} as Player)).state.freeAgentSinceWeek,110)
+
+const marketWorld = structuredClone(released.state.backgroundWorld!)
+const targetClub = marketWorld.competitions['top-esp'].entrantIds[0]
+marketWorld.clubs[targetClub].finances.cash = 1000000000
+marketWorld.clubs[targetClub].finances.annualSquadCostLimit = 1000000000
+const freeMarket = { ...released.state, backgroundWorld: marketWorld }
+const offers = generateMarketOffers(freeMarket,released.player)
+assert.ok(offers.length > 0,'Unattached senior must be eligible for club offers')
+const chosen = offers.find(offer => offer.worldClubId !== objectiveClub)!
+const destination = marketWorld.clubs[chosen.worldClubId]
+destination.finances.cash=1000000000
+destination.finances.annualSquadCostLimit=1000000000
+const negotiated = {...freeMarket, talks:{offer:chosen,readyWeek:110,countered:false}}
+const signed = finalizeProMove(negotiated,released.player)
+assert.ok(signed,'Free agent must sign a zero-transfer-fee club deal')
+assert.equal(signed.state.freeAgentSinceWeek,undefined)
+assert.ok(signed.player.contract && signed.player.contract.expiresWeek>110)
+assert.equal(signed.state.backgroundWorld!.players['career-contract-test'].clubId,chosen.worldClubId)
+assert.equal(signed.state.associationId,destination.associationId)
+assert.equal(signed.state.clubWorldIds![signed.state.world.playerTeamId],chosen.worldClubId)
+console.log('Phase 2: expired contracts, no wages, free-agent market and club signing passed')

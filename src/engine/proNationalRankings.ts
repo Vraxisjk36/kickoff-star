@@ -36,7 +36,7 @@ export function seniorNationRankings(records: readonly SeniorInternationalRecord
     if(applied.has(unique))continue
     applied.add(unique)
     const homeExpectation=1/(1+Math.pow(10,(away.points-home.points)/400))
-    const result=game.scored>game.conceded?1:game.scored===game.conceded?.5:0
+    const result=game.scored>game.conceded?1:game.scored===game.conceded ? 0.5 : 0
     const weight=game.competition==='final'?36:
       game.competition==='semifinal'||game.competition==='finals-group'?30:
       game.competition==='qualifier'?24:game.competition==='continental'?22:12

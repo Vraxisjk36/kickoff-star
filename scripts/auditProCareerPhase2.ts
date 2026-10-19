@@ -5,6 +5,7 @@ import { createProCareer, advanceProWeek, professionalSeasonWeeks, proRound, pro
 import { plannedClubCount, createProWorld } from '../src/engine/proWorldFactory'
 import { recordHumanProLeagueMatch } from '../src/engine/proWorldSimulation'
 import { syncPlayableProLeague, offerProRenewal, releaseExpiredProContract, generateMarketOffers, finalizeProMove } from '../src/engine/proIntegration'
+import { scheduleSeniorInternational, completeSeniorInternational, forfeitSeniorInternational } from '../src/engine/proInternational'
 import { PRO_INTERACTIVE_COUNTRIES, canStartInteractiveProCareer } from '../src/engine/proLeagueRegistry'
 
 assert.equal(PRO_INTERACTIVE_COUNTRIES.length, 10, 'Phase 2 must permit ten professional destinations')
@@ -245,3 +246,33 @@ assert.equal(signed.state.backgroundWorld!.players['career-contract-test'].clubI
 assert.equal(signed.state.associationId,destination.associationId)
 assert.equal(signed.state.clubWorldIds![signed.state.world.playerTeamId],chosen.worldClubId)
 console.log('Phase 2: expired contracts, no wages, free-agent market and club signing passed')
+
+const nationalPlayer = {
+  ...unsignedPlayer, turnedPro: {clubName:'London Athletic',weekSigned:0,countryId:'eng'},
+  nationality:'rsa',seasonAppearances:32,seasonGoals:7,seasonAssists:9,
+  reputation:65,matchRatings:[7.1,7.7,7.4,8.1],
+} as Player
+const internationalBase = { ...withBoard, season:3, week:12 }
+const called = scheduleSeniorInternational(internationalBase,nationalPlayer)
+assert.equal(called.international?.pending?.nationId,'rsa')
+assert.equal(called.international?.pending?.week,12)
+assert.equal(scheduleSeniorInternational(called,nationalPlayer),called,
+  'Call-up may not be duplicated after save/reload')
+const duty = completeSeniorInternational(called,nationalPlayer,
+  {scored:2,conceded:1,goals:1,assists:1,rating:8.4,minutes:90})
+assert.ok(duty)
+assert.equal(duty.state.international?.caps,1)
+assert.equal(duty.state.international?.goals,1)
+assert.equal(duty.state.international?.assists,1)
+assert.equal(duty.state.international?.pending,null)
+assert.equal(completeSeniorInternational(duty.state,duty.player,
+  {scored:2,conceded:1,goals:1,assists:1,rating:8.4,minutes:90}),null,
+  'International game cannot be resolved twice')
+assert.equal(scheduleSeniorInternational(duty.state,duty.player),duty.state,
+  'Completed international game cannot spawn a duplicate')
+const missed = forfeitSeniorInternational(called)
+assert.equal(missed.international?.caps,0)
+assert.equal(missed.international?.pending,null)
+assert.equal(missed.international?.fixtures.length,1)
+assert.ok(!scheduleSeniorInternational({...withBoard,week:13},nationalPlayer).international?.pending)
+console.log('Phase 2: national-team call-ups, save safety, caps and missed duty passed')

@@ -69,6 +69,7 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
         <p className="text-xs text-ks-muted mt-2">Extensions are considered in the final 26 weeks of a deal. Club finances and board confidence determine the offer.</p>
         <button className="mt-3 text-ks-gold text-xs disabled:opacity-35"
           disabled={player.contract.expiresWeek - (player.totalWeeksElapsed ?? 0) > 26 ||
+            player.contract.expiresWeek <= (player.totalWeeksElapsed ?? 0) ||
             (pro.clubObjective?.boardConfidence ?? 60) < 30 || !!pro.loan ||
             pro.lastRenewalWeek === player.totalWeeksElapsed}
           onClick={() => requestRenewal()}>REQUEST TWO-YEAR EXTENSION →</button>

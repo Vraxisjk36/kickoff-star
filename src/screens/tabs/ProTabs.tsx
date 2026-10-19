@@ -14,6 +14,7 @@ import { registrationOpen } from '../../engine/proMovement'
 import { proCompetitionName } from '../../engine/proTournaments'
 import { getNation } from '../../engine/nations'
 import { internationalCycle, internationalProgress, visibleQualifyingTable } from '../../engine/proInternationalTournament'
+import { continentalNationsProgress } from '../../engine/proContinentalNations'
 
 export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: HubTab; onGoTo: (tab: HubTab) => void }) {
   const pro = player.proCareer!
@@ -38,6 +39,8 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
   const championshipCycle = internationalCycle(pro.season)
   const championship = player.nationality && pro.international
     ? internationalProgress(player.nationality, championshipCycle, pro.international.fixtures) : null
+  const regionalNations = player.nationality ? continentalNationsProgress(player.nationality,
+    pro.season,pro.week,pro.international?.fixtures ?? []) : null
   const qualifierTable = player.nationality ? visibleQualifyingTable(player.nationality,
     pro.season, pro.week, pro.international?.fixtures ?? []) : []
   const moneySymbol = ({ eng: 'GBP', sco: 'GBP', esp: 'EUR', ger: 'EUR', fra: 'EUR', ita: 'EUR', ned: 'EUR', por: 'EUR', bra: 'BRL', rsa: 'ZAR' } as Record<string, string>)[pro.associationId ?? 'eng'] ?? 'GBP'
@@ -54,6 +57,16 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
         {stat('International caps', pro.international?.caps ?? 0)}
         {stat('International goals', pro.international?.goals ?? 0)}
         {stat('International assists', pro.international?.assists ?? 0)}
+        {regionalNations && <div className="mt-3 border-t border-ks-border pt-3">
+          <p className="font-display text-xs text-ks-gold mb-2">{regionalNations.name.toUpperCase()}</p>
+          <p className="text-xs text-ks-muted mb-2">Two-season regional competition · {regionalNations.participants.length} countries</p>
+          {regionalNations.championId && stat('Champion', getNation(regionalNations.championId).name)}
+          <div className="max-h-36 overflow-y-auto">{regionalNations.table.map((row,index)=>
+            <div key={row.nationId} className="flex justify-between text-xs border-b border-ks-border/30 py-1">
+              <span>{index+1}. {getNation(row.nationId).name}</span>
+              <span className="text-ks-muted">{row.played} PL · {row.points} PTS</span>
+            </div>)}</div>
+        </div>}
         {pro.international?.pending?.squad && <div className="mt-3 rounded-lg border border-ks-border p-3">
           <p className="font-display text-xs text-ks-gold">NATIONAL TEAM SQUAD · 23 PLAYERS</p>
           <p className="text-ks-muted text-xs mt-1">Selected: {pro.international.pending.squad.playerSelected ? 'YES' : 'NO'} · Captain: {pro.international.pending.squad.members.find(member=>member.id===pro.international?.pending?.squad?.captainId)?.name ?? '—'}</p>

@@ -1,7 +1,7 @@
 import { NATIONS } from './nations'
 import type { SeniorInternationalRecord, SeniorInternationalFixture } from './proInternational'
 
-export type TournamentStage = 'qualifier' | 'finals-group' | 'semifinal' | 'final' | 'third-place' | 'friendly'
+export type TournamentStage = 'qualifier' | 'finals-group' | 'semifinal' | 'final' | 'third-place' | 'continental' | 'friendly'
 export interface TournamentStanding {
   nationId: string
   played: number

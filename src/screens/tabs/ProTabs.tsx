@@ -13,6 +13,7 @@ import ProWorldPanel from '../ProWorldPanel'
 import { registrationOpen } from '../../engine/proMovement'
 import { proCompetitionName } from '../../engine/proTournaments'
 import { getNation } from '../../engine/nations'
+import { internationalCycle, internationalProgress } from '../../engine/proInternationalTournament'
 
 export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: HubTab; onGoTo: (tab: HubTab) => void }) {
   const pro = player.proCareer!
@@ -34,6 +35,9 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
   const [newsOpen, setNewsOpen] = useState(false)
   const [worldOpen, setWorldOpen] = useState(false)
   const windowOpen = pro.freeAgentSinceWeek !== undefined || (pro.date ? registrationOpen(pro.associationId ?? 'eng', pro.date) : false)
+  const championshipCycle = internationalCycle(pro.season)
+  const championship = player.nationality && pro.international
+    ? internationalProgress(player.nationality, championshipCycle, pro.international.fixtures) : null
   const moneySymbol = ({ eng: 'GBP', sco: 'GBP', esp: 'EUR', ger: 'EUR', fra: 'EUR', ita: 'EUR', ned: 'EUR', por: 'EUR', bra: 'BRL', rsa: 'ZAR' } as Record<string, string>)[pro.associationId ?? 'eng'] ?? 'GBP'
   const offerName = (id: string, teamId: string) => division.teams.find(team => team.id === teamId)?.name ?? pro.backgroundWorld?.clubs[id]?.name ?? id
   const cards = (title: string, body: React.ReactNode) => <Panel title={title}>{body}</Panel>
@@ -48,6 +52,19 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
         {stat('International caps', pro.international?.caps ?? 0)}
         {stat('International goals', pro.international?.goals ?? 0)}
         {stat('International assists', pro.international?.assists ?? 0)}
+        {championship && <div className="mt-3 border-t border-ks-border pt-3">
+          <p className="font-display text-xs text-ks-gold mb-2">INTERNATIONAL CHAMPIONSHIP · CYCLE {championship.cycle}</p>
+          {stat('Qualifying group', championship.qualifiers.map(r => getNation(r.nationId).short).join(' · '))}
+          {pro.season - championshipCycle >= 2 && stat('Qualified for finals', championship.qualified ? 'YES' : 'NO')}
+          {pro.season - championshipCycle >= 2 && championship.finalsGroup && stat('Finals group', championship.finalsGroup.map(r => getNation(r.nationId).short).join(' · '))}
+          {pro.season - championshipCycle === 3 && pro.week > 25 &&
+            stat('Champion', getNation(championship.championId).name)}
+          <div className="mt-2">{championship.qualifiers.map((r, index) =>
+            <div key={r.nationId} className="flex justify-between text-xs py-1 border-b border-ks-border/40">
+              <span>{index + 1}. {getNation(r.nationId).name}</span>
+              <span className="text-ks-muted">{r.points} pts · {r.goalsFor - r.goalsAgainst >= 0 ? '+' : ''}{r.goalsFor - r.goalsAgainst}</span>
+            </div>)}</div>
+        </div>}
         {pro.international?.pending ? <p className="text-ks-gold text-xs mt-2">CALLED UP · {pro.international.pending.competition.toUpperCase()} AGAINST {getNation(pro.international.pending.opponentId).name.toUpperCase()} · PLAY YOUR INTERNATIONAL MATCH</p>
           : <p className="text-ks-muted text-xs mt-2">Senior selection depends on your current performances, reputation and previous international experience.</p>}
       </div>)}

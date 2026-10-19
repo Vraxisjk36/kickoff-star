@@ -71,6 +71,16 @@
 
 **Limitations:** These are *fictional, confederation-based nations leagues*, not official UEFA Nations League, AFCON, Copa América or Asian Cup editions. They do not model real-life qualifying rules, all worldwide nations, formal squad-registration deadlines or FIFA player-eligibility decisions. The adult squads still use fictional filler players where the wider professional world lacks enough eligible domestic players.
 
+## International ranking, availability and save integrity — October 2026
+
+- A new **fictional senior nation rating index** seeds 24 playable national teams by existing nation strength. Completed player-controlled matches move points between both national sides using strength-based expected results and competition weighting (qualifiers, finals, regional fixtures and friendlies).
+- Rating tables are derived from saved match histories, with duplicate national game results ignored. Future fixtures and missed international duty cannot change rankings; the professional hub shows the player's national rank and points movement.
+- National-team call-up selection now respects active player injury status, including old saves with an absent position field. A default midfield role prevents crashes when a legacy profile has incomplete position information.
+- Tournament and regional standings explicitly ignore 0-minute missed appearances instead of interpreting a skipped national-team call-up as a real 0–0 draw.
+- New regression tests cover ranking conservation, idempotency, past/future match filtering, injury exclusion, and safe national duty for legacy saves.
+
+**Limitations:** The new ratings are intentionally **not** FIFA rankings or its officially calibrated SUM method. This system currently reacts to recorded human international fixtures, not every simulated NPC fixture across all national competitions.
+
 ## Remaining before Phase 2 is feature-complete
 - **Date-aligned play**: playable matchday fixture IDs and opponents now originate from the persistent league calendar; the weekly career UI still abstracts actual dates into a 44- or 52-week season. It must eventually support all exact event dates, reschedules and multiple matchdays in one week.
 - **Every domestic format**: Scottish split fixtures and league-specific cup calendars need to drive interactive matchday, not just the world simulator.

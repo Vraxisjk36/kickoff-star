@@ -186,7 +186,9 @@ export function advanceLivingWorld(previous: ProCareerState, next: ProCareerStat
   const payStatements = [...(previous.payStatements ?? [])]
   for (let month = monthIndex(previous.date) + 1; month <= monthIndex(date); month++) {
     const year = Math.floor(month / 12), monthNumber = month % 12 + 1
-    const gross = Math.round((player.contract?.terms.weeklyWage ?? 1200) * 52 / 12)
+    const stillSigned = !!player.contract && previous.freeAgentSinceWeek === undefined &&
+      player.contract.expiresWeek > (player.totalWeeksElapsed ?? 0)
+    const gross = stillSigned ? Math.round(player.contract!.terms.weeklyWage * 52 / 12) : 0
     const withholding = Math.round((gross + bonus) * gameWithholdingBps(residence?.countryId ?? 'eng') / 10000)
     const agentFee = Math.round((gross + bonus) * (getAgent(player.agentId)?.commission ?? 0) / 100)
     const housing = residence?.monthlyRent ?? housingFor(player)
@@ -223,12 +225,13 @@ export function advanceLivingWorld(previous: ProCareerState, next: ProCareerStat
   const rebuild = !!active && (next.season > previous.season ||
     active.id !== interim.activeCompetitionId || active.seasonId !== interim.activeSeasonId ||
     newFixtureCount > interim.world.divisions[1].fixtures.length)
-  const synced = rebuild ? syncPlayableProLeague(interim, world) : interim
-  return { state: synced,
-    player: { ...player, money, careerEarnings: grossEarnings, agentFeesPaid: feesPaid,
-      contract: worldTeamId !== next.world.playerTeamId && player.contract
-        ? { ...player.contract, clubName: synced.world.divisions[1].teams.find(team => team.id === synced.world.playerTeamId)?.name ?? player.contract.clubName }
-        : player.contract } }
+  const synced = rebuild && previous.freeAgentSinceWeek === undefined
+    ? syncPlayableProLeague(interim, world) : interim
+  const paidPlayer = { ...player, money, careerEarnings: grossEarnings, agentFeesPaid: feesPaid,
+    contract: worldTeamId !== next.world.playerTeamId && player.contract
+      ? { ...player.contract, clubName: synced.world.divisions[1].teams.find(team => team.id === synced.world.playerTeamId)?.name ?? player.contract.clubName }
+      : player.contract }
+  return releaseExpiredProContract(synced, paidPlayer)
 }
 
 /** Two-year contract extension, offered during the final 26 weeks.

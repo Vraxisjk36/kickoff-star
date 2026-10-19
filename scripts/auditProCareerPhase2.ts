@@ -431,7 +431,6 @@ const africaRound=CONTINENTAL_WINDOWS.find(week=>
   continentalRound('rsa',1,week).some(p=>p.homeId==='rsa'||p.awayId==='rsa'))!
 const africaPair=continentalRound('rsa',1,africaRound).find(p=>p.homeId==='rsa'||p.awayId==='rsa')!
 const africaOpponent=africaPair.homeId==='rsa'?africaPair.awayId:africaPair.homeId
-const originalAfrica=continentalNationsProgress('rsa',1,africaRound)!
 const playedAfrica={
   id:'regional-rsa-test',nationId:'rsa',opponentId:africaOpponent,
   season:1,week:africaRound,competition:'continental' as const,
@@ -439,11 +438,9 @@ const playedAfrica={
   goals:1,assists:1,rating:8.5,minutes:90,
 }
 const replacedAfrica=continentalNationsProgress('rsa',1,africaRound,[playedAfrica])!
-const rsaGoals=originalAfrica.table.find(r=>r.nationId==='rsa')!.goalsFor
-assert.equal(replacedAfrica.table.find(r=>r.nationId==='rsa')!.goalsFor,
-  rsaGoals+(6-(playedAfrica.home ? originalAfrica.table.find(r=>r.nationId==='rsa')!.goalsFor : rsaGoals))>=0
-    ? replacedAfrica.table.find(r=>r.nationId==='rsa')!.goalsFor
-    : -1)
+assert.equal(replacedAfrica.table.find(row=>row.nationId==='rsa')!.goalsFor -
+    replacedAfrica.table.find(row=>row.nationId==='rsa')!.goalsAgainst,6,
+    'User-controlled regional national result must replace simulated score')
 assert.equal(replacedAfrica.table.reduce((sum,row)=>sum+row.goalsFor,0),
   replacedAfrica.table.reduce((sum,row)=>sum+row.goalsAgainst,0))
 console.log('Phase 2: confederation-only senior competition, geographic fixtures and balanced standings passed')

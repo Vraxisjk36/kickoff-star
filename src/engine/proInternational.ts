@@ -1,5 +1,6 @@
 import { getNation } from './nations'
 import { selectSeniorNationalSquad, type NationalSquadSelection } from './proNationalSquad'
+import { CONTINENTAL_WINDOWS, continentalRound } from './proContinentalNations'
 import { INTERNATIONAL_WINDOWS, internationalTournamentFixture, internationalCycle, internationalProgress, type TournamentStage } from './proInternationalTournament'
 import type { Player } from '../types/player'
 import type { ProCareerState } from './proCareer'
@@ -51,7 +52,8 @@ export function internationalCallupEligible(player: Player): boolean {
 }
 /** Called on each pro week. No rerolling eligibility or opponents when reloading. */
 export function scheduleSeniorInternational(state: ProCareerState, player: Player): ProCareerState {
-  if (state.retired || !INTERNATIONAL_WINDOWS.includes(state.week as typeof INTERNATIONAL_WINDOWS[number])) return state
+  if (state.retired || (!INTERNATIONAL_WINDOWS.includes(state.week as typeof INTERNATIONAL_WINDOWS[number]) &&
+      !CONTINENTAL_WINDOWS.includes(state.week as typeof CONTINENTAL_WINDOWS[number]))) return state
   const cycle = internationalCycle(state.season)
   const qualifiedFinalist = state.season - cycle >= 2 &&
     (state.international?.caps ?? 0) > 0 && !!player.nationality &&
@@ -63,7 +65,13 @@ export function scheduleSeniorInternational(state: ProCareerState, player: Playe
   const international = state.international ?? { nationId, caps: 0, goals: 0, assists: 0, starts: 0, fixtures: [] }
   if (international.pending || international.fixtures.some(f => f.season === state.season && f.week === state.week))
     return state
-  const draw = internationalTournamentFixture(nationId, state.season, state.week, international.fixtures)
+  const isRegionalWindow=CONTINENTAL_WINDOWS.includes(state.week as typeof CONTINENTAL_WINDOWS[number])
+  const regionalPair=isRegionalWindow ? continentalRound(nationId,state.season,state.week)
+    .find(pair=>pair.homeId===nationId||pair.awayId===nationId) : undefined
+  const draw = isRegionalWindow
+    ? regionalPair ? { opponentId: regionalPair.homeId===nationId ? regionalPair.awayId : regionalPair.homeId,
+        home: regionalPair.homeId===nationId, competition: 'continental' as const } : null
+    : internationalTournamentFixture(nationId, state.season, state.week, international.fixtures)
   if (!draw) return state
   const pending: SeniorInternationalFixture = {
     id: `senior-int-${nationId}-${state.season}-${state.week}`,

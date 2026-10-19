@@ -57,6 +57,7 @@ import { ageGroupFor, initYouthPathway, representativeSelection, selectionPassed
 import { initOctoberLeague, recordOctoberResult, simulateOctoberWeek, octoberStandings } from '../engine/octoberLeague'
 import { createProCareer, advanceProWeek, resolveProMatch, proRound } from '../engine/proCareer'
 import { canStartInteractiveProCareer } from '../engine/proLeagueRegistry'
+import { completeSeniorInternational } from '../engine/proInternational'
 import { offerProRenewal, attachProWorld, advanceLivingWorld, generateMarketOffers, finalizeProMove, resolveProCup } from '../engine/proIntegration'
 import { startProLoan, registrationOpen } from '../engine/proMovement'
 import { assessProDeal } from '../engine/proClubFinance'
@@ -147,6 +148,7 @@ interface CareerStore {
   trainProCareer: () => void
   completeProMatch: (result: Parameters<typeof resolveProMatch>[2]) => void
   completeProCupMatch: (fixtureId: string, result: Parameters<typeof resolveProMatch>[2]) => void
+  completeSeniorNationalMatch: (result: { scored: number; conceded: number; goals: number; assists: number; rating: number; minutes: number; energy: number }) => void
   completeProTrialWeek: (points: number) => void
   signOpeningProClub: (clubName: string, prestige: number, associationId?: string) => void
   ensureLivingWorld: () => void
@@ -552,6 +554,16 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       career: career ? { ...career, appearances: career.appearances + (result.minutes > 0 ? 1 : 0), goals: career.goals + result.goals,
         assists: career.assists + result.assists, wins: career.wins + (result.scored > result.conceded ? 1 : 0),
         cleanSheets: career.cleanSheets + (result.conceded === 0 ? 1 : 0), bestRating: Math.max(career.bestRating, result.rating) } : career } })
+    void getState().saveCurrent()
+  },
+  completeSeniorNationalMatch: (result) => {
+    const { player } = getState()
+    if (!player?.proCareer?.international?.pending) return
+    const completed = completeSeniorInternational(player.proCareer, player, result)
+    if (!completed) return
+    setState({ player: { ...completed.player, proCareer: completed.state,
+      fitness: { stamina: Math.max(0, result.energy) },
+      matchRatings: [...player.matchRatings, result.rating].slice(-10) } })
     void getState().saveCurrent()
   },
   completeProCupMatch: (fixtureId, result) => {

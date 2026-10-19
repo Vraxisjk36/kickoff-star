@@ -45,7 +45,8 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
     : division.teams.find(t => t.id === (home ? fixture?.awayTeamId : fixture?.homeTeamId))
   const matchReady = !!national || (pro.freeAgentSinceWeek === undefined && (!!cup || (!!fixture && pro.resolvedWeek !== pro.week)))
   const destination = PRO_CAREER_DESTINATIONS.find(item => item.id === (pro.associationId ?? 'eng'))
-  const label = national ? `${getNation(national.nationId).name} · ${national.competition === 'qualifier' ? 'International Qualifier' : 'International Friendly'}` : cup ? cupLabel(cup) : pro.activeCompetitionId
+  const internationalLabel = ({ qualifier: 'Championship Qualifier', 'finals-group': 'Championship Finals · Group Stage', semifinal: 'Championship Semifinal', final: 'International Championship Final', 'third-place': 'Championship Third Place', friendly: 'International Friendly' } as Record<string,string>)[national?.competition ?? 'friendly']
+  const label = national ? `${getNation(national.nationId).name} · ${internationalLabel}` : cup ? cupLabel(cup) : pro.activeCompetitionId
     ? proCompetitionName(pro.activeCompetitionId) : `${destination?.name ?? 'Professional'} Premier Division`
   // WeeklyHub's familiar frame owns the six destinations; professional content
   // replaces only the inner panels. The school calendar is never advanced here.

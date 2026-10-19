@@ -9,6 +9,7 @@ import { scheduleSeniorInternational, completeSeniorInternational, forfeitSenior
 import { INTERNATIONAL_GROUPS, INTERNATIONAL_WINDOWS, internationalCycle, internationalTournamentFixture, internationalProgress, visibleQualifyingTable } from '../src/engine/proInternationalTournament'
 import { NATIONS } from '../src/engine/nations'
 import { selectSeniorNationalSquad } from '../src/engine/proNationalSquad'
+import { seniorNationRankings } from '../src/engine/proNationalRankings'
 import { CONTINENTAL_WINDOWS, continentalCycle, continentalNations, continentalRound, continentalNationsProgress, confederationForNation } from '../src/engine/proContinentalNations'
 import { PRO_INTERACTIVE_COUNTRIES, canStartInteractiveProCareer } from '../src/engine/proLeagueRegistry'
 
@@ -444,3 +445,30 @@ assert.equal(replacedAfrica.table.find(row=>row.nationId==='rsa')!.goalsFor -
 assert.equal(replacedAfrica.table.reduce((sum,row)=>sum+row.goalsFor,0),
   replacedAfrica.table.reduce((sum,row)=>sum+row.goalsAgainst,0))
 console.log('Phase 2: confederation-only senior competition, geographic fixtures and balanced standings passed')
+
+const firstRankings=seniorNationRankings([])
+assert.equal(firstRankings.length,NATIONS.length)
+assert.equal(new Set(firstRankings.map(row=>row.place)).size,NATIONS.length)
+const rankingResult = {
+  ...playedAfrica, competition:'qualifier' as const,
+  season:1,week:12,id:'ranking-rsa-eng',opponentId:'eng',home:true,
+  scored:4,conceded:0,goals:2,assists:1,rating:9,minutes:90,
+}
+const rankAfter = seniorNationRankings([rankingResult])
+const rsaRanking = rankAfter.find(row=>row.nationId==='rsa')!
+const engRanking = rankAfter.find(row=>row.nationId==='eng')!
+assert.ok(rsaRanking.change>0,'International win must increase national rating')
+assert.ok(engRanking.change<0,'National opponent must lose corresponding points')
+assert.equal(Math.round((rsaRanking.change+engRanking.change)*10)/10,0,
+  'Two-sided rating transfer must conserve points')
+assert.deepEqual(seniorNationRankings([rankingResult]),seniorNationRankings([rankingResult,rankingResult]),
+  'Duplicate saved national game may not be counted more than once')
+assert.equal(seniorNationRankings([rankingResult],1,8).find(row=>row.nationId==='rsa')!.change,0,
+  'National rankings must not reveal future match results')
+const skippedRank={...rankingResult,id:'skipped-rank',minutes:0,scored:0,conceded:0}
+assert.deepEqual(seniorNationRankings([skippedRank]),firstRankings,
+  'Missed duty may not change national ratings')
+const injuredCallup={...nationalPlayer, injury:{kind:'hamstring',weeksRemaining:1}} as Player
+assert.equal(scheduleSeniorInternational({...withBoard,season:5,week:12},injuredCallup).international?.pending,
+  undefined,'Injured player must not be called up for senior national duty')
+console.log('Phase 2: nation ratings, correct home-away transfers, no future records, injury eligibility passed')

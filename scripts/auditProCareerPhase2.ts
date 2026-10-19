@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import type { Player } from '../src/types/player'
 import type { ProWorldState } from '../src/engine/proWorld'
-import { createProCareer, advanceProWeek, professionalSeasonWeeks, proRound, proTrialClubs, PRO_CAREER_DESTINATIONS } from '../src/engine/proCareer'
+import { createProCareer, advanceProWeek, professionalSeasonWeeks, proRound, proFixture, proTrialClubs, PRO_CAREER_DESTINATIONS } from '../src/engine/proCareer'
 import { plannedClubCount, createProWorld } from '../src/engine/proWorldFactory'
 import { recordHumanProLeagueMatch } from '../src/engine/proWorldSimulation'
 import { syncPlayableProLeague, offerProRenewal, releaseExpiredProContract, generateMarketOffers, finalizeProMove } from '../src/engine/proIntegration'
@@ -213,6 +213,14 @@ assert.equal(released.state.backgroundWorld!.clubs[objectiveClub].finances.commi
   Math.max(0,originalCommitment - 52000))
 assert.equal(releaseExpiredProContract(released.state,released.player).state,released.state,
   'Free-agent release must be idempotent after reload')
+assert.equal(proFixture(released.state),undefined,'Free agent must not have a playable club fixture')
+const unsignedPlayer = { ...released.player, money:5000, careerEarnings:125000,
+  careerClock:{ageYears:24,phase:'academy'}, fitness:{stamina:100},
+  seasonAppearances:0,seasonGoals:0,seasonAssists:0,reputation:40,coachTrust:55 } as Player
+const unsignedWeek = advanceProWeek(released.state,unsignedPlayer)
+assert.equal(unsignedWeek.player.money,5000,'Free agents may not earn a phantom weekly salary')
+assert.equal(unsignedWeek.player.careerEarnings,125000,'Free-agent earnings must not accrue')
+assert.equal(unsignedWeek.state.freeAgentSinceWeek,110,'Free agency must survive weekly progression')
 assert.equal((advanceProWeek(released.state,{...released.player,careerClock:{
   ageYears:24,phase:'academy'},fitness:{stamina:100},seasonAppearances:0,
   seasonGoals:0,seasonAssists:0,reputation:40,coachTrust:55} as Player)).state.freeAgentSinceWeek,110)

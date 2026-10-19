@@ -208,7 +208,7 @@ export function advanceProWeek(state: ProCareerState, player: Player): { state: 
   const impact = Math.round((Math.min(38, starts) * .11 + Math.min(22, contribution) * .19 -
     (starts < 8 ? 3 : 0)) * youthPrime)
   const reputation = seasonEnd ? Math.max(0, Math.min(100, (player.reputation ?? 20) + impact)) : player.reputation
-  const coachTrust = seasonEnd ? Math.max(0, Math.min(100, player.coachTrust +
+  const coachTrust = seasonEnd ? Math.max(0, Math.min(100, (player.coachTrust ?? 50) +
     (starts >= 24 ? 5 : starts >= 10 ? 1 : -6))) : player.coachTrust
   return {
     state: { ...state, world, seasonRecords, clubObjective, season: seasonEnd ? state.season + 1 : state.season, week: seasonEnd ? 1 : nextWeek, resolvedWeek: undefined, trainedWeek: undefined,

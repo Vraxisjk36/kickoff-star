@@ -57,7 +57,7 @@ import { ageGroupFor, initYouthPathway, representativeSelection, selectionPassed
 import { initOctoberLeague, recordOctoberResult, simulateOctoberWeek, octoberStandings } from '../engine/octoberLeague'
 import { createProCareer, advanceProWeek, resolveProMatch, proRound } from '../engine/proCareer'
 import { canStartInteractiveProCareer } from '../engine/proLeagueRegistry'
-import { attachProWorld, advanceLivingWorld, generateMarketOffers, finalizeProMove, resolveProCup } from '../engine/proIntegration'
+import { offerProRenewal, attachProWorld, advanceLivingWorld, generateMarketOffers, finalizeProMove, resolveProCup } from '../engine/proIntegration'
 import { startProLoan, registrationOpen } from '../engine/proMovement'
 import { assessProDeal } from '../engine/proClubFinance'
 
@@ -151,6 +151,7 @@ interface CareerStore {
   signOpeningProClub: (clubName: string, prestige: number, associationId?: string) => void
   ensureLivingWorld: () => void
   requestProOffers: () => void
+  requestProRenewal: () => boolean
   openProTransferTalks: (teamId: string) => void
   counterProTransferTalks: () => void
   signProTransfer: () => boolean
@@ -578,6 +579,15 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     if (!player?.proCareer || player.proCareer.backgroundWorld) return
     setState({ player: { ...player, proCareer: attachProWorld(player.proCareer, player) } })
     void getState().saveCurrent()
+  },
+  requestProRenewal: () => {
+    const { player } = getState()
+    if (!player?.proCareer) return false
+    const renewal = offerProRenewal(player.proCareer, player)
+    if (!renewal) return false
+    setState({ player: { ...renewal.player, proCareer: renewal.state } })
+    void getState().saveCurrent()
+    return true
   },
   requestProOffers: () => {
     const { player } = getState()

@@ -290,7 +290,7 @@ export function offerProRenewal(state: ProCareerState, player: Player):
       state.freeAgentSinceWeek !== undefined ||
       state.lastRenewalWeek === elapsed || state.talks ||
       contract.expiresWeek - elapsed > 26 ||
-      contract.expiresWeek - elapsed < -4) return null
+      contract.expiresWeek <= elapsed) return null
   const club = world.clubs[clubId]
   const proPlayer = world.players[`career-${player.id}`]
   if (!club || !proPlayer || proPlayer.clubId !== clubId) return null

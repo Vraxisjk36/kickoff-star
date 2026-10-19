@@ -1,5 +1,5 @@
 import { getNation } from './nations'
-import { INTERNATIONAL_WINDOWS, internationalTournamentFixture, type TournamentStage } from './proInternationalTournament'
+import { INTERNATIONAL_WINDOWS, internationalTournamentFixture, internationalCycle, internationalProgress, type TournamentStage } from './proInternationalTournament'
 import type { Player } from '../types/player'
 import type { ProCareerState } from './proCareer'
 
@@ -49,8 +49,12 @@ export function internationalCallupEligible(player: Player): boolean {
 }
 /** Called on each pro week. No rerolling eligibility or opponents when reloading. */
 export function scheduleSeniorInternational(state: ProCareerState, player: Player): ProCareerState {
-  if (state.retired || !INTERNATIONAL_WINDOWS.includes(state.week as typeof INTERNATIONAL_WINDOWS[number]) ||
-      !internationalCallupEligible(player)) return state
+  if (state.retired || !INTERNATIONAL_WINDOWS.includes(state.week as typeof INTERNATIONAL_WINDOWS[number])) return state
+  const cycle = internationalCycle(state.season)
+  const qualifiedFinalist = state.season - cycle >= 2 &&
+    (state.international?.caps ?? 0) > 0 && !!player.nationality &&
+    internationalProgress(player.nationality, cycle, state.international?.fixtures ?? []).qualified
+  if (!internationalCallupEligible(player) && !qualifiedFinalist) return state
   const nationId = player.nationality!
   const nation = getNation(nationId)
   if (nation.id !== nationId) return state

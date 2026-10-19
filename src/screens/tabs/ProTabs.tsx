@@ -54,6 +54,14 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
         {stat('International caps', pro.international?.caps ?? 0)}
         {stat('International goals', pro.international?.goals ?? 0)}
         {stat('International assists', pro.international?.assists ?? 0)}
+        {pro.international?.pending?.squad && <div className="mt-3 rounded-lg border border-ks-border p-3">
+          <p className="font-display text-xs text-ks-gold">NATIONAL TEAM SQUAD · 23 PLAYERS</p>
+          <p className="text-ks-muted text-xs mt-1">Selected: {pro.international.pending.squad.playerSelected ? 'YES' : 'NO'} · Captain: {pro.international.pending.squad.members.find(member=>member.id===pro.international?.pending?.squad?.captainId)?.name ?? '—'}</p>
+          <div className="max-h-40 overflow-y-auto mt-2">{pro.international.pending.squad.members.map(member=>
+            <div key={member.id} className={`text-xs flex justify-between border-t border-ks-border/30 py-1 ${member.source==='career' ? 'text-ks-gold' : 'text-ks-muted'}`}>
+              <span>{member.position} · {member.name}</span><span>{member.overall} OVR</span>
+            </div>)}</div>
+        </div>}
         {championship && <div className="mt-3 border-t border-ks-border pt-3">
           <p className="font-display text-xs text-ks-gold mb-2">INTERNATIONAL CHAMPIONSHIP · CYCLE {championship.cycle}</p>
           {stat('Qualifying group', qualifierTable.map(r => getNation(r.nationId).short).join(' · '))}

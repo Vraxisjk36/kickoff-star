@@ -1,4 +1,5 @@
 import { getNation } from './nations'
+import { selectSeniorNationalSquad, type NationalSquadSelection } from './proNationalSquad'
 import { INTERNATIONAL_WINDOWS, internationalTournamentFixture, internationalCycle, internationalProgress, type TournamentStage } from './proInternationalTournament'
 import type { Player } from '../types/player'
 import type { ProCareerState } from './proCareer'
@@ -11,6 +12,7 @@ export interface SeniorInternationalFixture {
   week: number
   home: boolean
   competition: TournamentStage
+  squad?: NationalSquadSelection
   result?: { scored: number; conceded: number; goals: number; assists: number; rating: number; minutes: number }
 }
 export interface SeniorInternationalRecord {
@@ -66,6 +68,7 @@ export function scheduleSeniorInternational(state: ProCareerState, player: Playe
   const pending: SeniorInternationalFixture = {
     id: `senior-int-${nationId}-${state.season}-${state.week}`,
     nationId, season: state.season, week: state.week, ...draw,
+    squad: selectSeniorNationalSquad(nationId,state.season,state.week,state.backgroundWorld,player,true),
   }
   return { ...state, international: { ...international, pending, lastSelectionSeason: state.season } }
 }

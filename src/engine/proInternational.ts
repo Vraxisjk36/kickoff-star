@@ -1,4 +1,5 @@
-import { NATIONS, getNation } from './nations'
+import { getNation } from './nations'
+import { INTERNATIONAL_WINDOWS, internationalTournamentFixture, type TournamentStage } from './proInternationalTournament'
 import type { Player } from '../types/player'
 import type { ProCareerState } from './proCareer'
 
@@ -9,7 +10,7 @@ export interface SeniorInternationalFixture {
   season: number
   week: number
   home: boolean
-  competition: 'friendly' | 'qualifier'
+  competition: TournamentStage
   result?: { scored: number; conceded: number; goals: number; assists: number; rating: number; minutes: number }
 }
 export interface SeniorInternationalRecord {
@@ -37,7 +38,6 @@ export interface SeniorInternationalCareer {
   fixtures: SeniorInternationalRecord[]
   pending?: SeniorInternationalFixture | null
 }
-const WINDOWS = [12, 25, 37]
 export function internationalCallupEligible(player: Player): boolean {
   if (!player.turnedPro || !player.nationality) return false
   const caps = player.proCareer?.international?.caps ?? 0
@@ -49,7 +49,7 @@ export function internationalCallupEligible(player: Player): boolean {
 }
 /** Called on each pro week. No rerolling eligibility or opponents when reloading. */
 export function scheduleSeniorInternational(state: ProCareerState, player: Player): ProCareerState {
-  if (state.retired || !WINDOWS.includes(state.week) ||
+  if (state.retired || !INTERNATIONAL_WINDOWS.includes(state.week as typeof INTERNATIONAL_WINDOWS[number]) ||
       !internationalCallupEligible(player)) return state
   const nationId = player.nationality!
   const nation = getNation(nationId)

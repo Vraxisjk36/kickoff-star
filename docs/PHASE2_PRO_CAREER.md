@@ -57,6 +57,7 @@
 - Other national teams' games are simulated deterministically from nation strengths. The user's actual played international results override the matching simulated score and can change qualification, knockout entrants, opponents and tournament champions.
 - A completed player's caps, goals, assists and earned International Championship honours are visible in the pro hub and Hall of Fame. Qualifying standings and finals membership are derived from saved international fixtures, so they survive save/load.
 - Regression coverage spans five separate four-season cycles (**20 international seasons**) and checks group uniqueness, home-and-away opponents, finalists, knockout participation and whether winning or losing the player's qualifiers changes finals access.
+- A separate senior-career regression advances **20 full seasons in England and South Africa**, checking chronological seasons, consistent club counts, ageing to 38, archived seasons and no progression after retirement. This is an automated engine stress test, not a substitute for Android device performance QA.
 
 **Not yet official-format realism:** The simulated tournament has 24 rather than the real World Cup field; there are no confederation-specific World Cup qualifying paths, confederation championships, national-team squad lists, exact FIFA windows or official rankings. The 20-season audit covers international competition scheduling and bracket generation, not yet 20 years of full mobile gameplay or Android-device performance.
 

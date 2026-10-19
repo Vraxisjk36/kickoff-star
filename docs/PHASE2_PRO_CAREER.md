@@ -26,6 +26,18 @@
 
 **Remaining detail:** A real free-agency pathway at contract expiry, formal employer-initiated renewals, salary exchange rates, performance bonuses, work permits, personal transfer requests, and multi-year contract disputes have not yet been implemented. The board objective labels are simplified simulation rules, not literal qualification rules for each federation.
 
+## Free agency and contract expiry — October 2026
+
+- The first senior weekly tick reaching the contract's expiry releases the human player from their club, clears the contract, ends wages and removes the world player's club assignment and annual wage commitment.
+- Release is idempotent and saved as `freeAgentSinceWeek`; old saves without that field still load as normal attached careers.
+- The former club continues its league fixtures via background simulation, while the free agent cannot participate in club or cup matchdays or receive a prior club's title.
+- While unattached, players may seek agent offers from supported top-flight countries without a domestic transfer-window restriction. Signing uses **zero outgoing transfer fee**, updates the player's new 2-year contract and persistent world roster, assigns a new club and rebuilds that country's playable fixture calendar. This is a streamlined gameplay rule, not an exact reproduction of each nation's free-agent registration deadlines.
+- Squad wages and bonus statements do not continue beyond expiry. A new club contract resumes pay only when signed.
+- The professional UI shows an unattached-player panel, a transfer search, and disables renewing a contract that already expired.
+- New regression cases check payroll detachment, idempotency, transfer completion, saved club mapping, no unsigned matchdays and zero unsigned wages.
+
+**Still to do:** Employer decisions on releases, detailed Bosman/pre-contract negotiations, international registration restrictions, free-agent agents initiating offers automatically, career choices to retire early, and deeper international caps/competitions.
+
 ## Remaining before Phase 2 is feature-complete
 - **Date-aligned play**: playable matchday fixture IDs and opponents now originate from the persistent league calendar; the weekly career UI still abstracts actual dates into a 44- or 52-week season. It must eventually support all exact event dates, reschedules and multiple matchdays in one week.
 - **Every domestic format**: Scottish split fixtures and league-specific cup calendars need to drive interactive matchday, not just the world simulator.

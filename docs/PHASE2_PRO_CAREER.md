@@ -38,6 +38,16 @@
 
 **Still to do:** Employer decisions on releases, detailed Bosman/pre-contract negotiations, international registration restrictions, free-agent agents initiating offers automatically, career choices to retire early, and deeper international caps/competitions.
 
+## Senior international career — October 2026
+
+- Senior call-ups occur at three selected national duty windows in each professional season. The call-up score combines senior appearances, goals, assists, form and reputation; previously capped players have a lower repeat-selection threshold.
+- Eligibility follows the player's saved **nationality**, never the country where the player signed a professional contract. The current senior match engine uses the 24 nations in the existing `NATIONS` catalogue and chooses a similarly rated opponent deterministically.
+- A pending call-up takes precedence over a club match or cup fixture on the playable matchday. The same interactive match screens are used with national team identities, and the post-match result saves caps, goals and assists separately from club statistics.
+- Skipped duty is archived as a missed appearance, **not** a national-team cap; save/reload cannot duplicate the same duty fixture.
+- A player's senior caps and goals appear in the professional home panel and Hall of Fame; competition career records track their international contribution.
+
+**Remaining international realism:** Official national qualifying groups, tournament brackets, call-up squads beyond the user, exact FIFA windows and eligibility criteria, club postponements when dates clash, international injuries and suspensions, and proper ranking/Elo progression are not yet implemented. This is a first playable international-career layer, not a claim that the full national-team calendar is complete.
+
 ## Remaining before Phase 2 is feature-complete
 - **Date-aligned play**: playable matchday fixture IDs and opponents now originate from the persistent league calendar; the weekly career UI still abstracts actual dates into a 44- or 52-week season. It must eventually support all exact event dates, reschedules and multiple matchdays in one week.
 - **Every domestic format**: Scottish split fixtures and league-specific cup calendars need to drive interactive matchday, not just the world simulator.

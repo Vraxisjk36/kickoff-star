@@ -15,6 +15,7 @@ import { proCompetitionName } from '../../engine/proTournaments'
 import { getNation } from '../../engine/nations'
 import { internationalCycle, internationalProgress, visibleQualifyingTable } from '../../engine/proInternationalTournament'
 import { continentalNationsProgress } from '../../engine/proContinentalNations'
+import { seniorNationRankings } from '../../engine/proNationalRankings'
 
 export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: HubTab; onGoTo: (tab: HubTab) => void }) {
   const pro = player.proCareer!
@@ -39,6 +40,8 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
   const championshipCycle = internationalCycle(pro.season)
   const championship = player.nationality && pro.international
     ? internationalProgress(player.nationality, championshipCycle, pro.international.fixtures) : null
+  const nationRankings = seniorNationRankings(pro.international?.fixtures ?? [],pro.season,pro.week)
+  const nationRank = nationRankings.find(row=>row.nationId===player.nationality)
   const regionalNations = player.nationality ? continentalNationsProgress(player.nationality,
     pro.season,pro.week,pro.international?.fixtures ?? []) : null
   const qualifierTable = player.nationality ? visibleQualifyingTable(player.nationality,
@@ -57,6 +60,9 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
         {stat('International caps', pro.international?.caps ?? 0)}
         {stat('International goals', pro.international?.goals ?? 0)}
         {stat('International assists', pro.international?.assists ?? 0)}
+        {nationRank && stat('International ranking', `#${nationRank.place}/${nationRankings.length}`)}
+        {nationRank && stat('Ranking movement', `${nationRank.change>=0 ? '+' : ''}${nationRank.change.toFixed(1)} pts`)}
+        <p className="text-xs text-ks-muted mt-2">National ratings are a fictional career index based on completed international results, not official FIFA rankings.</p>
         {regionalNations && <div className="mt-3 border-t border-ks-border pt-3">
           <p className="font-display text-xs text-ks-gold mb-2">{regionalNations.name.toUpperCase()}</p>
           <p className="text-xs text-ks-muted mb-2">Two-season regional competition · {regionalNations.participants.length} countries</p>

@@ -1,5 +1,6 @@
 import type { Player } from '../types/player'
 import CareerRecord from '../components/CareerRecord'
+import { internationalProgress, internationalCycle } from '../engine/proInternationalTournament'
 
 export default function CareerEnd({ player, onMenu }: { player: Player; onMenu: () => void }) {
   const retired = !!player.proCareer?.retired
@@ -7,6 +8,10 @@ export default function CareerEnd({ player, onMenu }: { player: Player; onMenu: 
   const proSeasons = player.proCareer?.seasonRecords ?? []
   const leagueTitles = proSeasons.filter(season => season.leagueChampion).length
   const national = player.proCareer?.international
+  const championshipYears = national ? [...new Set(national.fixtures
+    .filter(fixture => fixture.competition === 'final' || fixture.competition === 'finals-group')
+    .map(fixture => internationalCycle(fixture.season)))].filter(cycle =>
+      internationalProgress(national.nationId, cycle, national.fixtures).championId === national.nationId) : []
   return (
     <div className="relative min-h-screen w-full bg-ks-black flex flex-col justify-center px-5 py-8">
       <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 60% 40% at 50% 20%, rgba(212,175,55,0.06), transparent 60%), linear-gradient(180deg,#0a0a09,#050504)' }} />
@@ -19,7 +24,7 @@ export default function CareerEnd({ player, onMenu }: { player: Player; onMenu: 
 
         {retired && <div className="grid grid-cols-3 gap-2 mb-6 text-center"><div className="border border-ks-border rounded-lg py-4"><b className="block text-ks-gold text-xl">{career?.appearances ?? 0}</b><small className="text-ks-muted">APPS</small></div><div className="border border-ks-border rounded-lg py-4"><b className="block text-ks-gold text-xl">{career?.goals ?? 0}</b><small className="text-ks-muted">GOALS</small></div><div className="border border-ks-border rounded-lg py-4"><b className="block text-ks-gold text-xl">{career?.assists ?? 0}</b><small className="text-ks-muted">ASSISTS</small></div></div>}
         {retired && <div className="mb-6 text-left"><div className="text-ks-gold font-display text-lg mb-3">{leagueTitles} LEAGUE TITLE{leagueTitles === 1 ? '' : 'S'}</div><div className="max-h-52 overflow-y-auto">{[...proSeasons].reverse().map(season => <div key={season.season} className="flex justify-between gap-3 border-b border-ks-border/50 py-2 text-xs"><span className="text-ks-ink">{season.season} · {season.clubName} ({season.associationId.toUpperCase()})</span><span className="shrink-0 text-ks-gold">#{season.leaguePosition}/{season.clubs}{season.leagueChampion ? ' 🏆' : ''}</span></div>)}</div></div>}
-        {retired && national && <div className="mb-6 border border-ks-border rounded-xl p-4 text-left"><h2 className="text-ks-gold font-display mb-2">INTERNATIONAL LEGACY</h2><div className="grid grid-cols-3 gap-2 text-center text-xs"><div><b className="block text-ks-ink text-xl">{national.caps}</b>CAPS</div><div><b className="block text-ks-ink text-xl">{national.goals}</b>GOALS</div><div><b className="block text-ks-ink text-xl">{national.assists}</b>ASSISTS</div></div></div>}
+        {retired && national && <div className="mb-6 border border-ks-border rounded-xl p-4 text-left"><h2 className="text-ks-gold font-display mb-2">INTERNATIONAL LEGACY</h2><p className="text-ks-muted text-xs mb-2">Championship victories: {championshipYears.length}</p><div className="grid grid-cols-3 gap-2 text-center text-xs"><div><b className="block text-ks-ink text-xl">{national.caps}</b>CAPS</div><div><b className="block text-ks-ink text-xl">{national.goals}</b>GOALS</div><div><b className="block text-ks-ink text-xl">{national.assists}</b>ASSISTS</div></div></div>}
         <CareerRecord player={player} />
 
         <button onClick={onMenu} className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-3.5 text-sm shadow-[0_0_25px_rgba(212,175,55,0.3)]">

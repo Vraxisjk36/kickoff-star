@@ -48,6 +48,18 @@
 
 **Remaining international realism:** Official national qualifying groups, tournament brackets, call-up squads beyond the user, exact FIFA windows and eligibility criteria, club postponements when dates clash, international injuries and suspensions, and proper ranking/Elo progression are not yet implemented. This is a first playable international-career layer, not a claim that the full national-team calendar is complete.
 
+## Four-season international championship — October 2026
+
+- The senior international layer now runs a repeatable **four-season International Championship** using the established 24-national-team catalogue. It is a clearly fictional competition format, not a representation of the official FIFA World Cup calendar.
+- Twenty-four nations are assigned to **six qualifying groups of four**. Each group plays a home-and-away round robin over six windows in the first two seasons of the cycle, with standings computed from wins, draws, goal difference and goals scored.
+- The six group winners and two best runners-up qualify for the eight-nation finals. In season three, the finalists enter two groups of four and play three group fixtures. Two teams per group qualify for the semifinals.
+- Season four features two semifinals, a title final and a third-place fixture. Players whose nation is eliminated still receive friendly fixtures when selected.
+- Other national teams' games are simulated deterministically from nation strengths. The user's actual played international results override the matching simulated score and can change qualification, knockout entrants, opponents and tournament champions.
+- A completed player's caps, goals, assists and earned International Championship honours are visible in the pro hub and Hall of Fame. Qualifying standings and finals membership are derived from saved international fixtures, so they survive save/load.
+- Regression coverage spans five separate four-season cycles (**20 international seasons**) and checks group uniqueness, home-and-away opponents, finalists, knockout participation and whether winning or losing the player's qualifiers changes finals access.
+
+**Not yet official-format realism:** The simulated tournament has 24 rather than the real World Cup field; there are no confederation-specific World Cup qualifying paths, confederation championships, national-team squad lists, exact FIFA windows or official rankings. The 20-season audit covers international competition scheduling and bracket generation, not yet 20 years of full mobile gameplay or Android-device performance.
+
 ## Remaining before Phase 2 is feature-complete
 - **Date-aligned play**: playable matchday fixture IDs and opponents now originate from the persistent league calendar; the weekly career UI still abstracts actual dates into a 44- or 52-week season. It must eventually support all exact event dates, reschedules and multiple matchdays in one week.
 - **Every domestic format**: Scottish split fixtures and league-specific cup calendars need to drive interactive matchday, not just the world simulator.

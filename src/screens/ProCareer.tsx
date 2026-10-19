@@ -45,7 +45,7 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
     : division.teams.find(t => t.id === (home ? fixture?.awayTeamId : fixture?.homeTeamId))
   const matchReady = !!national || (pro.freeAgentSinceWeek === undefined && (!!cup || (!!fixture && pro.resolvedWeek !== pro.week)))
   const destination = PRO_CAREER_DESTINATIONS.find(item => item.id === (pro.associationId ?? 'eng'))
-  const internationalLabel = ({ qualifier: 'Championship Qualifier', 'finals-group': 'Championship Finals · Group Stage', semifinal: 'Championship Semifinal', final: 'International Championship Final', 'third-place': 'Championship Third Place', friendly: 'International Friendly' } as Record<string,string>)[national?.competition ?? 'friendly']
+  const internationalLabel = ({ qualifier: 'Championship Qualifier', 'finals-group': 'Championship Finals · Group Stage', continental: 'Regional Nations Series', semifinal: 'Championship Semifinal', final: 'International Championship Final', 'third-place': 'Championship Third Place', friendly: 'International Friendly' } as Record<string,string>)[national?.competition ?? 'friendly']
   const label = national ? `${getNation(national.nationId).name} · ${internationalLabel}` : cup ? cupLabel(cup) : pro.activeCompetitionId
     ? proCompetitionName(pro.activeCompetitionId) : `${destination?.name ?? 'Professional'} Premier Division`
   // WeeklyHub's familiar frame owns the six destinations; professional content

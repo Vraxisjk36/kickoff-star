@@ -83,6 +83,8 @@ for(let i=0;i<44;i++){
 }
 assert.equal(seniorCareer.retired,true,'Age-38 retirement did not trigger')
 assert.equal(seniorPlayer.careerClock.ageYears,38)
+assert.ok(seniorPlayer.reputation > 20, 'Veteran contributions should improve career reputation')
+assert.equal(seniorPlayer.coachTrust,55, 'Regular senior appearances must improve coach confidence')
 assert.equal(seniorCareer.seasonRecords?.length,1)
 assert.equal(seniorCareer.seasonRecords?.[0].appearances,29)
 assert.equal(seniorCareer.seasonRecords?.[0].goals,6)

@@ -341,5 +341,5 @@ export function finalizeProMove(state: ProCareerState, player: Player): { state:
     shirtNumber: result.world.players[`career-${player.id}`].shirtNumber,
     residence: { countryId: club.associationId, city: club.homeCity, monthlyRent: housingFor(nextPlayer), hotelUntil: addDays(state.date, 21) },
     talks: null, marketOffers: [] }
-  return { state: isForeign ? syncPlayableProLeague(moved, result.world) : moved, player: nextPlayer }
+  return { state: syncPlayableProLeague(moved, result.world), player: nextPlayer }
 }

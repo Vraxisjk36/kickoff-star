@@ -137,7 +137,7 @@ export function attachProWorld(state: ProCareerState, player: Player): ProCareer
 
 /** The next dated cup tie for the player's club, before the next weekly tick. */
 export function pendingProCup(state: ProCareerState): ProFixture | null {
-  if (!state.backgroundWorld || !state.date || !state.clubWorldIds) return null
+  if (!state.backgroundWorld || !state.date || !state.clubWorldIds || state.freeAgentSinceWeek !== undefined) return null
   const clubId = state.clubWorldIds[state.world.playerTeamId]
   const until = addDays(state.date, 7)
   return Object.values(state.backgroundWorld.fixtures)

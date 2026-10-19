@@ -61,6 +61,16 @@
 
 **Not yet official-format realism:** The simulated tournament has 24 rather than the real World Cup field; there are no confederation-specific World Cup qualifying paths, confederation championships, national-team squad lists, exact FIFA windows or official rankings. The 20-season audit covers international competition scheduling and bracket generation, not yet 20 years of full mobile gameplay or Android-device performance.
 
+## Regional national-team squads and competitions — October 2026
+
+- Every senior international call-up now records a stable **23-player national squad**. Players are selected from the simulated world's eligible nationals by role and ability; vacant roles are filled with stable fictional national-team players. Injured or foreign-national players are ineligible, and the human player is assigned only if fit and selected.
+- Squad snapshots, position balance and captain selection are stored in the pending fixture. The professional hub displays the whole national squad, with the user's selected place highlighted.
+- Alongside the four-year fictional International Championship, countries now take part in separate **two-season confederation Nations Series**, with regional opponents only: Europe (UEFA), Africa (CAF), South America (CONMEBOL), North America (CONCACAF) and Asia (AFC). Smaller national-team pools may repeat opponents, and odd-sized groups have genuine byes.
+- Regional fixtures occupy the additional international weeks **8, 20 and 32**. Reciprocal fixtures update both opponents' standings consistently; human-controlled results override simulated scores. The professional hub shows regional tables and the champion after the cycle finishes.
+- New integration audits cover all 24 selectable senior nationalities, deterministic 23-player squads, foreign/injured disqualification, geographical opponent validity, odd-sized group byes and consistent score totals.
+
+**Limitations:** These are *fictional, confederation-based nations leagues*, not official UEFA Nations League, AFCON, Copa América or Asian Cup editions. They do not model real-life qualifying rules, all worldwide nations, formal squad-registration deadlines or FIFA player-eligibility decisions. The adult squads still use fictional filler players where the wider professional world lacks enough eligible domestic players.
+
 ## Remaining before Phase 2 is feature-complete
 - **Date-aligned play**: playable matchday fixture IDs and opponents now originate from the persistent league calendar; the weekly career UI still abstracts actual dates into a 44- or 52-week season. It must eventually support all exact event dates, reschedules and multiple matchdays in one week.
 - **Every domestic format**: Scottish split fixtures and league-specific cup calendars need to drive interactive matchday, not just the world simulator.

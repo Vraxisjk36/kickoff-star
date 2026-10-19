@@ -138,7 +138,7 @@ export function professionalSeasonWeeks(state: ProCareerState): number {
 export function proFixture(state: ProCareerState): Fixture | undefined {
   const round = proRound(state.week, state.world.divisions[1].teams.length,
     Math.max(0, ...state.world.divisions[1].fixtures.map(fixture => fixture.week)))
-  return round === null ? undefined : state.world.divisions[1].fixtures.find(fixture => fixture.week === round && !fixture.played && (fixture.homeTeamId === state.world.playerTeamId || fixture.awayTeamId === state.world.playerTeamId))
+  return round === null || state.freeAgentSinceWeek !== undefined ? undefined : state.world.divisions[1].fixtures.find(fixture => fixture.week === round && !fixture.played && (fixture.homeTeamId === state.world.playerTeamId || fixture.awayTeamId === state.world.playerTeamId))
 }
 
 export function resolveProMatch(state: ProCareerState, player: Player, result: {
@@ -218,7 +218,7 @@ export function advanceProWeek(state: ProCareerState, player: Player): { state: 
     state: { ...state, world, seasonRecords, clubObjective, season: seasonEnd ? state.season + 1 : state.season, week: seasonEnd ? 1 : nextWeek, resolvedWeek: undefined, trainedWeek: undefined,
       retired: seasonEnd && player.careerClock.ageYears + 1 >= 38 ? true : state.retired },
     player: { ...player, injury, reputation, coachTrust, suspensionMatches: Math.max(0, (player.suspensionMatches ?? 0) - (round !== null ? 1 : 0)), totalWeeksElapsed: (player.totalWeeksElapsed ?? 0) + 1, money: (player.money ?? 0) + pay,
-      careerEarnings: (player.careerEarnings ?? 0) + wage, fitness: { stamina: Math.min(100, player.fitness.stamina + 18) },
+      careerEarnings: (player.careerEarnings ?? 0) + (state.backgroundWorld ? 0 : wage), fitness: { stamina: Math.min(100, player.fitness.stamina + 18) },
       seasonAppearances: seasonEnd ? 0 : player.seasonAppearances, seasonGoals: seasonEnd ? 0 : player.seasonGoals, seasonAssists: seasonEnd ? 0 : player.seasonAssists,
       careerClock: seasonEnd ? { ...player.careerClock, ageYears: player.careerClock.ageYears + 1 } : player.careerClock },
   }

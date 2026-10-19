@@ -15,6 +15,17 @@
 - Academy-to-pro contracts retain the destination country where supported; legacy and unsupported destinations fail over safely.
 - Automated country-coverage and league-schedule checks run in GitHub Actions along with the existing pro-pyramid audits.
 
+## Senior club and contract systems — October 2026
+
+- A club objective is generated from its standing by reputation in the **actual active division**. The four objective types are title contention, continental qualification territory, top-half finish and survival. Each includes a target position, board confidence, club ID and season ID.
+- Completing or missing the objective moves board confidence by +15 or -18 at season end. The archived season keeps that assessment. A change of club, promotion or relegation generates the correct new division objective.
+- Senior players may request a two-year contract extension during the final 26 weeks of the current deal. Renewal eligibility requires an attached active world club, sufficient board confidence and remaining wage-budget headroom. Renewals increase the world player's wage obligation and update the player's expiration date.
+- At the end of each senior season, appearances, goals, assists and age drive a bounded reputation change; coach trust also adjusts based on playing time. Effects are applied once per season, not every match.
+- The professional hub exposes current board expectations, standing, confidence, weeks remaining and contract-extension controls.
+- New automated tests check the objective, wage updates, renewal lockout, annual progression and saved-career compatibility.
+
+**Remaining detail:** A real free-agency pathway at contract expiry, formal employer-initiated renewals, salary exchange rates, performance bonuses, work permits, personal transfer requests, and multi-year contract disputes have not yet been implemented. The board objective labels are simplified simulation rules, not literal qualification rules for each federation.
+
 ## Remaining before Phase 2 is feature-complete
 - **Date-aligned play**: playable matchday fixture IDs and opponents now originate from the persistent league calendar; the weekly career UI still abstracts actual dates into a 44- or 52-week season. It must eventually support all exact event dates, reschedules and multiple matchdays in one week.
 - **Every domestic format**: Scottish split fixtures and league-specific cup calendars need to drive interactive matchday, not just the world simulator.

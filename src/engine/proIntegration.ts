@@ -263,6 +263,9 @@ export function releaseExpiredProContract(state: ProCareerState, player: Player)
       ...club, finances: {
         ...club.finances,
         committedAnnualWages: Math.max(0, club.finances.committedAnnualWages - proPlayer.annualWage),
+        topPlayerAnnualWage: Math.max(0, ...Object.values(world.players)
+          .filter(candidate => candidate.id !== playerId && candidate.clubId === clubId)
+          .map(candidate => candidate.annualWage)),
       },
     } },
     recentEvents: [...world.recentEvents, {

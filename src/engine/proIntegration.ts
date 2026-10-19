@@ -231,6 +231,40 @@ export function advanceLivingWorld(previous: ProCareerState, next: ProCareerStat
         : player.contract } }
 }
 
+/** Two-year contract extension, offered during the final 26 weeks.
+ * Wage increases must fit the club's available senior squad budget.
+ */
+export function offerProRenewal(state: ProCareerState, player: Player):
+  { state: ProCareerState; player: Player } | null {
+  const contract = player.contract
+  const world = state.backgroundWorld
+  const clubId = state.clubWorldIds?.[state.world.playerTeamId]
+  const elapsed = player.totalWeeksElapsed ?? 0
+  if (!contract || !world || !clubId || state.loan || state.retired ||
+      state.lastRenewalWeek === elapsed || state.talks ||
+      contract.expiresWeek - elapsed > 26 ||
+      contract.expiresWeek - elapsed < -4) return null
+  const club = world.clubs[clubId]
+  const proPlayer = world.players[`career-${player.id}`]
+  if (!club || !proPlayer || proPlayer.clubId !== clubId) return null
+  const confidence = state.clubObjective?.boardConfidence ?? 60
+  if (confidence < 30) return null
+  const oldWage = contract.terms.weeklyWage
+  const multiplier = confidence >= 80 ? 1.14 : confidence >= 60 ? 1.09 : 1.04
+  const newWage = Math.max(oldWage + 1, Math.round(oldWage * multiplier))
+  const extraCost = (newWage - oldWage) * 52
+  const available = club.finances.annualSquadCostLimit - club.finances.committedAnnualWages
+  if (extraCost > available) return null
+  const nextWorld = { ...world,
+    clubs: { ...world.clubs, [clubId]: { ...club, finances: { ...club.finances,
+      committedAnnualWages: club.finances.committedAnnualWages + extraCost } } },
+    players: { ...world.players, [proPlayer.id]: { ...proPlayer, annualWage: newWage * 52 } } }
+  const nextContract = { ...contract, terms: { ...contract.terms, weeklyWage: newWage },
+    signedWeek: elapsed, expiresWeek: elapsed + 104 }
+  return { state: { ...state, backgroundWorld: nextWorld, lastRenewalWeek: elapsed },
+    player: { ...player, contract: nextContract } }
+}
+
 export function generateMarketOffers(state: ProCareerState, player: Player): ProMarketOffer[] {
   const world = state.backgroundWorld
   if (!world || !state.clubWorldIds || !state.date) return []

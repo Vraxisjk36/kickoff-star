@@ -6,6 +6,8 @@ import { plannedClubCount, createProWorld } from '../src/engine/proWorldFactory'
 import { recordHumanProLeagueMatch } from '../src/engine/proWorldSimulation'
 import { syncPlayableProLeague, offerProRenewal, releaseExpiredProContract, generateMarketOffers, finalizeProMove } from '../src/engine/proIntegration'
 import { scheduleSeniorInternational, completeSeniorInternational, forfeitSeniorInternational } from '../src/engine/proInternational'
+import { INTERNATIONAL_GROUPS, INTERNATIONAL_WINDOWS, internationalCycle, internationalTournamentFixture, internationalProgress } from '../src/engine/proInternationalTournament'
+import { NATIONS } from '../src/engine/nations'
 import { PRO_INTERACTIVE_COUNTRIES, canStartInteractiveProCareer } from '../src/engine/proLeagueRegistry'
 
 assert.equal(PRO_INTERACTIVE_COUNTRIES.length, 10, 'Phase 2 must permit ten professional destinations')
@@ -276,3 +278,40 @@ assert.equal(missed.international?.pending,null)
 assert.equal(missed.international?.fixtures.length,1)
 assert.ok(!scheduleSeniorInternational({...withBoard,week:13},nationalPlayer).international?.pending)
 console.log('Phase 2: national-team call-ups, save safety, caps and missed duty passed')
+
+assert.equal(INTERNATIONAL_GROUPS.length, 6)
+assert.deepEqual(INTERNATIONAL_GROUPS.map(group => group.length), [4,4,4,4,4,4])
+assert.equal(new Set(INTERNATIONAL_GROUPS.flat()).size,NATIONS.length)
+for(let cycle=1;cycle<=17;cycle+=4) {
+  assert.equal(internationalCycle(cycle+3),cycle)
+  const appearances=new Map(NATIONS.map(n=>[n.id,new Set<string>()]))
+  for(let season=cycle;season<cycle+2;season++)for(const week of INTERNATIONAL_WINDOWS)for(const nation of NATIONS){
+    const scheduled=internationalTournamentFixture(nation.id,season,week)
+    assert.ok(scheduled)
+    assert.equal(scheduled.competition,'qualifier')
+    appearances.get(nation.id)!.add(scheduled.opponentId)
+  }
+  for(const nation of NATIONS)assert.equal(appearances.get(nation.id)!.size,3,
+    'Four-year qualifying group must meet three opponents home and away')
+  const first=internationalProgress('rsa',cycle)
+  assert.equal(first.finalists.length,8)
+  assert.equal(new Set(first.finalists).size,8)
+  assert.equal(first.semifinalists.length,4)
+  assert.equal(first.finalistsMatch.length,2)
+  assert.ok(first.finalistsMatch.includes(first.championId!))
+  for(const nation of NATIONS) {
+    const progress=internationalProgress(nation.id,cycle)
+    assert.equal(progress.qualifiers.length,4)
+    if(progress.qualified){
+      assert.equal(progress.finalsGroup?.length,4)
+      for(const week of INTERNATIONAL_WINDOWS)
+        assert.equal(internationalTournamentFixture(nation.id,cycle+2,week)?.competition,'finals-group')
+    }
+    const semifinal=internationalTournamentFixture(nation.id,cycle+3,12)
+    if(first.semifinalists.includes(nation.id))assert.equal(semifinal?.competition,'semifinal')
+    const medal=internationalTournamentFixture(nation.id,cycle+3,25)
+    if(first.semifinalists.includes(nation.id))
+      assert.ok(medal?.competition==='final'||medal?.competition==='third-place')
+  }
+}
+console.log('Phase 2: five independent international four-year cycles, qualifiers and knockout fixtures passed')

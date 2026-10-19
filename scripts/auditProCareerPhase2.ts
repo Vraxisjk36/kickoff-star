@@ -4,7 +4,7 @@ import type { ProWorldState } from '../src/engine/proWorld'
 import { createProCareer, advanceProWeek, professionalSeasonWeeks, proRound, proTrialClubs, PRO_CAREER_DESTINATIONS } from '../src/engine/proCareer'
 import { plannedClubCount, createProWorld } from '../src/engine/proWorldFactory'
 import { recordHumanProLeagueMatch } from '../src/engine/proWorldSimulation'
-import { syncPlayableProLeague } from '../src/engine/proIntegration'
+import { syncPlayableProLeague, offerProRenewal } from '../src/engine/proIntegration'
 import { PRO_INTERACTIVE_COUNTRIES, canStartInteractiveProCareer } from '../src/engine/proLeagueRegistry'
 
 assert.equal(PRO_INTERACTIVE_COUNTRIES.length, 10, 'Phase 2 must permit ten professional destinations')
@@ -162,3 +162,36 @@ assert.equal(regionalSynced.activeCompetitionId, 'third-esp-1')
 assert.equal(regionalSynced.world.divisions[1].teams.length, regionalLeague.entrantIds.length)
 assert.equal(new Set(Object.values(regionalSynced.clubWorldIds!)).size, regionalLeague.entrantIds.length)
 console.log('Phase 2: grouped regional relegation preserves playable club membership')
+
+const objectiveClub = careerWorld.competitions['top-eng'].entrantIds[0]
+const objectiveCareer = createProCareer(careerWorld.clubs[objectiveClub].name, 5, 'eng')
+const objectiveMap = Object.fromEntries(objectiveCareer.world.divisions[1].teams
+  .map((team, index) => [team.id, careerWorld.competitions['top-eng'].entrantIds[index]]))
+const objectiveWorld = structuredClone(careerWorld)
+objectiveWorld.players['career-contract-test'] = {
+  id:'career-contract-test',name:'Contract Test',birthDate:'2000-01-01',
+  nationalityIds:['eng'], position:'CM',overall:64,potential:78,clubId:objectiveClub,
+  annualWage:52000,shirtNumber:18,
+}
+objectiveWorld.clubs[objectiveClub].finances.annualSquadCostLimit = 999_999_999
+const withBoard = syncPlayableProLeague({
+  ...objectiveCareer, clubWorldIds:objectiveMap, backgroundWorld:objectiveWorld })
+assert.ok(withBoard.clubObjective,'Senior club board objective not assigned')
+assert.ok(withBoard.clubObjective.targetPosition >= 1 &&
+  withBoard.clubObjective.targetPosition <= withBoard.world.divisions[1].teams.length)
+const renewalPlayer = {
+  id:'contract-test',totalWeeksElapsed:100,contract:{
+    clubName:careerWorld.clubs[objectiveClub].name,signedWeek:0,expiresWeek:110,
+    terms:{weeklyWage:1000,years:2},
+  },
+} as unknown as Player
+const renewable = offerProRenewal(withBoard, renewalPlayer)
+assert.ok(renewable,'Affordable senior renewal should be offered inside final 26 weeks')
+assert.ok(renewable.player.contract!.expiresWeek > renewalPlayer.contract!.expiresWeek)
+assert.ok(renewable.player.contract!.terms.weeklyWage > 1000)
+assert.equal(renewable.state.backgroundWorld!.players['career-contract-test'].annualWage,
+  renewable.player.contract!.terms.weeklyWage*52)
+assert.equal(offerProRenewal(renewable.state,renewable.player),null,
+  'New 104-week contract cannot immediately renew again')
+assert.ok(syncPlayableProLeague(renewable.state).clubObjective)
+console.log('Phase 2: club board objectives and affordable senior contract extensions passed')

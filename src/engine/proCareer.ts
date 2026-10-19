@@ -38,6 +38,8 @@ export interface ProCareerState {
   seasonRecords?: ProSeasonRecord[]
   clubObjective?: ProClubObjective
   lastRenewalWeek?: number
+  /** Persisted unattached status after an expired contract; career still advances. */
+  freeAgentSinceWeek?: number
   trainedWeek?: number
   /** Matchday resolution is persisted before advancing so a reload cannot replay a result. */
   resolvedWeek?: number
@@ -169,7 +171,7 @@ export function advanceProWeek(state: ProCareerState, player: Player): { state: 
   const round = proRound(state.week, state.world.divisions[1].teams.length, scheduledRounds)
   let world = state.world
   if (round !== null) {
-    world = { ...world, divisions: { ...world.divisions, 1: batchSimDivisionRound(world.divisions[1], round, world.playerTeamId, true, 'proLeague', state.season, state.week) } }
+    world = { ...world, divisions: { ...world.divisions, 1: batchSimDivisionRound(world.divisions[1], round, state.freeAgentSinceWeek === undefined ? world.playerTeamId : '', true, 'proLeague', state.season, state.week) } }
   }
   const nextWeek = state.week + 1
   const seasonEnd = nextWeek > professionalSeasonWeeks(state)
@@ -196,7 +198,9 @@ export function advanceProWeek(state: ProCareerState, player: Player): { state: 
     world = resetSchoolLeagueSeason(world)
   }
   world.kind = 'pro'
-  const wage = player.contract?.terms.weeklyWage ?? 1200
+  const hasContract = state.freeAgentSinceWeek === undefined && !!player.contract &&
+    player.contract.expiresWeek > (player.totalWeeksElapsed ?? 0)
+  const wage = hasContract ? player.contract!.terms.weeklyWage : 0
   const pay = state.backgroundWorld ? 0 : netWage(wage, player.agentId)
   const injury = player.injury && player.injury.weeksRemaining > 1 ? { ...player.injury, weeksRemaining: player.injury.weeksRemaining - 1 } : null
   // Senior development is based on minutes, actual season contribution and age,
@@ -207,7 +211,7 @@ export function advanceProWeek(state: ProCareerState, player: Player): { state: 
   const youthPrime = player.careerClock.ageYears <= 27 ? 1 : player.careerClock.ageYears <= 32 ? .65 : .35
   const impact = Math.round((Math.min(38, starts) * .11 + Math.min(22, contribution) * .19 -
     (starts < 8 ? 3 : 0)) * youthPrime)
-  const reputation = seasonEnd ? Math.max(0, Math.min(100, (player.reputation ?? 20) + impact)) : player.reputation
+  const reputation = seasonEnd ? Math.max(0, Math.min(100, (player.reputation ?? 20) + (state.freeAgentSinceWeek === undefined ? impact : -2))) : player.reputation
   const coachTrust = seasonEnd ? Math.max(0, Math.min(100, (player.coachTrust ?? 50) +
     (starts >= 24 ? 5 : starts >= 10 ? 1 : -6))) : player.coachTrust
   return {

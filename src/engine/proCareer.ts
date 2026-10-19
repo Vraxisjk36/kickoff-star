@@ -199,10 +199,21 @@ export function advanceProWeek(state: ProCareerState, player: Player): { state: 
   const wage = player.contract?.terms.weeklyWage ?? 1200
   const pay = state.backgroundWorld ? 0 : netWage(wage, player.agentId)
   const injury = player.injury && player.injury.weeksRemaining > 1 ? { ...player.injury, weeksRemaining: player.injury.weeksRemaining - 1 } : null
+  // Senior development is based on minutes, actual season contribution and age,
+  // not unlimited per-week overall growth. Older stars can retain reputation
+  // while declining in match influence.
+  const starts = player.seasonAppearances ?? 0
+  const contribution = (player.seasonGoals ?? 0) + (player.seasonAssists ?? 0)
+  const youthPrime = player.careerClock.ageYears <= 27 ? 1 : player.careerClock.ageYears <= 32 ? .65 : .35
+  const impact = Math.round((Math.min(38, starts) * .11 + Math.min(22, contribution) * .19 -
+    (starts < 8 ? 3 : 0)) * youthPrime)
+  const reputation = seasonEnd ? Math.max(0, Math.min(100, (player.reputation ?? 20) + impact)) : player.reputation
+  const coachTrust = seasonEnd ? Math.max(0, Math.min(100, player.coachTrust +
+    (starts >= 24 ? 5 : starts >= 10 ? 1 : -6))) : player.coachTrust
   return {
     state: { ...state, world, seasonRecords, clubObjective, season: seasonEnd ? state.season + 1 : state.season, week: seasonEnd ? 1 : nextWeek, resolvedWeek: undefined, trainedWeek: undefined,
       retired: seasonEnd && player.careerClock.ageYears + 1 >= 38 ? true : state.retired },
-    player: { ...player, injury, suspensionMatches: Math.max(0, (player.suspensionMatches ?? 0) - (round !== null ? 1 : 0)), totalWeeksElapsed: (player.totalWeeksElapsed ?? 0) + 1, money: (player.money ?? 0) + pay,
+    player: { ...player, injury, reputation, coachTrust, suspensionMatches: Math.max(0, (player.suspensionMatches ?? 0) - (round !== null ? 1 : 0)), totalWeeksElapsed: (player.totalWeeksElapsed ?? 0) + 1, money: (player.money ?? 0) + pay,
       careerEarnings: (player.careerEarnings ?? 0) + wage, fitness: { stamina: Math.min(100, player.fitness.stamina + 18) },
       seasonAppearances: seasonEnd ? 0 : player.seasonAppearances, seasonGoals: seasonEnd ? 0 : player.seasonGoals, seasonAssists: seasonEnd ? 0 : player.seasonAssists,
       careerClock: seasonEnd ? { ...player.careerClock, ageYears: player.careerClock.ageYears + 1 } : player.careerClock },

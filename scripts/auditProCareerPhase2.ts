@@ -334,3 +334,27 @@ assert.equal(finalsExample?.competition,'finals-group')
 const lossesExample = internationalTournamentFixture('rsa',3,12,qualifyingLosses)
 assert.equal(lossesExample?.competition,'friendly')
 console.log('Phase 2: human qualifying results change qualification and finals access')
+
+for(const country of ['eng','rsa'] as const){
+  let career = createProCareer('Twenty Year Wanderers',4,country)
+  let player = { ...unsignedPlayer, id:`career-long-${country}`, nationality:undefined,
+    turnedPro:{clubName:'Twenty Year Wanderers',weekSigned:0,countryId:country},
+    careerClock:{ageYears:18,phase:'academy'},seasonAppearances:0,seasonGoals:0,
+    seasonAssists:0,totalWeeksElapsed:0,reputation:35,coachTrust:50,
+    contract:null,fitness:{stamina:100} } as unknown as Player
+  let ticks=0
+  while(!career.retired && ticks<1040){
+    const next=advanceProWeek(career,player)
+    assert.ok(next.state.week>0 && next.state.week<=52)
+    assert.equal(next.state.world.divisions[1].teams.length,plannedClubCount(country))
+    career=next.state;player=next.player;ticks++
+  }
+  assert.equal(career.retired,true,`${country} senior career failed to retire`)
+  assert.equal(player.careerClock.ageYears,38,`${country} retired at wrong age`)
+  assert.equal(career.seasonRecords?.length,20,`${country} missing annual career records`)
+  assert.equal(new Set(career.seasonRecords!.map(s=>s.season)).size,20)
+  assert.ok(ticks>=800 && ticks<=1040,`${country} invalid twenty-season calendar length`)
+  const onceMore=advanceProWeek(career,player)
+  assert.equal(onceMore.state,career,`${country} retirement did not stop the calendar`)
+}
+console.log('Phase 2: twenty complete senior seasons in two countries retire cleanly at 38')

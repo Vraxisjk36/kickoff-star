@@ -52,7 +52,7 @@ export function internationalCallupEligible(player: Player): boolean {
 }
 /** Called on each pro week. No rerolling eligibility or opponents when reloading. */
 export function scheduleSeniorInternational(state: ProCareerState, player: Player): ProCareerState {
-  if (state.retired || (!INTERNATIONAL_WINDOWS.includes(state.week as typeof INTERNATIONAL_WINDOWS[number]) &&
+  if (state.retired || !!player.injury?.weeksRemaining || (!INTERNATIONAL_WINDOWS.includes(state.week as typeof INTERNATIONAL_WINDOWS[number]) &&
       !CONTINENTAL_WINDOWS.includes(state.week as typeof CONTINENTAL_WINDOWS[number]))) return state
   const cycle = internationalCycle(state.season)
   const qualifiedFinalist = state.season - cycle >= 2 &&

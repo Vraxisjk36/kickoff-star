@@ -8,6 +8,7 @@ import { syncPlayableProLeague, offerProRenewal, releaseExpiredProContract, gene
 import { scheduleSeniorInternational, completeSeniorInternational, forfeitSeniorInternational } from '../src/engine/proInternational'
 import { INTERNATIONAL_GROUPS, INTERNATIONAL_WINDOWS, internationalCycle, internationalTournamentFixture, internationalProgress, visibleQualifyingTable } from '../src/engine/proInternationalTournament'
 import { NATIONS } from '../src/engine/nations'
+import { selectSeniorNationalSquad } from '../src/engine/proNationalSquad'
 import { PRO_INTERACTIVE_COUNTRIES, canStartInteractiveProCareer } from '../src/engine/proLeagueRegistry'
 
 assert.equal(PRO_INTERACTIVE_COUNTRIES.length, 10, 'Phase 2 must permit ten professional destinations')
@@ -364,3 +365,30 @@ for(const country of ['eng','rsa'] as const){
   assert.equal(onceMore.state,career,`${country} retirement did not stop the calendar`)
 }
 console.log('Phase 2: twenty complete senior seasons in two countries retire cleanly at 38')
+
+for (const nation of NATIONS) {
+  const a=selectSeniorNationalSquad(nation.id,3,12,careerWorld)
+  const b=selectSeniorNationalSquad(nation.id,3,12,careerWorld)
+  assert.deepEqual(a,b,'National squad draw must survive save and reload')
+  assert.equal(a.members.length,23)
+  assert.equal(new Set(a.members.map(m=>m.id)).size,23)
+  assert.equal(a.members.filter(m=>m.position.toUpperCase().includes('GK')).length,3)
+  assert.ok(a.members.every(member=>member.source!=='world' ||
+    careerWorld.players[member.id]?.nationalityIds.includes(nation.id)))
+  assert.ok(a.members.some(member=>member.id===a.captainId))
+}
+const capPlayer = {...nationalPlayer,nationality:'rsa',name:'Senior Test Player',
+  position:'CM',injury:null} as Player
+const capSquad=selectSeniorNationalSquad('rsa',5,12,careerWorld,capPlayer,true)
+assert.equal(capSquad.playerSelected,true)
+assert.equal(capSquad.members.filter(m=>m.source==='career').length,1)
+assert.equal(capSquad.members.filter(m=>m.id===`career-${capPlayer.id}`).length,1)
+const wrongNation=selectSeniorNationalSquad('eng',5,12,careerWorld,capPlayer,true)
+assert.equal(wrongNation.playerSelected,false,'Foreign-nationality player in England squad')
+const injuredPlayer={...capPlayer,injury:{kind:'hamstring',weeksRemaining:2}} as Player
+assert.equal(selectSeniorNationalSquad('rsa',5,12,careerWorld,injuredPlayer,true).playerSelected,false)
+const cachedCallup=scheduleSeniorInternational({...withBoard,week:12,season:5},capPlayer)
+assert.ok(cachedCallup.international?.pending?.squad)
+assert.equal(cachedCallup.international!.pending!.squad!.members.length,23)
+assert.equal(cachedCallup.international!.pending!.squad!.playerSelected,true)
+console.log('Phase 2: 24 stable federation squads, nationality, player fitness and roster persistence passed')

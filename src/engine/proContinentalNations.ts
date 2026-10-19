@@ -38,13 +38,14 @@ export function continentalRound(nationId:string,season:number,week:number):Cont
   const participants=continentalNations(nationId)
   if(index<0||participants.length<2)return []
   const entrants=participants.length%2===0?[...participants]:[...participants,'BYE']
-  const round=((season-continentalCycle(season))*3+index)%(entrants.length-1)
+  const absoluteRound=(season-continentalCycle(season))*3+index
+  const round=absoluteRound%(entrants.length-1)
   const rotation=[entrants[0],...entrants.slice(1+round),...entrants.slice(1,1+round)]
   const pairs:ContinentalPair[]=[]
   for(let i=0;i<rotation.length/2;i++){
     const a=rotation[i],b=rotation[rotation.length-i-1]
     if(a==='BYE'||b==='BYE')continue
-    const flip=(round+i)%2===1
+    const flip=(absoluteRound+i)%2===1
     pairs.push({homeId:flip?b:a,awayId:flip?a:b})
   }
   return pairs

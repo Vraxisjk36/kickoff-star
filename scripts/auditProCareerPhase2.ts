@@ -315,3 +315,22 @@ for(let cycle=1;cycle<=17;cycle+=4) {
   }
 }
 console.log('Phase 2: five independent international four-year cycles, qualifiers and knockout fixtures passed')
+
+const winningRsaResults = INTERNATIONAL_WINDOWS.flatMap((week, round) => [1,2].map((leg) => {
+  const season=leg
+  const scheduled=internationalTournamentFixture('rsa',season,week)!
+  return { id:`audit-rsa-${season}-${week}`,nationId:'rsa',opponentId:scheduled.opponentId,
+    competition:'qualifier' as const,season,week,home:scheduled.home,
+    scored:8,conceded:0,goals:0,assists:0,rating:7.5,minutes:90 }
+}))
+const qualifyingWin = internationalProgress('rsa',1,winningRsaResults)
+assert.equal(qualifyingWin.qualified,true,'Six emphatic qualifying victories must earn a finals berth')
+assert.equal(qualifyingWin.qualifiers.find(r=>r.nationId==='rsa')?.points,18)
+const qualifyingLosses = winningRsaResults.map(record=>({...record,scored:0,conceded:8}))
+const qualifyingLoss = internationalProgress('rsa',1,qualifyingLosses)
+assert.equal(qualifyingLoss.qualified,false,'Six heavy qualifying defeats must eliminate nation')
+const finalsExample = internationalTournamentFixture('rsa',3,12,winningRsaResults)
+assert.equal(finalsExample?.competition,'finals-group')
+const lossesExample = internationalTournamentFixture('rsa',3,12,qualifyingLosses)
+assert.equal(lossesExample?.competition,'friendly')
+console.log('Phase 2: human qualifying results change qualification and finals access')

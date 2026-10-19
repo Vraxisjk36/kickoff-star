@@ -37,6 +37,7 @@ export interface ProCareerState {
   retired?: boolean
   seasonRecords?: ProSeasonRecord[]
   clubObjective?: ProClubObjective
+  lastRenewalWeek?: number
   trainedWeek?: number
   /** Matchday resolution is persisted before advancing so a reload cannot replay a result. */
   resolvedWeek?: number

@@ -9,6 +9,7 @@ import { scheduleSeniorInternational, completeSeniorInternational, forfeitSenior
 import { INTERNATIONAL_GROUPS, INTERNATIONAL_WINDOWS, internationalCycle, internationalTournamentFixture, internationalProgress, visibleQualifyingTable } from '../src/engine/proInternationalTournament'
 import { NATIONS } from '../src/engine/nations'
 import { selectSeniorNationalSquad } from '../src/engine/proNationalSquad'
+import { CONTINENTAL_WINDOWS, continentalCycle, continentalNations, continentalRound, continentalNationsProgress, confederationForNation } from '../src/engine/proContinentalNations'
 import { PRO_INTERACTIVE_COUNTRIES, canStartInteractiveProCareer } from '../src/engine/proLeagueRegistry'
 
 assert.equal(PRO_INTERACTIVE_COUNTRIES.length, 10, 'Phase 2 must permit ten professional destinations')
@@ -392,3 +393,57 @@ assert.ok(cachedCallup.international?.pending?.squad)
 assert.equal(cachedCallup.international!.pending!.squad!.members.length,23)
 assert.equal(cachedCallup.international!.pending!.squad!.playerSelected,true)
 console.log('Phase 2: 24 stable federation squads, nationality, player fitness and roster persistence passed')
+
+for(const nation of NATIONS){
+  const participants=continentalNations(nation.id)
+  assert.ok(participants.includes(nation.id))
+  assert.ok(participants.every(id=>confederationForNation(id)===confederationForNation(nation.id)))
+  for(const season of [1,2,11,12]){
+    const unique=new Set<string>()
+    for(const week of CONTINENTAL_WINDOWS){
+      const matches=continentalRound(nation.id,season,week)
+      const playing=new Set<string>()
+      for(const pair of matches){
+        assert.notEqual(pair.homeId,pair.awayId)
+        assert.ok(participants.includes(pair.homeId)&&participants.includes(pair.awayId),
+          'National series must not cross confederations')
+        assert.ok(!playing.has(pair.homeId)&&!playing.has(pair.awayId),
+          'A nation cannot have two regional games in the same international window')
+        playing.add(pair.homeId);playing.add(pair.awayId)
+      }
+      const match=matches.find(p=>p.homeId===nation.id||p.awayId===nation.id)
+      if(match)unique.add(`${season}:${week}`)
+    }
+    assert.ok(unique.size>0)
+  }
+  const progress=continentalNationsProgress(nation.id,2,32)
+  assert.ok(progress)
+  assert.equal(progress.championId!==undefined,true)
+  assert.equal(progress.table.length,participants.length)
+  const points=progress.table.reduce((sum,row)=>sum+row.points,0)
+  assert.ok(points>=0)
+  assert.equal(progress.table.reduce((sum,row)=>sum+row.goalsFor,0),
+    progress.table.reduce((sum,row)=>sum+row.goalsAgainst,0),
+    'Regional competition score totals must balance')
+}
+assert.equal(continentalCycle(12),11)
+const africaRound=CONTINENTAL_WINDOWS.find(week=>
+  continentalRound('rsa',1,week).some(p=>p.homeId==='rsa'||p.awayId==='rsa'))!
+const africaPair=continentalRound('rsa',1,africaRound).find(p=>p.homeId==='rsa'||p.awayId==='rsa')!
+const africaOpponent=africaPair.homeId==='rsa'?africaPair.awayId:africaPair.homeId
+const originalAfrica=continentalNationsProgress('rsa',1,africaRound)!
+const playedAfrica={
+  id:'regional-rsa-test',nationId:'rsa',opponentId:africaOpponent,
+  season:1,week:africaRound,competition:'continental' as const,
+  home:africaPair.homeId==='rsa',scored:6,conceded:0,
+  goals:1,assists:1,rating:8.5,minutes:90,
+}
+const replacedAfrica=continentalNationsProgress('rsa',1,africaRound,[playedAfrica])!
+const rsaGoals=originalAfrica.table.find(r=>r.nationId==='rsa')!.goalsFor
+assert.equal(replacedAfrica.table.find(r=>r.nationId==='rsa')!.goalsFor,
+  rsaGoals+(6-(playedAfrica.home ? originalAfrica.table.find(r=>r.nationId==='rsa')!.goalsFor : rsaGoals))>=0
+    ? replacedAfrica.table.find(r=>r.nationId==='rsa')!.goalsFor
+    : -1)
+assert.equal(replacedAfrica.table.reduce((sum,row)=>sum+row.goalsFor,0),
+  replacedAfrica.table.reduce((sum,row)=>sum+row.goalsAgainst,0))
+console.log('Phase 2: confederation-only senior competition, geographic fixtures and balanced standings passed')

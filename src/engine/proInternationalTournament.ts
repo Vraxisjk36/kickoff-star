@@ -64,7 +64,7 @@ function score(pair: Pairing, cycle: number, stage: string, round: number,
     : stage === 'finals-group' ? 2 : 3)
   const week = INTERNATIONAL_WINDOWS[stage === 'qualifier' ? round % 3
     : stage === 'finals-group' ? round : stage === 'semifinal' ? 0 : 1]
-  const actual = records.find(record => record.season === season && record.week === week &&
+  const actual = records.find(record => record.minutes > 0 && record.season === season && record.week === week &&
     record.competition === stage &&
     ((record.nationId === pair.homeId && record.opponentId === pair.awayId && record.home) ||
      (record.nationId === pair.awayId && record.opponentId === pair.homeId && !record.home)))

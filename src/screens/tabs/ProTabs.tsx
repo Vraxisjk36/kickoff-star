@@ -12,6 +12,7 @@ import ProNewsScreen from '../ProNewsScreen'
 import ProWorldPanel from '../ProWorldPanel'
 import { registrationOpen } from '../../engine/proMovement'
 import { proCompetitionName } from '../../engine/proTournaments'
+import { getNation } from '../../engine/nations'
 
 export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: HubTab; onGoTo: (tab: HubTab) => void }) {
   const pro = player.proCareer!
@@ -42,6 +43,14 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
     {tab === 'home' ? <>
       {header}
       {cards('NEXT UP · YOUR WEEK', <div><p className="text-ks-ink text-lg font-display">{fixture && pro.resolvedWeek !== pro.week ? `${fixture.homeTeamId === club.id ? 'HOME' : 'AWAY'} · ${opponent?.name}` : 'Training & recovery'}</p><p className="text-ks-muted text-xs mt-2">{fixture ? (pro.associationId ?? 'eng').toUpperCase() + ' League · matchweek ' + proRound(pro.week, division.teams.length, Math.max(0, ...division.fixtures.map(f => f.week))) : nextOpponent ? `Next fixture: ${nextOpponent.name}` : 'The next league calendar is being prepared.'}</p></div>)}
+      {cards('SENIOR NATIONAL TEAM', <div>
+        {stat('Nation', getNation(player.nationality).name)}
+        {stat('International caps', pro.international?.caps ?? 0)}
+        {stat('International goals', pro.international?.goals ?? 0)}
+        {stat('International assists', pro.international?.assists ?? 0)}
+        {pro.international?.pending ? <p className="text-ks-gold text-xs mt-2">CALLED UP · {pro.international.pending.competition.toUpperCase()} AGAINST {getNation(pro.international.pending.opponentId).name.toUpperCase()} · PLAY YOUR INTERNATIONAL MATCH</p>
+          : <p className="text-ks-muted text-xs mt-2">Senior selection depends on your current performances, reputation and previous international experience.</p>}
+      </div>)}
       {cards('WEEKLY TRAINING', <div><p className="text-ks-muted text-xs mb-3">One team session per week. Costs 12 energy and improves your standing with the coach.</p><button disabled={pro.trainedWeek === pro.week || player.fitness.stamina < 12} onClick={train} className="rounded-lg bg-ks-gold px-4 py-2 text-ks-black font-display text-xs disabled:opacity-35">{pro.trainedWeek === pro.week ? 'SESSION COMPLETE' : 'TRAIN WITH THE SQUAD →'}</button></div>)}
       {cards('THE GAZETTE · PRO EDITION', <div><p className="font-display text-ks-ink text-lg">{pro.news?.at(-1)?.headline ?? 'The season opens'}</p><p className="text-ks-muted text-xs mt-2">Club, country and world stories from recorded events.</p><button className="text-ks-gold text-xs mt-4" onClick={() => setNewsOpen(true)}>BROWSE THE GAZETTE →</button></div>)}
       <div className="grid grid-cols-2 gap-2"><button className="rounded-xl border border-ks-border p-4 text-left text-ks-gold" onClick={() => onGoTo('fixtures')}>LEAGUE <span className="block text-xs text-ks-muted mt-1">Table & fixtures →</span></button><button className="rounded-xl border border-ks-border p-4 text-left text-ks-gold" onClick={() => onGoTo('club')}>CONTRACT <span className="block text-xs text-ks-muted mt-1">Your first team deal →</span></button></div>

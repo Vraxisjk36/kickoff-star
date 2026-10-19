@@ -32,14 +32,27 @@ export function continentalNations(nationId:string):string[] {
 export function continentalCycle(season:number):number {
   return Math.floor((Math.max(1,season)-1)/2)*2+1
 }
-export function continentalOpponent(nationId:string,season:number,week:number):string|null {
+export interface ContinentalPair {homeId:string;awayId:string}
+export function continentalRound(nationId:string,season:number,week:number):ContinentalPair[] {
   const index=CONTINENTAL_WINDOWS.indexOf(week as typeof CONTINENTAL_WINDOWS[number])
-  const group=continentalNations(nationId),i=group.indexOf(nationId)
-  if(index<0 || i<0 || group.length<2)return null
-  const round=(season-continentalCycle(season))*3+index
-  // Offset jumps are deterministic, including for 2- and 3-nation regions.
-  const offset=1+round%(group.length-1)
-  return group[(i+offset)%group.length]
+  const participants=continentalNations(nationId)
+  if(index<0||participants.length<2)return []
+  const entrants=participants.length%2===0?[...participants]:[...participants,'BYE']
+  const round=((season-continentalCycle(season))*3+index)%(entrants.length-1)
+  const rotation=[entrants[0],...entrants.slice(1+round),...entrants.slice(1,1+round)]
+  const pairs:ContinentalPair[]=[]
+  for(let i=0;i<rotation.length/2;i++){
+    const a=rotation[i],b=rotation[rotation.length-i-1]
+    if(a==='BYE'||b==='BYE')continue
+    const flip=(round+i)%2===1
+    pairs.push({homeId:flip?b:a,awayId:flip?a:b})
+  }
+  return pairs
+}
+export function continentalOpponent(nationId:string,season:number,week:number):string|null {
+  const pair=continentalRound(nationId,season,week)
+    .find(p=>p.homeId===nationId||p.awayId===nationId)
+  return pair ? pair.homeId===nationId ? pair.awayId : pair.homeId : null
 }
 function hash(value:string):number {
   let seed=2166136261
@@ -68,23 +81,28 @@ export function continentalNationsProgress(nationId:string,season:number,week:nu
   for(let year=cycle;year<=Math.min(season,cycle+1);year++)
     for(const window of CONTINENTAL_WINDOWS) {
       if(year===season && window>week)continue
-      for(const id of participants){
-        const opponentId=continentalOpponent(id,year,window)
-        if(!opponentId)continue
-        const record=records.find(r=>r.nationId===id&&r.season===year&&r.week===window&&
-          r.opponentId===opponentId&&r.competition==='continental')
-        const goals=record ? [record.scored,record.conceded] : simulatedGoals(id,opponentId,year,window)
-        const row=rows.get(id)!
-        row.played++;row.goalsFor+=goals[0];row.goalsAgainst+=goals[1]
-        if(goals[0]>goals[1]){row.won++;row.points+=3}
-        else if(goals[0]===goals[1]){row.drawn++;row.points++}
-        else row.lost++
+      for(const pair of continentalRound(nationId,year,window)){
+        const {homeId,awayId}=pair
+        const record=records.find(r=>r.season===year&&r.week===window&&
+          r.competition==='continental'&&
+          ((r.nationId===homeId&&r.opponentId===awayId&&r.home)||
+          (r.nationId===awayId&&r.opponentId===homeId&&!r.home)))
+        const [homeGoals,awayGoals]=record
+          ? record.home?[record.scored,record.conceded]:[record.conceded,record.scored]
+          : simulatedGoals(homeId,awayId,year,window)
+        const home=rows.get(homeId)!,away=rows.get(awayId)!
+        home.played++;away.played++
+        home.goalsFor+=homeGoals;home.goalsAgainst+=awayGoals
+        away.goalsFor+=awayGoals;away.goalsAgainst+=homeGoals
+        if(homeGoals>awayGoals){home.won++;away.lost++;home.points+=3}
+        else if(homeGoals<awayGoals){away.won++;home.lost++;away.points+=3}
+        else {home.drawn++;away.drawn++;home.points++;away.points++}
       }
     }
   const table=[...rows.values()].sort((a,b)=>b.points-a.points||
     (b.goalsFor-b.goalsAgainst)-(a.goalsFor-a.goalsAgainst)||
     b.goalsFor-a.goalsFor||a.nationId.localeCompare(b.nationId))
-  const completed=season>cycle || season===cycle+1&&week>=32
+  const completed=season>=cycle+1&&week>=32
   return {confederation,name:REGION_LABELS[confederation],cycle,season,participants,table,
     championId:completed?table[0]?.nationId:undefined}
 }

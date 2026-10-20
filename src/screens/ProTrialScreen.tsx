@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useCareerStore } from '../store/careerStore'
-import { proTrialClubs, PRO_CAREER_DESTINATIONS, seniorTrialPoints } from '../engine/proCareer'
-import { TeamCrest } from '../components/ui'
+import { seniorTrialPoints } from '../engine/proCareer'
+import { seniorTrialOffers } from '../engine/proTrialOffers'
 import TrainingMiniGame, { type MiniGameKind } from '../components/TrainingMiniGame'
 import { computeCurrentAbility, toOvr } from '../engine/rating'
 
@@ -19,7 +19,6 @@ const WEEKS:readonly {title:string;text:string;drill:MiniGameKind;label:string}[
   {title:'FINAL ASSESSMENT',text:'The last week is an intense match-fitness test. Your rhythm and speed decide how the scouting report reads.',drill:'sprint',label:'Match fitness and intensity'},
 ]
 export default function ProTrialScreen({ onComplete, onExitToMenu }: { onComplete: () => void; onExitToMenu: () => void }) {
-  const [destination, setDestination] = useState('eng')
   const [phase,setPhase]=useState<'intro'|'drill'|'reaction'|'result'>('intro')
   const [earned,setEarned]=useState(0)
   const [drillIndex,setDrillIndex]=useState(0)
@@ -71,6 +70,20 @@ export default function ProTrialScreen({ onComplete, onExitToMenu }: { onComplet
           {trial.week===2?'VIEW YOUR CLUB OFFERS →':'ADVANCE TO NEXT TRIAL WEEK →'}</button>
       </div>}
     </>
-    : <><div className="mt-10 text-ks-gold tracking-[.2em] text-xs">THE OFFERS</div><h1 className="font-display text-ks-ink text-4xl mt-3">FOUR CLUBS. YOUR CALL.</h1><p className="text-ks-muted text-sm leading-relaxed my-6">Your three weeks of work earned {trial.points} assessment points. These clubs can offer a first-team contract; the stronger side may have a harder path into the XI.</p><div className="grid grid-cols-2 gap-2 mb-5 max-h-48 overflow-y-auto">{PRO_CAREER_DESTINATIONS.map(country => <button key={country.id} onClick={() => setDestination(country.id)} className={`rounded-lg border p-2 text-xs font-display ${destination === country.id ? 'border-ks-gold text-ks-gold' : 'border-ks-border text-ks-muted'}`}>{country.name}</button>)}</div><div className="flex flex-col gap-3">{proTrialClubs(trial.points, destination).map((club, index) => <button key={index} onClick={() => { signClub(club.name, club.prestige, destination); onComplete() }} className="text-left rounded-xl border border-ks-border p-4 bg-[#11100d] hover:border-ks-gold flex items-center gap-3"><TeamCrest primary={club.primaryColor} secondary={club.secondaryColor} short={club.short} size="sm"/><span className="flex-1"><b className="block text-ks-ink font-display">{club.name}</b><small className="text-ks-muted">{index === 3 ? 'Stronger squad · tougher selection' : 'First-team opportunity'} · prestige {club.prestige}</small></span><span className="text-ks-gold">→</span></button>)}</div></>}
+    : <><div className="mt-10 text-ks-gold tracking-[.2em] text-xs">THE OFFERS · GLOBAL SCOUTING</div>
+      <h1 className="font-display text-ks-ink text-4xl mt-3">FOUR CLUBS. YOUR CALL.</h1>
+      <p className="text-ks-muted text-sm leading-relaxed my-5">Your nine assessments earned <strong className="text-ks-gold">{trial.points}/9</strong> scouting points. Four clubs across the entire world have invited you to join—NOT four clubs per country. Offers consider your ability and trial performance.</p>
+      <div className="flex flex-col gap-3">
+        {seniorTrialOffers(trial.points,toOvr(computeCurrentAbility(player))).map((offer,index)=><button key={offer.id}
+          onClick={()=>{signClub(offer.name,offer.prestige,offer.associationId,offer.tier);onComplete()}}
+          className="text-left rounded-xl border border-ks-gold/20 p-4 bg-gradient-to-r from-[#191b13] to-[#11100d] hover:border-ks-gold flex items-center gap-3">
+          <div className="text-ks-gold font-display text-xl w-6">{index+1}</div>
+          <span className="flex-1 min-w-0">
+            <strong className="block text-ks-ink font-display">{offer.name}</strong>
+            <small className="block text-ks-muted mt-1">{offer.associationId.toUpperCase()} · {offer.tier===1?'First Division':'Second Division'} · {offer.overall} OVR</small>
+            <small className="block text-ks-gold mt-1">{offer.reason}</small>
+          </span><span className="text-ks-gold">→</span>
+        </button>)}
+      </div></>
   </div></div>
 }

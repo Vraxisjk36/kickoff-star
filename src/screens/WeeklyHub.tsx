@@ -34,7 +34,7 @@ import type { CalendarState } from '../types/calendar'
 // matches, decisions) and returns the player to where they were.
 
 export default function WeeklyHub({
-  tab, onTabChange, onOpenOffers, onExitToMenu, league, academyLeague, playerTeam, playerDivision, proCalendar,
+  tab, onTabChange, onOpenOffers, onExitToMenu, league, academyLeague, playerTeam, playerDivision, proCalendar, onProTrain,
 }: {
   tab: HubTab
   onTabChange: (tab: HubTab) => void
@@ -45,6 +45,7 @@ export default function WeeklyHub({
   playerTeam: Team
   playerDivision: Division
   proCalendar?: CalendarState
+  onProTrain?: () => void
 }) {
   const t = useTranslate()
   const player = useCareerStore((s) => s.player)
@@ -116,7 +117,7 @@ export default function WeeklyHub({
 
       <div key={tab} className="hub-content flex-1 px-3 pt-3 pb-40 flex flex-col gap-2.5 max-w-md mx-auto w-full">
         <BroadcastHeader tab={tab} player={player} team={playerTeam} division={playerDivision} week={calendar.currentWeek.weekNumber} />
-        {player.turnedPro && player.proCareer ? <ProTabs player={player} tab={tab} onGoTo={onTabChange} onOpenInbox={() => setInboxOpen(true)} onOpenEnergy={() => setEnergyOpen(true)} /> : <>
+        {player.turnedPro && player.proCareer ? <ProTabs player={player} tab={tab} onGoTo={onTabChange} onOpenInbox={() => setInboxOpen(true)} onOpenEnergy={() => setEnergyOpen(true)} onTrain={() => onProTrain?.()} /> : <>
         {tab === 'home' && (
           <HomeTab
             player={player}

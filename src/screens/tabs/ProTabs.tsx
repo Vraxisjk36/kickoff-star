@@ -107,6 +107,21 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
       <div className="grid grid-cols-2 gap-2"><button className="rounded-xl border border-ks-border p-4 text-left text-ks-gold" onClick={() => onGoTo('fixtures')}>LEAGUE <span className="block text-xs text-ks-muted mt-1">Table & fixtures →</span></button><button className="rounded-xl border border-ks-border p-4 text-left text-ks-gold" onClick={() => onGoTo('club')}>CONTRACT <span className="block text-xs text-ks-muted mt-1">Your first team deal →</span></button></div>
     </> : tab === 'player' || tab === 'scouts' ? <>
       <PlayerTab player={player} onOpenOffers={() => onGoTo('club')} />
+      <Section title="PROFESSIONAL SEASON ARCHIVE">
+        {(pro.seasonRecords??[]).length ? [...(pro.seasonRecords??[])].reverse().map(record=>
+          <div key={record.season} className="border-b border-ks-border/40 py-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs font-display text-ks-ink">SEASON {record.season} · {record.clubName}</div>
+              <span className="text-ks-gold text-xs">#{record.leaguePosition}/{record.clubs}</span>
+            </div>
+            <div className="grid grid-cols-3 text-center mt-3 rounded-lg bg-[#151710] py-2">
+              <div><b className="block text-ks-gold text-lg">{record.appearances}</b><small className="text-[9px] text-ks-muted">APPS</small></div>
+              <div><b className="block text-ks-gold text-lg">{record.goals}</b><small className="text-[9px] text-ks-muted">GOALS</small></div>
+              <div><b className="block text-ks-gold text-lg">{record.assists}</b><small className="text-[9px] text-ks-muted">ASSISTS</small></div>
+            </div>
+            {record.leagueChampion && <div className="text-xs text-ks-gold mt-2">🏆 LEAGUE CHAMPIONS</div>}
+          </div>) : <p className="text-xs text-ks-muted">Your professional season records will appear here after your first completed campaign.</p>}
+      </Section>
     </> : tab === 'people' ? <>
       <PeopleTab player={player} />
       {cards('YOUR REPRESENTATION', <>{stat('Agent', getAgent(player.agentId)?.name ?? 'Unrepresented')}{stat('Coach trust', Math.round(player.coachTrust ?? 50))}</>)}

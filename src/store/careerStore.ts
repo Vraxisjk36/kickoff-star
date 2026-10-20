@@ -634,7 +634,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const { player } = getState()
     if (!player?.proCareer) return
     const existing = player.proCareer
-    if (existing.backgroundWorld && existing.ratingBalanceVersion === 1) return
+    if (existing.backgroundWorld && existing.ratingBalanceVersion === 1 && existing.clubNameVersion === 1) return
     // Upgrade old professional saves once, without touching youth saves or
     // established late-career players. Do not reset contracts, fixtures or XP.
     const graduate = (existing.ratingBalanceVersion !== 1 && existing.season <= 3)
@@ -645,7 +645,11 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       const id = `career-${graduate.id}`
       world.players[id] = { ...world.players[id], overall: toOvr(computeCurrentAbility(graduate)) }
     }
-    const migrated = syncPlayableProLeague({ ...base, ratingBalanceVersion: 1 })
+    const properWorld = base.backgroundWorld && base.clubNameVersion!==1
+      ? renameLegacyProClubs(base.backgroundWorld,base.clubWorldIds?.[base.world.playerTeamId])
+      : base.backgroundWorld
+    const migrated = syncPlayableProLeague({ ...base, backgroundWorld:properWorld,
+      ratingBalanceVersion: 1, clubNameVersion: 1 })
     const own = migrated.world.divisions[1].teams.find(team=>team.id===migrated.world.playerTeamId)
     const teamOvr = own ? teamOverall(own) : 72
     const seniorSquad = (graduate.squad ?? []).map(mate=>({

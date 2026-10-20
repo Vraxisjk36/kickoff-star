@@ -1,3 +1,4 @@
+import { seniorTrialOffers } from '../src/engine/proTrialOffers'
 import assert from 'node:assert/strict'
 import type { Player } from '../src/types/player'
 import type { ProWorldState } from '../src/engine/proWorld'
@@ -628,3 +629,14 @@ assert.equal(missedSeniorResult.state.world.divisions[1].fixtures.find(f=>f.id==
   'Senior fixture must count even when the human does not appear')
 assert.equal(missedSeniorResult.record.lines.find(line=>line.playerId===unsignedPlayer.id)?.minutes,0)
 console.log('Phase 2: all national professional club names and missed-match league reconciliation passed')
+
+for(const points of [0,2,4,6,7,9])for(const ovr of [55,60,65,70]){
+  const offers=seniorTrialOffers(points,ovr)
+  assert.equal(offers.length,4)
+  assert.equal(new Set(offers.map(o=>o.id)).size,4)
+  assert.ok(offers.every(o=>o.overall<80),'Elite clubs must not invite youth trialists')
+  assert.ok(offers.every(o=>o.overall<=Math.min(points>=7&&ovr>=57?79:76,ovr+(points>=7&&ovr>=57?14:10))))
+  assert.ok(points>=7 || offers.every(o=>o.tier===2||!['eng','esp','ger','ita','fra'].includes(o.associationId)))
+  assert.ok(offers.filter(o=>o.tier===1&&['eng','esp','ger','ita','fra'].includes(o.associationId)).length<=1)
+}
+console.log('Phase 2: four global earned offers, 0-9 performance/55-70 OVR and safe tier matching passed')

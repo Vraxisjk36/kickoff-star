@@ -26,7 +26,7 @@ export interface ProClubObjective {
   boardConfidence: number
   lastReviewedSeason?: string
 }
-export interface ProSeasonRecord { season: number; associationId: string; clubName: string; leaguePosition: number; clubs: number; appearances: number; goals: number; assists: number; leagueChampion: boolean; objectiveMet?: boolean; boardConfidence?: number }
+export interface ProSeasonRecord { season: number; associationId: string; clubName: string; leaguePosition: number; clubs: number; appearances: number; goals: number; assists: number; leagueChampion: boolean; objectiveMet?: boolean; boardConfidence?: number; competitionId?: string }
 
 export interface ProCareerState {
   world: LeagueWorld
@@ -46,6 +46,7 @@ export interface ProCareerState {
   /** Career ends at age 38 after the final senior season. */
   retired?: boolean
   seasonRecords?: ProSeasonRecord[]
+  seenMilestones?: string[]
   clubObjective?: ProClubObjective
   lastRenewalWeek?: number
   /** Persisted unattached status after an expired contract; career still advances. */
@@ -214,6 +215,7 @@ export function advanceProWeek(state: ProCareerState, player: Player): { state: 
       assists: player.seasonAssists ?? 0,
       leagueChampion: state.freeAgentSinceWeek === undefined && position === 1,
       objectiveMet, boardConfidence: clubObjective?.boardConfidence,
+      competitionId: state.activeCompetitionId,
     }].slice(-30)
     world = resetSchoolLeagueSeason(world)
   }

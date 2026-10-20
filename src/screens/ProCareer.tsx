@@ -95,7 +95,7 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
       onContinue={()=>acknowledgeCeremony('kickoff')}/>
 
   const milestone=nextProMilestone(pro,cup)
-  if(milestone && mode==='hub') return <ProMilestoneScreen event={milestone}
+  if(milestone && mode==='hub') return <ProMilestoneScreen event={milestone} playerName={player.name}
     onContinue={()=>acknowledgeMilestone(milestone.id)}/>
 
   if(mode==='training') return <TrainingScreen player={player} onComplete={(outcome:TrainingOutcome,spent,injury,xp,attrs)=>{

@@ -31,6 +31,7 @@ export interface ProCareerState {
   world: LeagueWorld
   associationId?: string
   ratingBalanceVersion?: number
+  clubNameVersion?: number
   /** Actual living-world competition identity (may become second-tier after relegation). */
   activeCompetitionId?: string
   activeSeasonId?: string

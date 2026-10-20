@@ -11,6 +11,7 @@ import PeopleTab from './PeopleTab'
 import ClubTab from './ClubTab'
 import ShopTab from './ShopTab'
 import StandingsTable from '../../components/StandingsTable'
+import ProWeeklyCalendar from './ProWeeklyCalendar'
 import { useCareerStore } from '../../store/careerStore'
 import { useMemo, useState } from 'react'
 import ProNewsScreen from '../ProNewsScreen'
@@ -22,7 +23,7 @@ import { internationalCycle, internationalProgress, visibleQualifyingTable } fro
 import { continentalNationsProgress } from '../../engine/proContinentalNations'
 import { seniorWorldNationRankings } from '../../engine/proNationWorldRankings'
 
-export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy }: { player: Player; tab: HubTab; onGoTo: (tab: HubTab) => void; onOpenInbox: () => void; onOpenEnergy: () => void }) {
+export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy, onTrain }: { player: Player; tab: HubTab; onGoTo: (tab: HubTab) => void; onOpenInbox: () => void; onOpenEnergy: () => void; onTrain: () => void }) {
   const pro = player.proCareer!
   const division = pro.world.divisions[1]
   const club = division.teams.find(t => t.id === pro.world.playerTeamId)!
@@ -32,7 +33,6 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
   const row = table.find(r => r.teamId === club.id)!
   const nextFixture = division.fixtures.find(f => !f.played && (f.homeTeamId === club.id || f.awayTeamId === club.id))
   const nextOpponent = division.teams.find(t => t.id === (nextFixture?.homeTeamId === club.id ? nextFixture?.awayTeamId : nextFixture?.homeTeamId))
-  const train = useCareerStore(s => s.trainProCareer)
   const requestOffers = useCareerStore(s => s.requestProOffers)
   const requestRenewal = useCareerStore(s => s.requestProRenewal)
   const openTalks = useCareerStore(s => s.openProTransferTalks)
@@ -60,6 +60,7 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
   return <div className="flex flex-col gap-2.5 stagger-children">
     {tab === 'home' ? <>
       {header}
+      <ProWeeklyCalendar pro={pro} opponent={pro.international?.pending ? getNation(pro.international.pending.opponentId).name : opponent?.name} matchKind={pro.international?.pending?'international':'league'} onTrain={onTrain}/>
       {cards('NEXT UP · YOUR WEEK', <div><p className="text-ks-ink text-lg font-display">{pro.international?.pending ? `INTERNATIONAL · ${getNation(pro.international.pending.opponentId).name}` : fixture && pro.resolvedWeek !== pro.week ? `${fixture.homeTeamId === club.id ? 'HOME' : 'AWAY'} · ${opponent?.name}` : 'Training & recovery'}</p><p className="text-ks-muted text-xs mt-2">{fixture ? (pro.associationId ?? 'eng').toUpperCase() + ' League · matchweek ' + proRound(pro.week, division.teams.length, Math.max(0, ...division.fixtures.map(f => f.week))) : nextOpponent ? `Next fixture: ${nextOpponent.name}` : 'The next league calendar is being prepared.'}</p></div>)}
       <div className="rounded-xl border border-ks-gold/25 bg-[#122018] px-4 py-3 flex items-center justify-between gap-3">
         <div><span className="font-display tracking-widest text-[10px] text-ks-gold">PROFESSIONAL PATHWAY</span>
@@ -102,7 +103,11 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
         <button onClick={onOpenEnergy} className="text-xs text-ks-gold font-display mr-4">RECOVERY →</button>
         <button onClick={() => setNewsOpen(true)} className="text-ks-gold font-display text-xs">READ THE GAZETTE →</button>
       </Section>
-      {cards('WEEKLY TRAINING', <div><p className="text-ks-muted text-xs mb-3">One team session per week. Costs 12 energy and improves your standing with the coach.</p><button disabled={pro.trainedWeek === pro.week || player.fitness.stamina < 12} onClick={train} className="rounded-lg bg-ks-gold px-4 py-2 text-ks-black font-display text-xs disabled:opacity-35">{pro.trainedWeek === pro.week ? 'SESSION COMPLETE' : 'TRAIN WITH THE SQUAD →'}</button></div>)}
+      {cards('FIRST-TEAM TRAINING', <div>
+        <p className="text-xs text-ks-muted mb-3">Train on scheduled weekdays. Each interactive session uses the original school drills and opens attribute XP allocation afterward.</p>
+        <button onClick={onTrain} disabled={(pro.trainedDays??[]).includes(pro.day??0)||player.fitness.stamina<12}
+          className="rounded-xl bg-ks-gold px-4 py-3 text-ks-black font-display text-sm disabled:opacity-35">OPEN TODAY'S TRAINING →</button>
+      </div>)}
       {cards('THE GAZETTE · PRO EDITION', <div><p className="font-display text-ks-ink text-lg">{pro.news?.at(-1)?.headline ?? 'The season opens'}</p><p className="text-ks-muted text-xs mt-2">Club, country and world stories from recorded events.</p><button className="text-ks-gold text-xs mt-4" onClick={() => setNewsOpen(true)}>BROWSE THE GAZETTE →</button></div>)}
       <div className="grid grid-cols-2 gap-2"><button className="rounded-xl border border-ks-border p-4 text-left text-ks-gold" onClick={() => onGoTo('fixtures')}>LEAGUE <span className="block text-xs text-ks-muted mt-1">Table & fixtures →</span></button><button className="rounded-xl border border-ks-border p-4 text-left text-ks-gold" onClick={() => onGoTo('club')}>CONTRACT <span className="block text-xs text-ks-muted mt-1">Your first team deal →</span></button></div>
     </> : tab === 'player' || tab === 'scouts' ? <>

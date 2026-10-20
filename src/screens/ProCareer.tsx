@@ -87,6 +87,10 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
     else if(cup || national)advance()
     setMode('hub')
   }
+  const milestone=nextProMilestone(pro,cup)
+  if(milestone?.kind==='ceremony' && mode==='hub')return <ProMilestoneScreen
+    event={milestone} playerName={player.name}
+    onContinue={()=>acknowledgeMilestone(milestone.id)}/>
   if(pro.week===1 && (pro.day??0)===0 && pro.preseasonIntroducedSeason!==pro.season)
     return <ProSeasonCeremony pro={pro} clubName={team.name} kind="preseason"
       onContinue={()=>acknowledgeCeremony('preseason')}/>
@@ -94,7 +98,6 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
     return <ProSeasonCeremony pro={pro} clubName={team.name} kind="kickoff"
       onContinue={()=>acknowledgeCeremony('kickoff')}/>
 
-  const milestone=nextProMilestone(pro,cup)
   if(milestone && mode==='hub') return <ProMilestoneScreen event={milestone} playerName={player.name}
     onContinue={()=>acknowledgeMilestone(milestone.id)}/>
 

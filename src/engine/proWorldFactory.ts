@@ -4,6 +4,7 @@ import { createEmptyProWorld, type IsoDate, type ProAcademyProspect, type ProClu
 import { isInPeriod, type SeasonCalendarProfile } from './proCalendar'
 import { PRO_SATELLITE_ASSOCIATIONS } from './proSatelliteRegistry'
 import { VERIFIED_PRO_RULES } from './proRulebook'
+import { proRatingTarget } from './proRatings'
 
 const DAY = 86_400_000
 const utc = (date: IsoDate) => Date.parse(`${date}T00:00:00Z`)
@@ -203,8 +204,10 @@ export function createProWorld(seed: number, currentDate: IsoDate): ProWorldStat
       const tier = i < topCount ? 1 : i < topCount + secondCount ? 2 : i < topCount + secondCount + thirdCount ? 3 : i < topCount + secondCount + thirdCount + fourthCount ? 4 : 5
       const offset = tier === 1 ? i : tier === 2 ? i - topCount : tier === 3 ? i - topCount - secondCount :
         tier === 4 ? i - topCount - secondCount - thirdCount : i - topCount - secondCount - thirdCount - fourthCount
-      const reputation = Math.max(35, Math.min(89, leagueStrength[league.confederation] + (tier === 1 ? 13 : -7 - (tier - 2) * 9) - offset * 1.25
-        + Math.floor(proRoll(seed, `${id}:rep`) * 7) - 3))
+      const reputation = Math.max(35, Math.min(90,
+        proRatingTarget(league.associationId,tier,offset,
+          tier === 1 ? topCount : tier === 2 ? secondCount : tier === 3 ? thirdCount : tier === 4 ? fourthCount : fifthCount,
+          league.confederation) + Math.floor(proRoll(seed, `${id}:rep`) * 3) - 1))
       const revenue = Math.round((11_000_000 + reputation * 2_300_000) * (league.mode === 'playable' ? 1.1 : .8))
       const annualSquadCostLimit = Math.floor(revenue * .58)
       const finances: ProClub['finances'] = { clubId: id, currency, annualRevenue: revenue,

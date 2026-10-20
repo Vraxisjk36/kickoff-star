@@ -619,12 +619,12 @@ const missedOpponentId=missedFixture!.homeTeamId===noAppearance.world.playerTeam
   ?missedFixture!.awayTeamId:missedFixture!.homeTeamId
 const missedOpponent=noAppearance.world.divisions[1].teams.find(team=>team.id===missedOpponentId)!
 const missedHome=missedFixture!.homeTeamId===noAppearance.world.playerTeamId
-const missed=resolveProMatch({...noAppearance,week:5},unsignedPlayer,{
+const missedSeniorResult=resolveProMatch({...noAppearance,week:5},unsignedPlayer,{
   opponent:missedOpponent,home:missedHome,scored:1,conceded:2,
   goals:0,assists:0,rating:6,energy:70,minutes:0,yellowCards:0,redCarded:false,
 })
-assert.equal(missed.state.resolvedWeek,5)
-assert.equal(missed.state.world.divisions[1].fixtures.find(f=>f.id===missedFixture!.id)?.played,true,
+assert.equal(missedSeniorResult.state.resolvedWeek,5)
+assert.equal(missedSeniorResult.state.world.divisions[1].fixtures.find(f=>f.id===missedFixture!.id)?.played,true,
   'Senior fixture must count even when the human does not appear')
-assert.equal(missed.record.lines.find(line=>line.playerId===unsignedPlayer.id)?.minutes,0)
+assert.equal(missedSeniorResult.record.lines.find(line=>line.playerId===unsignedPlayer.id)?.minutes,0)
 console.log('Phase 2: all national professional club names and missed-match league reconciliation passed')

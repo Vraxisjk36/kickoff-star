@@ -23,6 +23,7 @@ import { getNation } from '../../engine/nations'
 import { internationalCycle, internationalProgress, visibleQualifyingTable } from '../../engine/proInternationalTournament'
 import { continentalNationsProgress } from '../../engine/proContinentalNations'
 import { seniorWorldNationRankings } from '../../engine/proNationWorldRankings'
+import { proLeagueRecords,worldPlayerAwards } from '../../engine/proHonours'
 
 export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy, onTrain, matchKind, matchOpponent, matchDate }: { player: Player; tab: HubTab; onGoTo: (tab: HubTab) => void; onOpenInbox: () => void; onOpenEnergy: () => void; onTrain: () => void; matchKind?: 'league'|'domestic-cup'|'europe'|'international'|'final'; matchOpponent?: string; matchDate?: string }) {
   const pro = player.proCareer!
@@ -114,6 +115,16 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
       <div className="grid grid-cols-2 gap-2"><button className="rounded-xl border border-ks-border p-4 text-left text-ks-gold" onClick={() => onGoTo('fixtures')}>LEAGUE <span className="block text-xs text-ks-muted mt-1">Table & fixtures →</span></button><button className="rounded-xl border border-ks-border p-4 text-left text-ks-gold" onClick={() => onGoTo('club')}>CONTRACT <span className="block text-xs text-ks-muted mt-1">Your first team deal →</span></button></div>
     </> : tab === 'player' || tab === 'scouts' ? <>
       <PlayerTab player={player} onOpenOffers={() => onGoTo('club')} />
+      <Section title="SEASON AWARDS & CEREMONIES">
+        {(pro.seasonRecords??[]).length?[...(pro.seasonRecords??[])].reverse().slice(0,4).map(record=>
+          <div key={record.season} className="rounded-lg bg-[#151710] border border-ks-border/40 p-3 mb-3">
+            <div className="font-display text-ks-gold text-xs mb-2">SEASON {record.season} · AWARDS NIGHT</div>
+            {worldPlayerAwards(record,pro).map(award=><div key={award.id} className="flex gap-2 text-xs items-center justify-between py-1.5 border-t border-ks-border/30">
+              <span className="text-ks-muted max-w-[62%]">{award.title}</span>
+              <span className={award.won?'text-ks-gold font-display':'text-ks-ink'}>{award.won?'🏆 YOU':award.recipient}</span>
+            </div>)}
+          </div>):<p className="text-ks-muted text-xs">The first annual awards ceremony arrives after your first professional season.</p>}
+      </Section>
       <Section title="PROFESSIONAL SEASON ARCHIVE">
         {(pro.seasonRecords??[]).length ? [...(pro.seasonRecords??[])].reverse().map(record=>
           <div key={record.season} className="border-b border-ks-border/40 py-3">
@@ -173,6 +184,18 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
       </section>
       {proLeagueView==='table' && <>
         <StandingsTable division={division} playerTeamId={club.id} hideZones />
+        <Section title="LEAGUE HISTORY · RECORDS TO BREAK">
+          {proLeagueRecords(pro.associationId??'eng',pro.activeCompetitionId??`top-${pro.associationId??'eng'}`,
+            pro.seasonRecords??[],pro).map(record=><div key={record.kind} className="py-2 border-b border-ks-border/40">
+              <div className="flex justify-between gap-3 text-xs">
+                <span className="text-ks-ink">{record.kind==='career-goals'?'Career league goals':record.kind==='season-goals'?'Most league goals in a season':'Most league assists in a season'}</span>
+                <b className={record.broken?'text-green-400':'text-ks-gold'}>{record.current} / {record.mark}</b>
+              </div>
+              <p className="text-[10px] text-ks-muted mt-1">Historical benchmark: {record.holder} {record.broken?'· NEW RECORD!':''}</p>
+              <div className="w-full bg-white/10 rounded-full h-1.5 mt-2 overflow-hidden"><span className="block bg-ks-gold h-full" style={{width:`${Math.min(100,record.current/record.mark*100)}%`}}/></div>
+            </div>)}
+          <p className="text-[10px] text-ks-muted mt-2">Fictional historic football legends and records for your playable division. Domestic league goals and assists only.</p>
+        </Section>
         <Section title="Your professional season">
           {stat('League record', `${row.won}W · ${row.drawn}D · ${row.lost}L`)}
           {stat('Goal difference', row.goalsFor-row.goalsAgainst)}

@@ -22,7 +22,7 @@ import { internationalCycle, internationalProgress, visibleQualifyingTable } fro
 import { continentalNationsProgress } from '../../engine/proContinentalNations'
 import { seniorWorldNationRankings } from '../../engine/proNationWorldRankings'
 
-export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: HubTab; onGoTo: (tab: HubTab) => void }) {
+export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy }: { player: Player; tab: HubTab; onGoTo: (tab: HubTab) => void; onOpenInbox: () => void; onOpenEnergy: () => void }) {
   const pro = player.proCareer!
   const division = pro.world.divisions[1]
   const club = division.teams.find(t => t.id === pro.world.playerTeamId)!
@@ -70,6 +70,13 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
         <span><span className="font-display text-[11px] text-ks-muted">PLAYER DOSSIER</span><span className="block text-ks-ink text-sm mt-1">Development, match form & career record</span></span>
         <span className="text-ks-gold text-xl">→</span>
       </button>
+      <button type="button" onClick={onOpenInbox} className="w-full text-left rounded-xl border border-ks-border bg-[#10120f] px-4 py-4 flex items-center gap-3">
+        <span className="w-9 h-9 rounded-full border border-ks-border grid place-items-center text-ks-gold">✉</span>
+        <span className="flex-1"><strong className="text-sm text-ks-ink font-normal">Career inbox</strong>
+          <small className="block uppercase text-[10px] text-ks-muted mt-1">{(player.inbox??[]).filter(item=>!item.read).length} unread · Your career stories</small>
+        </span>
+        <span className="text-xs text-ks-gold">OPEN →</span>
+      </button>
       {cards('TEAM SELECTION', <div className="space-y-2">
         <div className="flex justify-between gap-2"><strong className="text-sm text-green-500">{player.squadRole === 'starting-xi' ? 'STARTING XI' : player.squadRole === 'bench' ? 'MATCHDAY SQUAD' : 'FIRST TEAM'}</strong><span className="text-xs text-ks-muted">Coach trust {Math.round(player.coachTrust ?? 50)}</span></div>
         <Bar value={Math.max(0,Math.min(100,(player.coachTrust ?? 50)))} max={100}/>
@@ -92,6 +99,7 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
           <div className="rounded-lg bg-[#171910] p-3 text-center"><div className="text-ks-gold font-display text-lg">{row.points}</div><div className="text-[10px] text-ks-muted">POINTS</div></div>
         </div>
         <div className="text-xs text-ks-muted mb-3">Next opponent: {nextOpponent?.name ?? 'Awaiting the next fixture'}</div>
+        <button onClick={onOpenEnergy} className="text-xs text-ks-gold font-display mr-4">RECOVERY →</button>
         <button onClick={() => setNewsOpen(true)} className="text-ks-gold font-display text-xs">READ THE GAZETTE →</button>
       </Section>
       {cards('WEEKLY TRAINING', <div><p className="text-ks-muted text-xs mb-3">One team session per week. Costs 12 energy and improves your standing with the coach.</p><button disabled={pro.trainedWeek === pro.week || player.fitness.stamina < 12} onClick={train} className="rounded-lg bg-ks-gold px-4 py-2 text-ks-black font-display text-xs disabled:opacity-35">{pro.trainedWeek === pro.week ? 'SESSION COMPLETE' : 'TRAIN WITH THE SQUAD →'}</button></div>)}

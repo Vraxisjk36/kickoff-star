@@ -44,8 +44,11 @@ export function proClubIdentity(country:string,index:number,tier=1,associationNa
   const cities=HOME_CITIES[country]??[associationName]
   const city=cities[index%cities.length]
   const style=CLUB_WORDS[(index+Math.max(0,tier-1)*5)%CLUB_WORDS.length]
-  const suffix=tier>1 ? ['Development','County','Town','Athletic','United'][(index+Math.floor(index/cities.length))%5] : ''
-  const name=[city,style,suffix].filter(Boolean).join(' ')
+  const districts=['Riverside','Old Town','East End','Westfield','Northgate','Southbank','Hillcrest','Meadowbrook','Harbour','Market','Valley','Woodside','Highfield','Lakeside','Stonebridge','Parkside']
+  const qualifiers=['Athletic','Town','United','Wanderers','County','Rovers','Borough','Sporting']
+  const district= districts[Math.floor(index/cities.length)%districts.length]
+  const qualifier=qualifiers[Math.floor(index/(cities.length*districts.length))%qualifiers.length]
+  const name=tier>1 ? [city,district,style,qualifier].join(' ') : [city,style].join(' ')
   return {name,city}
 }
 /** Keep existing human club identity (contract, player story), while mapping

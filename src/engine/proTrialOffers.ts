@@ -52,24 +52,26 @@ export function seniorTrialOffers(points:number,ovr:number):SeniorTrialOffer[]{
     (standout || item.tier===2 || !['eng','esp','ger','ita','fra'].includes(item.country)))
   const unique=new Set<string>()
   const selected:SeniorTrialOffer[]=[]
-  const staged=[...allowed.filter(item=>item.tier===2),
-    ...allowed.filter(item=>item.tier===1 && !['eng','esp','ger','ita','fra'].includes(item.country)),
-    ...allowed.filter(item=>item.tier===1)]
-  for(const candidate of staged){
-    if(selected.length===4)break
-    const key=`${candidate.country}:${candidate.tier}:${candidate.rank}`
-    if(unique.has(key))continue
-    if(candidate.tier===1 && ['eng','esp','ger','ita','fra'].includes(candidate.country) &&
-      (selected.some(item=>item.tier===1&&['eng','esp','ger','ita','fra'].includes(item.associationId))||!standout))
-      continue
-    const firstDivisionCount=selected.filter(item=>item.tier===1).length
-    if(candidate.tier===1 && firstDivisionCount >= (standout?2:2))continue
-    unique.add(key)
-    selected.push({id:key,associationId:candidate.country,tier:candidate.tier,
-      rank:candidate.rank,name:candidate.name,overall:candidate.overall,
-      prestige:Math.max(3,Math.min(8,Math.round(candidate.overall/12))),
-      reason:candidate.label})
+  const addFrom=(pool:typeof allowed,count:number)=>{
+    for(const candidate of pool){
+      if(count<=0)break
+      const key=`${candidate.country}:${candidate.tier}:${candidate.rank}`
+      if(unique.has(key))continue
+      if(selected.some(item=>item.associationId===candidate.country))continue
+      unique.add(key)
+      selected.push({id:key,associationId:candidate.country,tier:candidate.tier,
+        rank:candidate.rank,name:candidate.name,overall:candidate.overall,
+        prestige:Math.max(3,Math.min(8,Math.round(candidate.overall/12))),
+        reason:candidate.label})
+      count--
+    }
   }
+  const major=(item:typeof allowed[number])=>['eng','esp','ger','ita','fra'].includes(item.country)
+  addFrom(allowed.filter(item=>item.tier===2&&major(item)),2)
+  addFrom(allowed.filter(item=>item.tier===1&&!major(item)),standout?1:2)
+  if(standout)addFrom(allowed.filter(item=>item.tier===1&&major(item)),1)
+  if(selected.length<4)addFrom(allowed.filter(item=>item.tier===2),4-selected.length)
+  if(selected.length<4)addFrom(allowed.filter(item=>item.tier===1&&!major(item)),4-selected.length)
   if(selected.length!==4)throw new Error('Senior scouting failed to supply four affordable offers')
   return selected
 }

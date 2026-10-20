@@ -54,6 +54,8 @@ export interface Player {
   sundayContractsVersion?: number
   /** Match-only context, supplied when selecting the player for a fixture. */
   matchEnergyMultiplier?: number
+  /** Nonpersistent per-match professional difficulty from the opponent's OVR. */
+  matchOpponentOverall?: number
   leagueGoals?: import('../engine/leagueScorers').PlayerLeagueGoals[]
   pathway?: import('../engine/pathway').YouthPathwayState
   octoberLeague?: import('../engine/octoberLeague').OctoberLeague | null

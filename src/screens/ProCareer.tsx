@@ -26,6 +26,7 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
   const player = useCareerStore(s => s.player)
   const advance = useCareerStore(s => s.advanceProCareer)
   const complete = useCareerStore(s => s.completeProMatch)
+  const sitOutProMatch = useCareerStore(s => s.sitOutProMatch)
   const completeCup = useCareerStore(s => s.completeProCupMatch)
   const completeNational = useCareerStore(s => s.completeSeniorNationalMatch)
   const completeTraining = useCareerStore(s => s.completeProTraining)
@@ -77,6 +78,12 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
   const canTrain = proTrainingAvailable(day,matchDay) &&
     !(pro.trainedDays??[]).includes(day) && !player.injury?.weeksRemaining && player.fitness.stamina>=12
   const beginTraining=()=>{if(canTrain)setMode('training')}
+  const sitOut=()=>{
+    if(preseason)completePreseason(6,player.fitness.stamina,0,0)
+    else if(fixture && !national && !cup)sitOutProMatch()
+    else if(cup || national)advance()
+    setMode('hub')
+  }
   if(pro.week===1 && (pro.day??0)===0 && pro.preseasonIntroducedSeason!==pro.season)
     return <ProSeasonCeremony pro={pro} clubName={team.name} kind="preseason"
       onContinue={()=>acknowledgeCeremony('preseason')}/>
@@ -94,7 +101,7 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
     totalXp={trainingReward.xp} attrs={trainingReward.attrs}
     values={player.attributes.values as Record<string,number>} potential={player.potential}
     onSpend={(attr,amount)=>spendXp(attr,amount)} onDone={()=>{setTrainingReward(null);setMode('hub')}}/>
-  if (mode === 'matchday' && matchReady && opponent) return <MatchDayScreen player={selected} playerTeam={activeTeam} opponent={opponent} isHome={home} competitionId={national ? 'seniorInternational' : cup?.competitionId ?? 'proLeague'} competitionLabel={label} matchKey={`${player.id}:${pro.season}:${pro.week}:${national?.id ?? cup?.id ?? fixture?.id ?? 'preseason'}`} onSitOut={() => { if(preseason)completePreseason(6,player.fitness.stamina,0,0); else advance(); setMode('hub') }} onKickOff={() => { sfx.whistle(); setMode('match') }} />
+  if (mode === 'matchday' && matchReady && opponent) return <MatchDayScreen player={selected} playerTeam={activeTeam} opponent={opponent} isHome={home} competitionId={national ? 'seniorInternational' : cup?.competitionId ?? 'proLeague'} competitionLabel={label} matchKey={`${player.id}:${pro.season}:${pro.week}:${national?.id ?? cup?.id ?? fixture?.id ?? 'preseason'}`} onSitOut={sitOut} onKickOff={() => { sfx.whistle(); setMode('match') }} />
   if (mode === 'match' && matchReady && opponent) return <MatchScreen player={selected} playerTeam={activeTeam} opponent={opponent} playerIsHome={home} autoResolve={autoResolve} onToggleAutoResolve={() => setAutoResolve(v => !v)} onComplete={r => { setResult(r); setMode('summary') }} />
   if (mode === 'summary' && result && matchReady && opponent) return <MatchSummary homeTeamName={home?activeTeam.name:opponent.name} awayTeamName={home?opponent.name:activeTeam.name} homeGoals={home?result.playerScore:result.opponentScore} awayGoals={home?result.opponentScore:result.playerScore} rating={result.rating} goals={result.goals} assists={result.assists} won={result.won} drew={result.drew} injury={result.injury} wasSubbed={result.wasSubbed} redCarded={result.redCarded} playerStats={result.playerStats} ratingBreakdown={result.ratingBreakdown} minutesPlayed={result.minutesPlayed} yellowCards={result.yellowCards} onDone={() => {
     const outcome = { opponent, home, scored: result.playerScore, conceded: result.opponentScore, goals: result.goals, assists: result.assists, rating: result.rating, energy: result.finalMatchStamina, minutes: result.minutesPlayed, yellowCards: result.yellowCards, redCarded: result.redCarded, injury: result.injury }
@@ -108,10 +115,10 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
   return <div className="relative">
     <WeeklyHub tab={tab} onTabChange={setTab} onOpenOffers={() => setTab('club')} onExitToMenu={onExitToMenu} league={world} academyLeague={null} playerTeam={team} playerDivision={division} proCalendar={calendar} onProTrain={beginTraining} proMatchKind={kind} proMatchOpponent={opponent?.name} proMatchDate={matchDate} />
     <div className="career-continue fixed left-0 right-0 px-3 max-w-md mx-auto z-20" style={{ bottom: 'calc(var(--safe-bottom) + 4.5rem)' }}>
-      <button className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-3.5 text-sm shadow-[0_0_25px_rgba(212,175,55,0.3)]" onClick={() => matchReady && day === matchDay && !player.injury && !(player.suspensionMatches ?? 0) && player.fitness.stamina >= 30 ? setMode('matchday') : advance()}>
+      <button className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-3.5 text-sm shadow-[0_0_25px_rgba(212,175,55,0.3)]" onClick={() => matchReady && day === matchDay ? (!player.injury && !(player.suspensionMatches ?? 0) && player.fitness.stamina >= 30 ? setMode('matchday') : sitOut()) : advance()}>
         {matchReady && day===matchDay
           ? national ? `INTERNATIONAL · ${getNation(national.opponentId).name} →`
-            : player.injury ? 'INJURED · SIT OUT MATCH →' : `MATCHDAY · ${opponent?.name??'OPPONENT'} →`
+            : player.injury || (player.suspensionMatches??0)>0 || player.fitness.stamina<30 ? 'UNAVAILABLE · SIMULATE MATCH →' : `MATCHDAY · ${opponent?.name??'OPPONENT'} →`
           : `CONTINUE · ${PRO_WEEKDAYS[day]} → ${day<6?PRO_WEEKDAYS[day+1]:'NEXT WEEK'}`}
 
       </button>

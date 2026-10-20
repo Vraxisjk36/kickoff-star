@@ -52,7 +52,6 @@ export function seniorTrialOffers(points:number,ovr:number):SeniorTrialOffer[]{
     (standout || item.tier===2 || !['eng','esp','ger','ita','fra'].includes(item.country)))
   const unique=new Set<string>()
   const selected:SeniorTrialOffer[]=[]
-  const wanted=standout?[2,1,1]:[2,2]
   const staged=[...allowed.filter(item=>item.tier===2),
     ...allowed.filter(item=>item.tier===1 && !['eng','esp','ger','ita','fra'].includes(item.country)),
     ...allowed.filter(item=>item.tier===1)]

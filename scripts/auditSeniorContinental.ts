@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { createProWorld } from '../src/engine/proWorldFactory'
-import { beginContinentalSeason, recordTournamentResult } from '../src/engine/proTournaments'
+import { beginContinentalSeason, advanceTournamentsTo, recordTournamentResult } from '../src/engine/proTournaments'
 
 const confeds=['uefa','caf','conmebol','concacaf','afc','ofc'] as const
 const world=createProWorld(714,'2026-08-01')
@@ -50,4 +50,13 @@ assert.ok(recordTournamentResult(world,sample.id,2,1),'CAF fixture result must r
 assert.equal(world.fixtures[sample.id].result?.homeGoals,2)
 assert.equal(recordTournamentResult(world,sample.id,9,9),false,
   'Continental fixtures must not count repeated results')
+advanceTournamentsTo(world,'2028-12-31')
+for(const id of allCompIds){
+  const tournament=world.competitions[id].tournament
+  assert.equal(tournament?.completed,true,`${id}: knockout bracket did not reach a champion`)
+  const titles=world.championHistory.filter(h=>h.competitionId===id&&h.seasonId==='2026')
+  assert.equal(titles.length,1,`${id}: expected exactly one champion`)
+  assert.ok(world.competitions[id].entrantIds.includes(titles[0].championId),
+    `${id}: champion was not in the field`)
+}
 console.log('Thirteen continental club competitions across UEFA, CAF, CONMEBOL, CONCACAF, AFC and OFC validated')

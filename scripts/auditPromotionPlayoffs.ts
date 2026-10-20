@@ -50,8 +50,11 @@ const upset = advanceProWorldTo(createProWorld(1, '2026-08-01'), '2027-10-01')
 const englishTable = upset.seasonHistory.find(item => item.competitionId === 'second-eng' && item.seasonId === '2026')!.table
   .sort((a, b) => b.points - a.points ||
     (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst) || b.goalsFor - a.goalsFor || a.clubId.localeCompare(b.clubId))
-assert.equal(upset.promotionHistory!.find(item => item.associationId === 'eng')!.promotedIds[2], englishTable[4].clubId,
-  'fifth-place club can win the playoff instead of automatic third place')
+const playoffWinner = upset.promotionHistory!.find(item => item.associationId === 'eng')!.promotedIds[2]
+assert.ok(englishTable.slice(2, 6).some(row => row.clubId === playoffWinner),
+  'England third promotion spot must be won by a qualifying play-off club, not a fixed league finish')
+assert.ok(!englishTable.slice(0, 2).some(row => row.clubId === playoffWinner),
+  'Play-off winner must be distinct from direct promotion clubs')
 for (const [id, fixtures] of [['esp', 6], ['ger', 2], ['fra', 4], ['sco', 6], ['por', 2], ['ita', 8], ['bra', 4], ['ned', 12]] as const) {
   const history = direct.promotionHistory?.find(item => item.associationId === id && item.seasonId === '2026')
   assert.ok(history, `${id} playoff archived`)

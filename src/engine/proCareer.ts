@@ -3,6 +3,7 @@ import type { LeagueWorld, Division, Fixture } from './league'
 import { batchSimDivisionRound, recordPlayerMatchResult, resetSchoolLeagueSeason } from './league'
 import { generateTeam, type Team } from './teams'
 import { calibrateSeniorTeam, proRatingTarget } from './proRatings'
+import { proClubIdentity, PRO_TOP_FLIGHT_IDENTITIES } from './proClubIdentities'
 import type { MatchLine, MatchRecord } from './matchLedger'
 import { netWage } from './agents'
 import type { ProWorldState } from './proWorld'
@@ -87,8 +88,9 @@ export function proTrialClubs(points: number, associationId = 'eng'): Team[] {
   const base = points >= 5 ? 5 : points >= 3 ? 4 : 3
   return region.cities.map((city, index) => {
     const team = generateTeam(Math.min(6, base + (index === 3 ? 1 : 0)))
-    const name = associationId === 'eng' ? CLUB_NAMES[(index * 2 + Math.min(2, Math.floor(points / 3))) % CLUB_NAMES.length]
-      : `${city} ${['Athletic', 'United', 'Sporting', 'City'][index]}`
+    const options = PRO_TOP_FLIGHT_IDENTITIES[associationId] ?? []
+    const name = options[(index * 3 + Math.min(2,Math.floor(points/3))) % Math.max(1,options.length)]
+      ?? proClubIdentity(associationId,index,1,region.name).name
     return { ...team, name, short: name.split(' ').map(part => part[0]).join('').slice(0, 3).toUpperCase() }
   })
 }
@@ -102,9 +104,8 @@ export function createProCareer(clubName: string, prestige = 4, associationId = 
   own.name = clubName
   own.short = clubName.split(' ').map(part => part[0]).join('').slice(0, 3).toUpperCase()
   const others = Array.from({ length: count - 1 }, (_, index) => {
-    const city = region.cities[index % region.cities.length]
-    const name = associationId === 'eng' ? CLUB_NAMES.filter(name => name !== clubName)[index] :
-      `${city} ${['Rovers', 'Albion', 'Wanderers', 'Olympic', 'Union'][Math.floor(index / region.cities.length) % 5]} ${index + 1}`
+    const chosen = (PRO_TOP_FLIGHT_IDENTITIES[associationId] ?? []).filter(name=>name!==clubName)
+    const name = chosen[index] ?? proClubIdentity(associationId,index+1,1,region.name).name
     const team = calibrateSeniorTeam(generateTeam(3 + index % 4),
       proRatingTarget(associationId,1,index+1,count))
     return { ...team, name, short: name.split(' ').map(part => part[0]).join('').slice(0, 3).toUpperCase() }

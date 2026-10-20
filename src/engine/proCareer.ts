@@ -29,6 +29,7 @@ export interface ProSeasonRecord { season: number; associationId: string; clubNa
 export interface ProCareerState {
   world: LeagueWorld
   associationId?: string
+  ratingBalanceVersion?: number
   /** Actual living-world competition identity (may become second-tier after relegation). */
   activeCompetitionId?: string
   activeSeasonId?: string

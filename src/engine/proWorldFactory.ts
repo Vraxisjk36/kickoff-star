@@ -4,6 +4,7 @@ import { createEmptyProWorld, type IsoDate, type ProAcademyProspect, type ProClu
 import { isInPeriod, type SeasonCalendarProfile } from './proCalendar'
 import { PRO_SATELLITE_ASSOCIATIONS } from './proSatelliteRegistry'
 import { VERIFIED_PRO_RULES } from './proRulebook'
+import { proClubIdentity } from './proClubIdentities'
 import { proRatingTarget } from './proRatings'
 
 const DAY = 86_400_000
@@ -74,10 +75,15 @@ const firstNames = ['Amir','Daniel','Leo','Jamal','Hiro','Thabo','Mateo','Samuel
 const lastNames = ['Silva','Kamara','Morales','Okafor','Diallo','Costa','Kim','Mokoena','Garcia','Sato','Mensah','Bennett','Ahmed','Santos','Novak','Reyes']
 const positions = ['GK','GK','RB','CB','CB','CB','LB','DM','CM','CM','AM','RW','LW','ST','ST','GK','CB','RB','LB','CM','CM','RW','LW','ST']
 
-function clubName(league: ProLeaguePlan, index: number): { name: string; city: string } {
-  const city = namedCities[league.associationId]?.[index % (namedCities[league.associationId].length)]
-    ?? `${league.associationName} ${index < 8 ? 'North' : 'South'}`
-  return { city, name: `${city} ${identities[index % identities.length]}${index >= 40 ? ` ${Math.floor(index / 40) + 1}` : ''}` }
+function clubName(league:ProLeaguePlan,index:number,tier=1,offset=index):{name:string;city:string}{
+  const named=proClubIdentity(league.associationId,offset,tier,league.associationName)
+  if(tier===1)return named
+  const city=namedCities[league.associationId]?.[offset%(namedCities[league.associationId].length)] ??
+    named.city
+  const style=identities[(offset+tier*3)%identities.length]
+  const distinction=['County','Town','Athletic','United','Vale','Borough'][
+    Math.floor(offset/Math.max(1,namedCities[league.associationId]?.length??8))%6]
+  return {city,name:`${city} ${style} ${distinction}`}
 }
 
 function createSquad(club: ProClub, seed: number, year: number): ProPlayer[] {
@@ -199,7 +205,8 @@ export function createProWorld(seed: number, currentDate: IsoDate): ProWorldStat
     const clubCount = topCount + secondCount + thirdCount + fourthCount + fifthCount
     for (let i = 0; i < clubCount; i++) {
       const id = `club-${league.associationId}-${padded(i + 1)}`
-      let identity = clubName(league, i)
+      let identity = clubName(league, i, i < topCount ? 1 : i < topCount + secondCount ? 2 : i < topCount + secondCount + thirdCount ? 3 : i < topCount + secondCount + thirdCount + fourthCount ? 4 : 5,
+      i < topCount ? i : i < topCount + secondCount ? i - topCount : i < topCount + secondCount + thirdCount ? i-topCount-secondCount : i < topCount+secondCount+thirdCount+fourthCount ? i-topCount-secondCount-thirdCount : i-topCount-secondCount-thirdCount-fourthCount)
       const tier = i < topCount ? 1 : i < topCount + secondCount ? 2 : i < topCount + secondCount + thirdCount ? 3 : i < topCount + secondCount + thirdCount + fourthCount ? 4 : 5
       const offset = tier === 1 ? i : tier === 2 ? i - topCount : tier === 3 ? i - topCount - secondCount :
         tier === 4 ? i - topCount - secondCount - thirdCount : i - topCount - secondCount - thirdCount - fourthCount
@@ -223,7 +230,7 @@ export function createProWorld(seed: number, currentDate: IsoDate): ProWorldStat
         fifthGroups && tier === 5 ? Math.floor(offset / fifthGroups.clubsPerGroup) + 1 : undefined
       if (feederGroup && regionalCityAnchors[league.associationId]?.[feederGroup - 1]) {
         const city = regionalCityAnchors[league.associationId][feederGroup - 1]
-        identity = { city, name: city + ' ' + identities[i % identities.length] + ' ' + (i + 1) }
+        identity = { city, name: `${city} ${identities[i % identities.length]} ${['County','Town','Athletic','United'][Math.floor(i / 16)%4]}` }
       }
       const club: ProClub = { id, associationId: league.associationId, tier, feederGroup,
         homeRegion: feederGroup ?? (fourthGroups

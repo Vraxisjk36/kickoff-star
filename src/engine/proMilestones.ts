@@ -9,7 +9,7 @@ export interface ProMilestone {
   id:string;kind:'competition'|'transfer'|'ceremony'
   eyebrow:string;title:string;description:string;detail:string
 }
-const awardCeremony=(season:ProSeasonRecord,pro:ProCareerState):ProMilestone=>({
+const awardCeremony=(season:ProSeasonRecord):ProMilestone=>({
   id:`awards:${season.season}`,kind:'ceremony',
   eyebrow:`SEASON ${season.season} · AWARDS NIGHT`,title:'THE FOOTBALL HONOURS',
   description:`The season has ended. ${season.clubName} finished ${season.leaguePosition || 'unranked'} of ${season.clubs}. Here are this year's honours: ${worldPlayerAwards(season).map(award=>`${award.title}: ${award.recipient}`).join(' · ')}.`,
@@ -19,7 +19,7 @@ export function nextProMilestone(state:ProCareerState,cup?:ProFixture|null):ProM
   const seen=new Set(state.seenMilestones??[])
   const previous=state.seasonRecords?.find(r=>r.season===state.season-1)
   if(previous && state.week===1){
-    const candidate=awardCeremony(previous,state)
+    const candidate=awardCeremony(previous)
     if(!seen.has(candidate.id))return candidate
   }
   const country=state.associationId??'eng'

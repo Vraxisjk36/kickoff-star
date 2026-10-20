@@ -18,6 +18,7 @@ import type { MatchRecord } from './matchLedger'
 import { generateTeam, teamOverall } from './teams'
 import { calibrateSeniorTeam, proRatingTarget } from './proRatings'
 import type { LeagueWorld, Division } from './league'
+import { mondayFrom } from './proWeeklySchedule'
 
 const addDays = (date: string, days: number): string => new Date(Date.parse(`${date}T00:00:00Z`) + days * 86400000).toISOString().slice(0, 10)
 const monthIndex = (date: string) => Number(date.slice(0, 4)) * 12 + Number(date.slice(5, 7)) - 1
@@ -144,9 +145,10 @@ export function attachProWorld(state: ProCareerState, player: Player): ProCareer
 export function pendingProCup(state: ProCareerState): ProFixture | null {
   if (!state.backgroundWorld || !state.date || !state.clubWorldIds || state.freeAgentSinceWeek !== undefined) return null
   const clubId = state.clubWorldIds[state.world.playerTeamId]
-  const until = addDays(state.date, 7)
+  const weekStart=mondayFrom(state.date)
+  const until = addDays(weekStart, 7)
   return Object.values(state.backgroundWorld.fixtures)
-    .filter(fixture => !fixture.result && fixture.kickoffDate >= state.date! && fixture.kickoffDate < until &&
+    .filter(fixture => !fixture.result && fixture.kickoffDate >= weekStart && fixture.kickoffDate < until &&
       (fixture.homeId === clubId || fixture.awayId === clubId) && !!state.backgroundWorld!.competitions[fixture.competitionId]?.tournament)
     .sort((a, b) => a.kickoffDate.localeCompare(b.kickoffDate) || a.id.localeCompare(b.id))[0] ?? null
 }

@@ -78,7 +78,10 @@ export function renameLegacyProClubs(world:ProWorldState, protectedClubId?:strin
       const club=clubs[id]
       if(id===protectedClubId)continue
       const old=club.name
-      if(/\b\d{1,4}\b/.test(old) || /\b(?:North|South) (?:Athletic|United|City|Sporting)\b/i.test(old)){
+      const currentAliases=PRO_TOP_FLIGHT_IDENTITIES[country]??[]
+      if((tier===1 && currentAliases.length && !currentAliases.includes(old)) ||
+        /\b\d{1,4}\b/.test(old) ||
+        /\b(?:North|South) (?:Athletic|United|City|Sporting)\b/i.test(old)){
         const identity=proClubIdentity(country,index,tier)
         clubs[id]={...club,name:identity.name}
       }

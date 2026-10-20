@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useCareerStore } from '../store/careerStore'
-import { proTrialClubs, PRO_CAREER_DESTINATIONS } from '../engine/proCareer'
+import { proTrialClubs, PRO_CAREER_DESTINATIONS, seniorTrialPoints } from '../engine/proCareer'
 import { TeamCrest } from '../components/ui'
 import TrainingMiniGame, { type MiniGameKind } from '../components/TrainingMiniGame'
 import { computeCurrentAbility, toOvr } from '../engine/rating'
@@ -10,10 +10,6 @@ const WEEKS:readonly {title:string;text:string;drill:MiniGameKind;label:string}[
   {title:'THE CLOSED-DOOR FRIENDLY',text:'Six moving targets represent moments in a friendly. Pick your finish, keep your head and convert the chances.',drill:'targets',label:'Finishing and reactions'},
   {title:'FINAL ASSESSMENT',text:'The last week is an intense match-fitness test. Your rhythm and speed decide how the scouting report reads.',drill:'sprint',label:'Match fitness and intensity'},
 ]
-export function seniorTrialPoints(quality:number,ability:number):number{
-  return Math.max(0,Math.min(3,Math.round((Math.max(0,Math.min(1,quality))*.78+(ability/99)*.22)*3)))
-}
-
 export default function ProTrialScreen({ onComplete, onExitToMenu }: { onComplete: () => void; onExitToMenu: () => void }) {
   const [destination, setDestination] = useState('eng')
   const [phase,setPhase]=useState<'intro'|'drill'|'result'>('intro')

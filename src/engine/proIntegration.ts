@@ -118,7 +118,11 @@ export function syncPlayableProLeague(state: ProCareerState, world = state.backg
 /** Attach the recorded club to the living world without touching the youth save. */
 export function attachProWorld(state: ProCareerState, player: Player): ProCareerState {
   if (state.backgroundWorld) return state
-  const date = addDays('2026-08-01', (state.season - 1) * 364 + (state.week - 1) * 7)
+  // Align first-team preseason with the opening of the national fixture
+  // calendar. Continental European leagues start in August; Brazil starts
+  // in January. Week 1 is preseason, Week 5 the first league date.
+  const baseDate = (state.associationId ?? 'eng') === 'bra' ? '2026-01-03' : '2026-07-18'
+  const date = addDays(baseDate, (state.season - 1) * 364 + (state.week - 1) * 7)
   const world = createProWorld(player.id.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) + 17, date)
   const playable = state.world.divisions[1].teams
   const country = state.associationId ?? 'eng'

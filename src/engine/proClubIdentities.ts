@@ -1,3 +1,4 @@
+import type { ProWorldState } from './proWorld'
 /** Fictional football-world clubs, deliberately evocative of recognizable
  * city histories and club traditions without using protected names/crests.
  * Stable array order preserves the country's long-lived world-club IDs.
@@ -62,8 +63,7 @@ export function upgradedProClubName(name:string,country:string,rank:number,tier=
 /** Readable names for already-created clubs without replacing club IDs,
  * standings, results, contracts or historic achievements.
  */
-export function renameLegacyProClubs<T extends {clubs: Record<string,{id:string;associationId:string;name:string;tier?:number;homeCity:string}>}>(
-  world:T, protectedClubId?:string):T {
+export function renameLegacyProClubs(world:ProWorldState, protectedClubId?:string):ProWorldState {
   const clubs={...world.clubs}
   const grouped=new Map<string,string[]>()
   for(const club of Object.values(clubs)){

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useCareerStore } from '../store/careerStore'
-import { proFixture, professionalSeasonWeeks, PRO_CAREER_DESTINATIONS } from '../engine/proCareer'
+import { proFixture, PRO_CAREER_DESTINATIONS } from '../engine/proCareer'
 import { playerForMatch } from '../engine/selection'
 import type { HubTab } from '../components/navItems'
 import WeeklyHub from './WeeklyHub'

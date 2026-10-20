@@ -8,6 +8,7 @@ import Avatar from '../../components/Avatar'
 import { TeamCrest, Panel, Section, Bar } from '../../components/ui'
 import PlayerTab from './PlayerTab'
 import PeopleTab from './PeopleTab'
+import ClubTab from './ClubTab'
 import { useCareerStore } from '../../store/careerStore'
 import { useMemo, useState } from 'react'
 import ProNewsScreen from '../ProNewsScreen'
@@ -86,7 +87,7 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
       {cards('YOUR REPRESENTATION', <>{stat('Agent', getAgent(player.agentId)?.name ?? 'Unrepresented')}{stat('Coach trust', Math.round(player.coachTrust ?? 50))}</>)}
       {cards('PRO DRESSING ROOM', <div className="flex flex-col gap-2">{club.notablePlayers.map(person => <div key={person.name} className="flex justify-between text-sm text-ks-ink"><span>{person.name}</span><span className="text-ks-muted">{person.position}</span></div>)}</div>)}
     </> : tab === 'club' ? <>
-      <section className="club-hero" style={{'--club-primary':club.primaryColor,'--club-secondary':club.secondaryColor} as React.CSSProperties}><div className="club-stand"/><small>PROFESSIONAL CLUB · FIRST TEAM</small><div className="club-identity"><TeamCrest primary={club.primaryColor} secondary={club.secondaryColor} short={club.short}/><div><h2>{club.name}</h2><p>LEAGUE POSITION {table.findIndex(r => r.teamId === club.id) + 1}</p></div></div><div className="club-record"><div><span>PLAYED</span><b>{row.played}</b></div><div><span>W-D-L</span><b>{row.won}-{row.drawn}-{row.lost}</b></div><div><span>POINTS</span><b>{row.points}</b></div></div></section>
+      <ClubTab player={player} playerTeam={club} division={division} isAcademy={false} isPro />
       {pro.clubObjective && cards('BOARD EXPECTATIONS', <div>
         {stat('Objective', ({ title: 'Fight for the title', continental: 'Qualify near the top', 'top-half': 'Finish in the top half', survival: 'Avoid relegation' } as Record<string,string>)[pro.clubObjective.type])}
         {stat('Target position', `#${pro.clubObjective.targetPosition} or better`)}

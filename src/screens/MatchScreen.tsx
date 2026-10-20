@@ -121,7 +121,7 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
     }
     if (result.keyMoment) {
       setMoment(result.keyMoment)
-      setBundle(momentToDecision(player, result.keyMoment, `${result.state.minute}' · ${result.state.homeTeam.short} ${displayScore.home}-${displayScore.away} ${result.state.awayTeam.short}`))
+      setBundle(momentToDecision(player, result.keyMoment, `${result.state.minute}' · ${(player.turnedPro ? result.state.homeTeam.name : result.state.homeTeam.short)} ${displayScore.home}-${displayScore.away} ${player.turnedPro ? result.state.awayTeam.name : result.state.awayTeam.short}}`))
     }
   }
 
@@ -325,8 +325,8 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
         <GoalCelebration
           kind={celebration.kind}
           scorerName={celebration.kind === 'player-goal' || celebration.kind === 'player-assist' ? player.name : undefined}
-          homeShort={state.homeTeam.short}
-          awayShort={state.awayTeam.short}
+          homeShort={player.turnedPro ? state.homeTeam.name : state.homeTeam.short}
+          awayShort={player.turnedPro ? state.awayTeam.name : state.awayTeam.short}
           homeScore={displayScore.home}
           awayScore={displayScore.away}
           minute={celebration.minute}
@@ -338,8 +338,8 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
       )}
       {halfTimeShown && (
         <HalfTimeBreak
-          homeShort={state.homeTeam.short}
-          awayShort={state.awayTeam.short}
+          homeShort={player.turnedPro ? state.homeTeam.name : state.homeTeam.short}
+          awayShort={player.turnedPro ? state.awayTeam.name : state.awayTeam.short}
           homeScore={displayScore.home}
           awayScore={displayScore.away}
           playerRating={state.playerRating}
@@ -376,14 +376,14 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
         <div className="flex items-center justify-between gap-2 mb-1">
           <div className={`flex items-center gap-1.5 rounded-full pl-1 pr-2.5 py-1 ${playerIsHome ? 'bg-ks-gold' : 'bg-[#1c1c18]'}`}>
             <TeamCrest primary={state.homeTeam.primaryColor} secondary={state.homeTeam.secondaryColor} short={state.homeTeam.short} size="sm" />
-            <span className={`font-display tracking-wide text-xs ${playerIsHome ? 'text-ks-black' : 'text-ks-ink'}`}>{state.homeTeam.short}</span>
+            <span className={`font-display tracking-wide text-xs ${playerIsHome ? 'text-ks-black' : 'text-ks-ink'}`}>{player.turnedPro ? state.homeTeam.name : state.homeTeam.short}</span>
           </div>
           <span key={`${displayScore.home}-${displayScore.away}`} className="font-display tracking-widest text-ks-gold text-3xl animate-[scorepop_0.4s_ease-out] shrink-0">
             {displayScore.home}–{displayScore.away}
           </span>
           <div className={`flex items-center gap-1.5 rounded-full pl-2.5 pr-1 py-1 flex-row-reverse ${!playerIsHome ? 'bg-ks-gold' : 'bg-[#1c1c18]'}`}>
             <TeamCrest primary={state.awayTeam.primaryColor} secondary={state.awayTeam.secondaryColor} short={state.awayTeam.short} size="sm" />
-            <span className={`font-display tracking-wide text-xs ${!playerIsHome ? 'text-ks-black' : 'text-ks-ink'}`}>{state.awayTeam.short}</span>
+            <span className={`font-display tracking-wide text-xs ${!playerIsHome ? 'text-ks-black' : 'text-ks-ink'}`}>{player.turnedPro ? state.awayTeam.name : state.awayTeam.short}</span>
           </div>
         </div>
         <div className="broadcast-phase"><span className="broadcast-live-dot"/> LIVE MATCH · {playerIsHome ? state.homeTeam.name : state.awayTeam.name} <strong>{state.onPitch ? "ON THE PITCH" : state.substituted ? "SUBSTITUTED" : "BENCH"}</strong></div>
@@ -405,7 +405,7 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
       </div>
 
       <div className="relative z-10 px-5 max-w-md mx-auto w-full mb-2">
-        <LiveMatchPitch momentum={state.momentum} homeColor={state.homeTeam.primaryColor} awayColor={state.awayTeam.primaryColor} homeShort={state.homeTeam.short} awayShort={state.awayTeam.short} playerIsHome={playerIsHome} player={player} playerOnPitch={state.onPitch} minute={displayMinute} action={pitchAction} scoringSide={lastVisibleEvent?.scoringSide} focusPlayer={showMoment || executing !== null} />
+        <LiveMatchPitch momentum={state.momentum} homeColor={state.homeTeam.primaryColor} awayColor={state.awayTeam.primaryColor} homeShort={player.turnedPro ? state.homeTeam.name : state.homeTeam.short} awayShort={player.turnedPro ? state.awayTeam.name : state.awayTeam.short} playerIsHome={playerIsHome} player={player} playerOnPitch={state.onPitch} minute={displayMinute} action={pitchAction} scoringSide={lastVisibleEvent?.scoringSide} focusPlayer={showMoment || executing !== null} />
       </div>
 
       <div ref={feedRef} className="match-feed relative z-10 flex-1 min-h-0 overflow-y-auto px-5 max-w-md mx-auto w-full" style={{ maxHeight: '30dvh' }}>
@@ -526,9 +526,9 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
           <div className="fulltime-stage">
             <div className="ft-label">FULL TIME</div>
             <div className="ft-scoreline">
-              <div><TeamCrest primary={state.homeTeam.primaryColor} secondary={state.homeTeam.secondaryColor} short={state.homeTeam.short} size="sm" /><span>{state.homeTeam.short}</span></div>
+              <div><TeamCrest primary={state.homeTeam.primaryColor} secondary={state.homeTeam.secondaryColor} short={state.homeTeam.short} size="sm" /><span>{player.turnedPro ? state.homeTeam.name : state.homeTeam.short}</span></div>
               <b><span>{state.homeScore}</span><i>—</i><span>{state.awayScore}</span></b>
-              <div><TeamCrest primary={state.awayTeam.primaryColor} secondary={state.awayTeam.secondaryColor} short={state.awayTeam.short} size="sm" /><span>{state.awayTeam.short}</span></div>
+              <div><TeamCrest primary={state.awayTeam.primaryColor} secondary={state.awayTeam.secondaryColor} short={state.awayTeam.short} size="sm" /><span>{player.turnedPro ? state.awayTeam.name : state.awayTeam.short}</span></div>
             </div>
             <div className="ft-player-line">
               <div><small>RATING</small><strong>{state.playerRating.toFixed(1)}</strong></div>

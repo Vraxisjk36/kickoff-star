@@ -660,7 +660,7 @@ for(const country of PRO_INTERACTIVE_COUNTRIES){
 }
 const recordSeason={season:1,associationId:'eng',clubName:'West London Blues',
   competitionId:'top-eng',leaguePosition:2,clubs:20,
-  appearances:38,goals:70,assists:21,leagueGoals:70,leagueAssists:21,leagueAppearances:38,leagueChampion:false}
+  appearances:38,goals:70,assists:25,leagueGoals:70,leagueAssists:25,leagueAppearances:38,leagueChampion:false}
 const broken=proLeagueRecords('eng','top-eng',[recordSeason])
 assert.ok(broken.some(rec=>rec.kind==='season-goals'&&rec.broken))
 assert.ok(broken.some(rec=>rec.kind==='season-assists'&&rec.broken))

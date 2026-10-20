@@ -12,9 +12,11 @@ export default function ProSeasonCeremony({pro,clubName,kind,onContinue}:{
   const competitionName=pro.activeCompetitionId ? proCompetitionName(pro.activeCompetitionId) :
     `${PRO_CAREER_DESTINATIONS.find(c=>c.id===association)?.name??'Professional'} First Division`
   const format=rules&&rules.topFlightClubs===size ? rules : null
-  const continental=association==='eng' ? 'The highest finishers compete for continental places; finishing fifth or sixth may offer a secondary route.'
-    : association==='rsa'?'The highest eligible South African clubs can enter continental club competitions.'
-      :'High finishes may qualify your club for continental tournaments, depending on federation allocations and domestic cup winners.'
+  const continental=association==='eng'
+    ? 'Places 1–4 qualify for the Champions tournament. Fifth enters the secondary continental tier; domestic cup winners receive additional berths, passed down to the highest eligible league clubs.'
+    : association==='rsa'
+    ? 'Places 1–2 enter the African Champions tournament. Third place and the national cup winner are eligible for the secondary continental tournament (with pass-down if already qualified).'
+    : 'The world simulation allocates continental berths using league standing, association strength, cup wins and federation availability. Exact places may vary by country and season.'
   return <div className="min-h-screen bg-[#070a09] text-ks-ink px-5 py-8">
     <div className="max-w-md mx-auto">
       <div className="text-ks-gold tracking-[.22em] uppercase text-xs">KICKOFF STAR · SEASON {pro.season}</div>

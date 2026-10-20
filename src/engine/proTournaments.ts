@@ -88,9 +88,18 @@ function findDate(world: ProWorldState, comp: ProCompetition, a: string, b: stri
   // allow a weekend or one-day rest rather than deadlocking the save.
   for (let pass = 0; pass < 3; pass++) for (let shift = 0; shift < 84; shift++) {
     const date = addDays(desired, shift)
+    const dayOfWeek = new Date(`${date}T00:00:00Z`).getUTCDay()
+    const isFinal = comp.tournament?.stage === 'knockout' &&
+      comp.tournament.remainingIds?.length === 2
+    // Finals become genuine Saturday fixtures in the underlying world, not
+    // just Saturday text in the UI. European ties favour Tue–Thu, but may
+    // use other days when a clash or minimum rest prevents an ordinary date.
+    if (isFinal && dayOfWeek !== 6) continue
+    if (pass === 0 && !isFinal && comp.kind === 'continental-club' &&
+      ![2, 3, 4].includes(dayOfWeek)) continue
     if (occupied(world, a, date) || occupied(world, b, date)) continue
     if (pass === 0 && isClubFixture(comp) && (shortRest(world, a, date) || shortRest(world, b, date) ||
-      [0, 6].includes(new Date(`${date}T00:00:00Z`).getUTCDay()))) continue
+      (!isFinal && [0, 6].includes(dayOfWeek)))) continue
     if (pass === 1 && isClubFixture(comp) && (shortRest(world, a, date) || shortRest(world, b, date))) continue
     return date
   }

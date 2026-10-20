@@ -7,7 +7,7 @@ import { getAgent } from '../../engine/agents'
 import Avatar from '../../components/Avatar'
 import { TeamCrest, Panel } from '../../components/ui'
 import { useCareerStore } from '../../store/careerStore'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import ProNewsScreen from '../ProNewsScreen'
 import ProWorldPanel from '../ProWorldPanel'
 import { registrationOpen } from '../../engine/proMovement'
@@ -40,7 +40,8 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
   const championshipCycle = internationalCycle(pro.season)
   const championship = player.nationality && pro.international
     ? internationalProgress(player.nationality, championshipCycle, pro.international.fixtures) : null
-  const nationRankings = seniorWorldNationRankings(pro.season,pro.week,pro.international?.fixtures ?? [])
+  const nationRankings = useMemo(() => seniorWorldNationRankings(pro.season,pro.week,pro.international?.fixtures ?? []),
+    [pro.season, pro.week, pro.international?.fixtures])
   const nationRank = nationRankings.find(row=>row.nationId===player.nationality)
   const regionalNations = player.nationality ? continentalNationsProgress(player.nationality,
     pro.season,pro.week,pro.international?.fixtures ?? []) : null

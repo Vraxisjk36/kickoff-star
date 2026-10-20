@@ -133,7 +133,7 @@ export function createProCareer(clubName: string, prestige = 4, associationId = 
  */
 export function proRound(week: number, teamCount = 20, scheduledRounds?: number): number | null {
   if (teamCount === 10 && (!scheduledRounds || scheduledRounds <= 18))
-    return week >= 5 && week <= 39 && (week - 5) % 2 === 0 ? (week - 5) / 2 + 1 : null
+    return week >= 4 && week <= 38 && (week - 4) % 2 === 0 ? (week - 4) / 2 + 1 : null
   const rounds = scheduledRounds ?? (teamCount === 12 ? 38 : (teamCount - 1) * 2)
   const weeks = rounds > LEAGUE_WEEKS.length ? LONG_LEAGUE_WEEKS : LEAGUE_WEEKS
   const index = weeks.indexOf(week)

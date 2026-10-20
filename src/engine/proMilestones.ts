@@ -3,16 +3,18 @@ import type { ProFixture } from './proWorld'
 import { proCompetitionName } from './proTournaments'
 import { getNation } from './nations'
 import { registrationOpen } from './proMovement'
-import { worldPlayerAwards } from './proHonours'
+import { worldPlayerAwards, type PlayerAward } from './proHonours'
 
 export interface ProMilestone {
   id:string;kind:'competition'|'transfer'|'ceremony'
   eyebrow:string;title:string;description:string;detail:string
+  winners?:PlayerAward[]
 }
 const awardCeremony=(season:ProSeasonRecord):ProMilestone=>({
   id:`awards:${season.season}`,kind:'ceremony',
   eyebrow:`SEASON ${season.season} · AWARDS NIGHT`,title:'THE FOOTBALL HONOURS',
-  description:`The season has ended. ${season.clubName} finished ${season.leaguePosition || 'unranked'} of ${season.clubs}. Here are this year's honours: ${worldPlayerAwards(season).map(award=>`${award.title}: ${award.recipient}`).join(' · ')}.`,
+  winners:worldPlayerAwards(season),
+  description:`The season has ended. ${season.clubName} finished ${season.leaguePosition || 'unranked'} of ${season.clubs}. The game's world and league football prizes will now be presented.`,
   detail:`Your campaign: ${season.appearances} appearances · ${season.goals} goals · ${season.assists} assists. Trophies are based on league achievements and deterministic fictional rival contenders; none is automatically given to the player.`,
 })
 export function nextProMilestone(state:ProCareerState,cup?:ProFixture|null):ProMilestone|null {

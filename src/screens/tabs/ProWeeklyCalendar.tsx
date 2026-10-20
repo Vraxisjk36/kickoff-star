@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ProCareerState } from '../../engine/proCareer'
 import { proWeekSchedule, PRO_WEEKDAYS } from '../../engine/proWeeklySchedule'
-import { professionalSeasonWeeks } from '../../engine/proCareer'
+import { professionalSeasonWeeks, proRound } from '../../engine/proCareer'
 interface Props {
   pro: ProCareerState
   opponent?: string
@@ -23,6 +23,18 @@ export default function ProWeeklyCalendar({pro,opponent,matchKind='league',onTra
   const baseDate=starts-(pro.week-1)*7*86400000
   const weeksOnView=Array.from({length:weeks},(_,n)=>n+1)
     .filter(week=>view==='season'||new Date(baseDate+(week-1)*7*86400000).getUTCMonth()===actualMonth)
+  const division=pro.world.divisions[1]
+  const maxRounds=Math.max(0,...division.fixtures.map(f=>f.week))
+  const nextLeagueMatch=(week:number)=>{
+    const round=proRound(week,division.teams.length,maxRounds)
+    if(round===null)return null
+    const fixture=division.fixtures.find(f=>f.week===round&&
+      (f.homeTeamId===pro.world.playerTeamId||f.awayTeamId===pro.world.playerTeamId))
+    if(!fixture)return null
+    const home=fixture.homeTeamId===pro.world.playerTeamId
+    const opponentId=home?fixture.awayTeamId:fixture.homeTeamId
+    return {home,name:division.teams.find(t=>t.id===opponentId)?.name??'Opponent'}
+  }
   return <div className="rounded-xl border border-ks-gold/30 overflow-hidden bg-[#101510]">
     <div className="px-4 py-3 flex items-center justify-between gap-2 bg-gradient-to-r from-[#1d210f] to-[#101510]">
       <div><div className="font-display text-xs tracking-widest text-ks-gold">YOUR FOOTBALL CALENDAR</div>
@@ -50,7 +62,9 @@ export default function ProWeeklyCalendar({pro,opponent,matchKind='league',onTra
     </> : <div className="max-h-60 overflow-y-auto p-3 grid grid-cols-2 gap-2">
       {weeksOnView.map(week=><div key={week} className={`rounded-lg border p-2 ${week===pro.week?'border-ks-gold bg-ks-gold/10':'border-ks-border/60'}`}>
         <span className="text-xs text-ks-ink">{formatWeek(week)}</span>
-        <div className="text-[10px] text-ks-muted mt-1">{new Date(baseDate+(week-1)*7*86400000).toLocaleDateString('en-GB',{month:'short',timeZone:'UTC'})} · Team training and fixtures</div>
+        <div className="text-[10px] text-ks-muted mt-1">{new Date(baseDate+(week-1)*7*86400000).toLocaleDateString('en-GB',{month:'short',timeZone:'UTC'})}</div>
+        {nextLeagueMatch(week) ? <div className="text-[10px] text-ks-gold mt-1">SAT · {nextLeagueMatch(week)!.home?'HOME':'AWAY'} · {nextLeagueMatch(week)!.name}</div>
+          : <div className="text-[10px] text-ks-muted mt-1">Training · Recovery</div>}
       </div>)}
       </div>}
   </div>

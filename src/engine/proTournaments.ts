@@ -94,7 +94,10 @@ function findDate(world: ProWorldState, comp: ProCompetition, a: string, b: stri
     // Finals become genuine Saturday fixtures in the underlying world, not
     // just Saturday text in the UI. European ties favour Tue–Thu, but may
     // use other days when a clash or minimum rest prevents an ordinary date.
-    if (isFinal && dayOfWeek !== 6) continue
+    // Saturday is the preferred showpiece slot; if clubs have no free
+    // Saturday inside the scheduling horizon, use the final conflict-safe
+    // fallback rather than deadlocking 100 interconnected league calendars.
+    if (isFinal && dayOfWeek !== 6 && pass < 2) continue
     if (pass === 0 && !isFinal && comp.kind === 'continental-club' &&
       ![2, 3, 4].includes(dayOfWeek)) continue
     if (occupied(world, a, date) || occupied(world, b, date)) continue

@@ -550,7 +550,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const matchDay=proMatchDay(pro)
     if (!proTrainingAvailable(day,matchDay) || (pro.trainedDays??[]).includes(day) ||
         player.injury?.weeksRemaining || pro.retired ||
-        player.fitness.stamina < energySpent) return
+        player.fitness.stamina < 12) return
     const trustDelta=outcome.grade==='A'?2:outcome.grade==='B'?1:0
     const updated={...player,
       proCareer:{...pro,trainedWeek:pro.week,trainedDays:[...(pro.trainedDays??[]),day]},

@@ -22,7 +22,7 @@ import type { ArcVerdict } from '../engine/storylines'
 import { itemById, ageEquipment, monthlyAllowance, allowanceDue, rewardForStreak, shopFor, availableJobs, canWorkThisWeek, weeklyLivingCost, energyGainFromPct, type OwnedEquipment } from '../engine/economy'
 import { netWage, commissionOn } from '../engine/agents'
 import { hasSundayContract, openSundayContractWindow } from '../engine/sundayContracts'
-import { generateTeam } from '../engine/teams'
+import { generateTeam, teamOverall } from '../engine/teams'
 import { simulateSundayThrough } from '../engine/sundayFootball'
 import { recordLeagueGoals } from '../engine/leagueScorers'
 import { currentPerformance, representativeEvidence } from '../engine/youthOpportunities'
@@ -714,10 +714,13 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const wage = 350 + prestige * 175 + player.proTrial.points * 45
     const terms = { weeklyWage: wage, years: 2, appearanceFee: Math.round(wage * .08), goalBonus: Math.round(wage * .12), signingBonus: wage * 2 }
     const graduate = prepareProGraduate(player)
-    setState({ player: { ...graduate, proTrial: undefined, trialWeekCompleted: 3, squadRole: player.proTrial.points >= 6 ? 'starting-xi' : 'bench', squad: generateSquad(prestige),
+    const professional = createProCareer(clubName, prestige, associationId)
+    const ownTeam = professional.world.divisions[1].teams.find(team => team.id === professional.world.playerTeamId)!
+    const squadPrestige = Math.max(5,Math.min(9,Math.round(teamOverall(ownTeam)/10)))
+    setState({ player: { ...graduate, proTrial: undefined, trialWeekCompleted: 3, squadRole: player.proTrial.points >= 6 ? 'starting-xi' : 'bench', squad: generateSquad(squadPrestige),
       careerClock: { ...player.careerClock, ageYears: 18, phase: 'academy' }, agentId: player.agentId ?? 'independent',
       contract: { clubName, terms, signedWeek: 0, expiresWeek: 88 }, turnedPro: { clubName, weekSigned: 0, countryId: associationId },
-      proCareer: createProCareer(clubName, prestige, associationId), money: (player.money ?? 0) + terms.signingBonus } })
+      proCareer: { ...professional, ratingBalanceVersion: 1 }, money: (player.money ?? 0) + terms.signingBonus } })
     void getState().saveCurrent()
   },
 

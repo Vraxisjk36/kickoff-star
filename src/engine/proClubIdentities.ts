@@ -58,3 +58,31 @@ export function upgradedProClubName(name:string,country:string,rank:number,tier=
   const anonymous=/\b\d{1,3}\b|(?:North|South) (?:Athletic|United|City|Sporting)|\b(?:Rovers|Albion|Wanderers|Olympic|Union) \d+$/i.test(name)
   return anonymous ? proClubIdentity(country,rank,tier).name : name
 }
+
+/** Readable names for already-created clubs without replacing club IDs,
+ * standings, results, contracts or historic achievements.
+ */
+export function renameLegacyProClubs<T extends {clubs: Record<string,{id:string;associationId:string;name:string;tier?:number;homeCity:string}>}>(
+  world:T, protectedClubId?:string):T {
+  const clubs={...world.clubs}
+  const grouped=new Map<string,string[]>()
+  for(const club of Object.values(clubs)){
+    const key=`${club.associationId}:${club.tier??1}`
+    grouped.set(key,[...(grouped.get(key)??[]),club.id])
+  }
+  for(const [key,ids] of grouped){
+    const [country,tierStr]=key.split(':')
+    const tier=Number(tierStr)
+    ids.sort()
+    for(const [index,id] of ids.entries()){
+      const club=clubs[id]
+      if(id===protectedClubId)continue
+      const old=club.name
+      if(/\b\d{1,4}\b/.test(old) || /\b(?:North|South) (?:Athletic|United|City|Sporting)\b/i.test(old)){
+        const identity=proClubIdentity(country,index,tier)
+        clubs[id]={...club,name:identity.name}
+      }
+    }
+  }
+  return {...world,clubs}
+}

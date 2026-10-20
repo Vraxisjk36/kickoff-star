@@ -151,6 +151,7 @@ interface CareerStore {
   acknowledgeProSigning: () => void
   advanceProCareer: () => void
   trainProCareer: () => void
+  acknowledgeProMilestone: (id:string) => void
   acknowledgeProSeasonCeremony: (kind:'preseason'|'kickoff') => void
   completeProPreseasonFriendly: (rating:number, energy:number, goals:number, assists:number) => void
   completeProTraining: (outcome: TrainingOutcome, energySpent: number, injury?: {severity: string; weeksOut: number; description: string} | null) => void
@@ -556,6 +557,13 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
         (rating>=7.5?3:rating>=6.5?1:-1))),
       matchRatings:[...player.matchRatings,rating].slice(-10),
       reputation:Math.max(0,Math.min(100,(player.reputation??20)+(goals+assists>0?1:0)))}})
+    void getState().saveCurrent()
+  },
+  acknowledgeProMilestone: (id) => {
+    const {player}=getState()
+    if(!player?.proCareer || player.proCareer.seenMilestones?.includes(id))return
+    setState({player:{...player,proCareer:{...player.proCareer,
+      seenMilestones:[...(player.proCareer.seenMilestones??[]),id].slice(-180)}}})
     void getState().saveCurrent()
   },
   acknowledgeProSeasonCeremony: (kind) => {

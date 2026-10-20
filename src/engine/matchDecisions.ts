@@ -34,7 +34,14 @@ function attrValue(player: Player, attr: AnyAttribute): number {
 // heavily that players could repeatedly make a good read and still feel doomed.
 // Attributes still matter strongly, but a football-correct choice now starts from
 // a healthier baseline. Half-chances remain meaningfully harder than clear looks.
-export function optionChance(player: Player, o: MomentOption, tier: string): number {
+export /** Senior football is harder when a youth graduate faces elite opposition.
+ * This modifier affects ONLY senior choices; original school odds are intact.
+ */
+export function professionalDecisionModifier(playerOvr:number,opponentOvr:number):number{
+  const gap=opponentOvr-playerOvr
+  return gap>0?1-Math.min(.32,gap*.009):1+Math.min(.06,-gap*.002)
+}
+function optionChance(player: Player, o: MomentOption, tier: string): number {
   const avg = o.keyAttributes.length ? o.keyAttributes.reduce((s, a) => s + attrValue(player, a), 0) / o.keyAttributes.length : 10
   const attrMod = 0.68 + (avg / 20) * 0.42
   const risk = 1 - o.baseCeiling
@@ -58,9 +65,8 @@ export function optionChance(player: Player, o: MomentOption, tier: string): num
   // 1–20 attributes convert to player OVR and the opponent's adult-level OVR
   // affects the chance of executing difficult decisions. No automatic wins:
   // even 90-rated opponents can occasionally be beaten by a 60-rated player.
-  const gap=player.turnedPro&&player.matchOpponentOverall !== undefined
-    ? player.matchOpponentOverall-toOvr(computeCurrentAbility(player)) : 0
-  const seniorModifier=gap>0?1-Math.min(.32,gap*.009):1+Math.min(.06,-gap*.002)
+  const seniorModifier=player.turnedPro&&player.matchOpponentOverall !== undefined
+    ? professionalDecisionModifier(toOvr(computeCurrentAbility(player)),player.matchOpponentOverall) : 1
   return clamp(normalChance*seniorModifier,0.05,0.96)
 }
 

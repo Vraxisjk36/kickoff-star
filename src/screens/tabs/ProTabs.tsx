@@ -5,7 +5,9 @@ import { sortStandings } from '../../engine/league'
 import { toOvr, computeCurrentAbility } from '../../engine/rating'
 import { getAgent } from '../../engine/agents'
 import Avatar from '../../components/Avatar'
-import { TeamCrest, Panel } from '../../components/ui'
+import { TeamCrest, Panel, Section, Bar } from '../../components/ui'
+import PlayerTab from './PlayerTab'
+import PeopleTab from './PeopleTab'
 import { useCareerStore } from '../../store/careerStore'
 import { useMemo, useState } from 'react'
 import ProNewsScreen from '../ProNewsScreen'
@@ -56,6 +58,60 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
     {tab === 'home' ? <>
       {header}
       {cards('NEXT UP · YOUR WEEK', <div><p className="text-ks-ink text-lg font-display">{fixture && pro.resolvedWeek !== pro.week ? `${fixture.homeTeamId === club.id ? 'HOME' : 'AWAY'} · ${opponent?.name}` : 'Training & recovery'}</p><p className="text-ks-muted text-xs mt-2">{fixture ? (pro.associationId ?? 'eng').toUpperCase() + ' League · matchweek ' + proRound(pro.week, division.teams.length, Math.max(0, ...division.fixtures.map(f => f.week))) : nextOpponent ? `Next fixture: ${nextOpponent.name}` : 'The next league calendar is being prepared.'}</p></div>)}
+      <div className="rounded-xl border border-ks-gold/25 bg-[#122018] px-4 py-3 flex items-center justify-between gap-3">
+        <div><span className="font-display tracking-widest text-[10px] text-ks-gold">PROFESSIONAL PATHWAY</span>
+          <p className="text-sm text-ks-ink mt-1">First team → International football → Hall of Fame</p></div>
+        <span className="text-ks-gold text-xl">➜</span>
+      </div>
+      <button onClick={() => onGoTo('player')} className="w-full text-left rounded-xl border border-ks-border bg-[#101410] px-4 py-3 flex justify-between items-center">
+        <span><span className="font-display text-[11px] text-ks-muted">PLAYER DOSSIER</span><span className="block text-ks-ink text-sm mt-1">Development, match form & career record</span></span>
+        <span className="text-ks-gold text-xl">→</span>
+      </button>
+      {cards('TEAM SELECTION', <div className="space-y-2">
+        <div className="flex justify-between gap-2"><strong className="text-sm text-green-500">{player.squadRole === 'starting-xi' ? 'STARTING XI' : player.squadRole === 'bench' ? 'MATCHDAY SQUAD' : 'FIRST TEAM'}</strong><span className="text-xs text-ks-muted">Coach trust {Math.round(player.coachTrust ?? 50)}</span></div>
+        <Bar value={Math.max(0,Math.min(100,(player.coachTrust ?? 50)))} max={100}/>
+        <p className="text-xs text-ks-muted">Your performances and training affect your place in the manager's plans.</p>
+      </div>)}
+      <button onClick={() => onGoTo('fixtures')} className="w-full text-left rounded-xl border border-ks-gold/25 bg-[#171810] px-4 py-4 flex justify-between gap-3 items-center">
+        <span><span className="font-display text-xs text-ks-gold">INTERNATIONAL FOOTBALL</span><span className="block text-ks-ink text-sm mt-1">{getNation(player.nationality).name} · {pro.international?.caps ?? 0} caps · {pro.international?.goals ?? 0} goals</span></span>
+        <span className="text-ks-gold text-xl">→</span>
+      </button>
+      {cards('WEEKLY TRAINING', <div><p className="text-ks-muted text-xs mb-3">One team session per week. Costs 12 energy and improves your standing with the coach.</p><button disabled={pro.trainedWeek === pro.week || player.fitness.stamina < 12} onClick={train} className="rounded-lg bg-ks-gold px-4 py-2 text-ks-black font-display text-xs disabled:opacity-35">{pro.trainedWeek === pro.week ? 'SESSION COMPLETE' : 'TRAIN WITH THE SQUAD →'}</button></div>)}
+      {cards('THE GAZETTE · PRO EDITION', <div><p className="font-display text-ks-ink text-lg">{pro.news?.at(-1)?.headline ?? 'The season opens'}</p><p className="text-ks-muted text-xs mt-2">Club, country and world stories from recorded events.</p><button className="text-ks-gold text-xs mt-4" onClick={() => setNewsOpen(true)}>BROWSE THE GAZETTE →</button></div>)}
+      <div className="grid grid-cols-2 gap-2"><button className="rounded-xl border border-ks-border p-4 text-left text-ks-gold" onClick={() => onGoTo('fixtures')}>LEAGUE <span className="block text-xs text-ks-muted mt-1">Table & fixtures →</span></button><button className="rounded-xl border border-ks-border p-4 text-left text-ks-gold" onClick={() => onGoTo('club')}>CONTRACT <span className="block text-xs text-ks-muted mt-1">Your first team deal →</span></button></div>
+    </> : tab === 'player' || tab === 'scouts' ? <>
+      <PlayerTab player={player} onOpenOffers={() => onGoTo('club')} />
+    </> : tab === 'people' ? <>
+      <PeopleTab player={player} />
+      {cards('YOUR REPRESENTATION', <>{stat('Agent', getAgent(player.agentId)?.name ?? 'Unrepresented')}{stat('Coach trust', Math.round(player.coachTrust ?? 50))}</>)}
+      {cards('PRO DRESSING ROOM', <div className="flex flex-col gap-2">{club.notablePlayers.map(person => <div key={person.name} className="flex justify-between text-sm text-ks-ink"><span>{person.name}</span><span className="text-ks-muted">{person.position}</span></div>)}</div>)}
+    </> : tab === 'club' ? <>
+      <section className="club-hero" style={{'--club-primary':club.primaryColor,'--club-secondary':club.secondaryColor} as React.CSSProperties}><div className="club-stand"/><small>PROFESSIONAL CLUB · FIRST TEAM</small><div className="club-identity"><TeamCrest primary={club.primaryColor} secondary={club.secondaryColor} short={club.short}/><div><h2>{club.name}</h2><p>LEAGUE POSITION {table.findIndex(r => r.teamId === club.id) + 1}</p></div></div><div className="club-record"><div><span>PLAYED</span><b>{row.played}</b></div><div><span>W-D-L</span><b>{row.won}-{row.drawn}-{row.lost}</b></div><div><span>POINTS</span><b>{row.points}</b></div></div></section>
+      {pro.clubObjective && cards('BOARD EXPECTATIONS', <div>
+        {stat('Objective', ({ title: 'Fight for the title', continental: 'Qualify near the top', 'top-half': 'Finish in the top half', survival: 'Avoid relegation' } as Record<string,string>)[pro.clubObjective.type])}
+        {stat('Target position', `#${pro.clubObjective.targetPosition} or better`)}
+        {stat('Board confidence', `${pro.clubObjective.boardConfidence}/100`)}
+        {stat('Current standing', `#${table.findIndex(item => item.teamId === club.id) + 1}`)}
+        <p className="text-xs text-ks-muted mt-2">Expectations reset when you join a new club or your division changes.</p>
+      </div>)}
+      {pro.freeAgentSinceWeek !== undefined && cards('FREE AGENT', <div><p className="text-ks-gold font-display text-lg">YOUR CONTRACT HAS ENDED</p><p className="text-ks-muted text-xs mt-2">You are unattached. You will not play club matches or receive wages until you sign for a new team. Ask your agent for opportunities from the ten supported countries.</p>{stat('Unattached since', `Week ${pro.freeAgentSinceWeek}`)}</div>)}
+      {cards('YOUR CONTRACT', <>{stat('Country', (pro.associationId ?? 'eng').toUpperCase())}{stat('Division', pro.activeCompetitionId ? proCompetitionName(pro.activeCompetitionId) : 'Professional League')}{stat('Contract status', pro.freeAgentSinceWeek !== undefined ? 'Free agent' : player.contract?.clubName ?? club.name)}{stat('Gross weekly wage', `${moneySymbol}${(player.contract?.terms.weeklyWage ?? 0).toLocaleString()}`)}{stat('Appearance fee', `${moneySymbol}${player.contract?.terms.appearanceFee ?? 0}`)}{stat('Goal bonus', `${moneySymbol}${player.contract?.terms.goalBonus ?? 0}`)}{stat('Contract end', `Week ${player.contract?.expiresWeek ?? '—'}`)}{stat('Squad role', player.squadRole ?? 'First team squad')}{pro.loan && <p className="text-ks-gold text-xs mt-3">On loan at {club.name}. Your parent club retains your contract until the end of the season.</p>}</>)}
+      {player.contract && pro.freeAgentSinceWeek === undefined && cards('CONTRACT RENEWAL', <div>
+        {stat('Weeks remaining', Math.max(0, player.contract.expiresWeek - (player.totalWeeksElapsed ?? 0)))}
+        {stat('Board confidence', pro.clubObjective?.boardConfidence ?? 60)}
+        <p className="text-xs text-ks-muted mt-2">Extensions are considered in the final 26 weeks of a deal. Club finances and board confidence determine the offer.</p>
+        <button className="mt-3 text-ks-gold text-xs disabled:opacity-35"
+          disabled={player.contract.expiresWeek - (player.totalWeeksElapsed ?? 0) > 26 ||
+            player.contract.expiresWeek <= (player.totalWeeksElapsed ?? 0) ||
+            (pro.clubObjective?.boardConfidence ?? 60) < 30 || !!pro.loan ||
+            pro.lastRenewalWeek === player.totalWeeksElapsed}
+          onClick={() => requestRenewal()}>REQUEST TWO-YEAR EXTENSION →</button>
+      </div>)}
+      {cards('TRANSFER DESK', <div><p className="text-ks-muted text-xs mb-3">Talks take two weeks. Club budgets and the registration window control which moves can happen.</p>{stat('Registration', pro.freeAgentSinceWeek !== undefined ? 'Free-agent signing' : windowOpen ? 'Open' : 'Closed')}
+        {pro.talks ? <div className="mt-3 text-ks-ink text-sm"><b>{offerName(pro.talks.offer.worldClubId, pro.talks.offer.teamId)}</b><p className="text-ks-muted text-xs mt-1">{moneySymbol}{pro.talks.offer.weeklyWage.toLocaleString()}/week · {pro.talks.readyWeek > player.totalWeeksElapsed ? `${pro.talks.readyWeek - player.totalWeeksElapsed} week(s) to terms` : 'terms ready to sign'}</p><div className="flex gap-3 mt-3"><button disabled={pro.talks.readyWeek > player.totalWeeksElapsed} onClick={() => signMove()} className="text-ks-gold text-xs disabled:opacity-35">SIGN DEAL →</button><button disabled={pro.talks.readyWeek > player.totalWeeksElapsed || pro.talks.countered} onClick={counterTalks} className="text-ks-muted text-xs disabled:opacity-35">ASK FOR 5% MORE</button></div></div> : <><button disabled={!windowOpen || !!pro.loan} onClick={requestOffers} className="text-ks-gold text-xs mt-3 disabled:opacity-35">ASK AGENT FOR OFFERS →</button>{pro.marketOffers?.map(offer => <button key={offer.teamId} onClick={() => openTalks(offer.teamId)} className="block w-full text-left border-t border-ks-border/50 py-3 text-xs text-ks-ink">{offerName(offer.worldClubId, offer.teamId)}<span className="float-right text-ks-gold">{moneySymbol}{offer.weeklyWage.toLocaleString()}/wk →</span></button>)}</>}
+        {windowOpen && pro.freeAgentSinceWeek === undefined && !pro.loan && player.squadRole !== 'starting-xi' && <div className="border-t border-ks-border mt-4 pt-3"><p className="text-ks-muted text-xs">Need senior minutes? A temporary loan keeps your parent contract.</p>{division.teams.filter(team => team.id !== club.id).slice(0, 2).map(team => <button key={team.id} onClick={() => acceptLoan(team.id)} className="block text-ks-gold text-xs mt-2">REQUEST LOAN · {team.name} →</button>)}</div>}
+      </div>)}
+    </> : tab === 'fixtures' || tab === 'table' ? <>
       {cards('SENIOR NATIONAL TEAM', <div>
         {stat('Nation', getNation(player.nationality).name)}
         {stat('International caps', pro.international?.caps ?? 0)}
@@ -98,43 +154,7 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
         {pro.international?.pending ? <p className="text-ks-gold text-xs mt-2">CALLED UP · {pro.international.pending.competition.toUpperCase()} AGAINST {getNation(pro.international.pending.opponentId).name.toUpperCase()} · PLAY YOUR INTERNATIONAL MATCH</p>
           : <p className="text-ks-muted text-xs mt-2">Senior selection depends on your current performances, reputation and previous international experience.</p>}
       </div>)}
-      {cards('WEEKLY TRAINING', <div><p className="text-ks-muted text-xs mb-3">One team session per week. Costs 12 energy and improves your standing with the coach.</p><button disabled={pro.trainedWeek === pro.week || player.fitness.stamina < 12} onClick={train} className="rounded-lg bg-ks-gold px-4 py-2 text-ks-black font-display text-xs disabled:opacity-35">{pro.trainedWeek === pro.week ? 'SESSION COMPLETE' : 'TRAIN WITH THE SQUAD →'}</button></div>)}
-      {cards('THE GAZETTE · PRO EDITION', <div><p className="font-display text-ks-ink text-lg">{pro.news?.at(-1)?.headline ?? 'The season opens'}</p><p className="text-ks-muted text-xs mt-2">Club, country and world stories from recorded events.</p><button className="text-ks-gold text-xs mt-4" onClick={() => setNewsOpen(true)}>BROWSE THE GAZETTE →</button></div>)}
-      <div className="grid grid-cols-2 gap-2"><button className="rounded-xl border border-ks-border p-4 text-left text-ks-gold" onClick={() => onGoTo('fixtures')}>LEAGUE <span className="block text-xs text-ks-muted mt-1">Table & fixtures →</span></button><button className="rounded-xl border border-ks-border p-4 text-left text-ks-gold" onClick={() => onGoTo('club')}>CONTRACT <span className="block text-xs text-ks-muted mt-1">Your first team deal →</span></button></div>
-    </> : tab === 'player' || tab === 'scouts' ? <>
-      {cards('PLAYER DOSSIER', <>{stat('Position', player.position)}{stat('Age', player.careerClock.ageYears)}{stat('Overall', toOvr(computeCurrentAbility(player)))}{stat('Shirt number', pro.shirtNumber ?? '—')}{stat('Coach trust', Math.round(player.coachTrust))}{stat('Career appearances', player.career?.appearances ?? 0)}{stat('Career goals', player.career?.goals ?? 0)}{stat('Career assists', player.career?.assists ?? 0)}{stat('Latest match rating', player.matchRatings.at(-1)?.toFixed(1) ?? '—')}{stat('Injury', player.injury ? `${player.injury.weeksRemaining} weeks · ${player.injury.severity}` : 'Fit')}{stat('Suspension', player.suspensionMatches ?? 0)}</>)}
-      {cards('THE ROAD SO FAR', <p className="text-sm text-ks-muted">Your school and academy appearances, trophies and stats stay in this career. Your professional record now builds on them.</p>)}
-    </> : tab === 'people' ? <>
-      {cards('YOUR REPRESENTATION', <>{stat('Agent', getAgent(player.agentId)?.name ?? 'Unrepresented')}{stat('Coach trust', Math.round(player.coachTrust))}<p className="text-ks-muted text-xs mt-3">Your existing relationships and agent carry into the professional chapter.</p></>)}
-      {cards('DRESSING ROOM', <div className="flex flex-col gap-2">{club.notablePlayers.map(person => <div key={person.name} className="flex justify-between text-sm text-ks-ink"><span>{person.name}</span><span className="text-ks-muted">{person.position}</span></div>)}</div>)}
-      {pro.backgroundWorld && cards('MANAGER & CLUB', <>{stat('Manager', Object.values(pro.backgroundWorld.managers).find(manager => manager.clubId === pro.clubWorldIds?.[club.id])?.name ?? '—')}{stat('Home stadium', pro.backgroundWorld.stadiums[pro.backgroundWorld.clubs[pro.clubWorldIds?.[club.id] ?? '']?.stadiumId ?? '']?.name ?? '—')}{stat('Squad players', Object.values(pro.backgroundWorld.players).filter(person => person.clubId === pro.clubWorldIds?.[club.id]).length)}</>)}
-    </> : tab === 'club' ? <>
-      <section className="club-hero" style={{'--club-primary':club.primaryColor,'--club-secondary':club.secondaryColor} as React.CSSProperties}><div className="club-stand"/><small>PROFESSIONAL CLUB · FIRST TEAM</small><div className="club-identity"><TeamCrest primary={club.primaryColor} secondary={club.secondaryColor} short={club.short}/><div><h2>{club.name}</h2><p>LEAGUE POSITION {table.findIndex(r => r.teamId === club.id) + 1}</p></div></div><div className="club-record"><div><span>PLAYED</span><b>{row.played}</b></div><div><span>W-D-L</span><b>{row.won}-{row.drawn}-{row.lost}</b></div><div><span>POINTS</span><b>{row.points}</b></div></div></section>
-      {pro.clubObjective && cards('BOARD EXPECTATIONS', <div>
-        {stat('Objective', ({ title: 'Fight for the title', continental: 'Qualify near the top', 'top-half': 'Finish in the top half', survival: 'Avoid relegation' } as Record<string,string>)[pro.clubObjective.type])}
-        {stat('Target position', `#${pro.clubObjective.targetPosition} or better`)}
-        {stat('Board confidence', `${pro.clubObjective.boardConfidence}/100`)}
-        {stat('Current standing', `#${table.findIndex(item => item.teamId === club.id) + 1}`)}
-        <p className="text-xs text-ks-muted mt-2">Expectations reset when you join a new club or your division changes.</p>
-      </div>)}
-      {pro.freeAgentSinceWeek !== undefined && cards('FREE AGENT', <div><p className="text-ks-gold font-display text-lg">YOUR CONTRACT HAS ENDED</p><p className="text-ks-muted text-xs mt-2">You are unattached. You will not play club matches or receive wages until you sign for a new team. Ask your agent for opportunities from the ten supported countries.</p>{stat('Unattached since', `Week ${pro.freeAgentSinceWeek}`)}</div>)}
-      {cards('YOUR CONTRACT', <>{stat('Country', (pro.associationId ?? 'eng').toUpperCase())}{stat('Division', pro.activeCompetitionId ? proCompetitionName(pro.activeCompetitionId) : 'Professional League')}{stat('Contract status', pro.freeAgentSinceWeek !== undefined ? 'Free agent' : player.contract?.clubName ?? club.name)}{stat('Gross weekly wage', `${moneySymbol}${(player.contract?.terms.weeklyWage ?? 0).toLocaleString()}`)}{stat('Appearance fee', `${moneySymbol}${player.contract?.terms.appearanceFee ?? 0}`)}{stat('Goal bonus', `${moneySymbol}${player.contract?.terms.goalBonus ?? 0}`)}{stat('Contract end', `Week ${player.contract?.expiresWeek ?? '—'}`)}{stat('Squad role', player.squadRole ?? 'First team squad')}{pro.loan && <p className="text-ks-gold text-xs mt-3">On loan at {club.name}. Your parent club retains your contract until the end of the season.</p>}</>)}
-      {player.contract && pro.freeAgentSinceWeek === undefined && cards('CONTRACT RENEWAL', <div>
-        {stat('Weeks remaining', Math.max(0, player.contract.expiresWeek - (player.totalWeeksElapsed ?? 0)))}
-        {stat('Board confidence', pro.clubObjective?.boardConfidence ?? 60)}
-        <p className="text-xs text-ks-muted mt-2">Extensions are considered in the final 26 weeks of a deal. Club finances and board confidence determine the offer.</p>
-        <button className="mt-3 text-ks-gold text-xs disabled:opacity-35"
-          disabled={player.contract.expiresWeek - (player.totalWeeksElapsed ?? 0) > 26 ||
-            player.contract.expiresWeek <= (player.totalWeeksElapsed ?? 0) ||
-            (pro.clubObjective?.boardConfidence ?? 60) < 30 || !!pro.loan ||
-            pro.lastRenewalWeek === player.totalWeeksElapsed}
-          onClick={() => requestRenewal()}>REQUEST TWO-YEAR EXTENSION →</button>
-      </div>)}
-      {cards('TRANSFER DESK', <div><p className="text-ks-muted text-xs mb-3">Talks take two weeks. Club budgets and the registration window control which moves can happen.</p>{stat('Registration', pro.freeAgentSinceWeek !== undefined ? 'Free-agent signing' : windowOpen ? 'Open' : 'Closed')}
-        {pro.talks ? <div className="mt-3 text-ks-ink text-sm"><b>{offerName(pro.talks.offer.worldClubId, pro.talks.offer.teamId)}</b><p className="text-ks-muted text-xs mt-1">{moneySymbol}{pro.talks.offer.weeklyWage.toLocaleString()}/week · {pro.talks.readyWeek > player.totalWeeksElapsed ? `${pro.talks.readyWeek - player.totalWeeksElapsed} week(s) to terms` : 'terms ready to sign'}</p><div className="flex gap-3 mt-3"><button disabled={pro.talks.readyWeek > player.totalWeeksElapsed} onClick={() => signMove()} className="text-ks-gold text-xs disabled:opacity-35">SIGN DEAL →</button><button disabled={pro.talks.readyWeek > player.totalWeeksElapsed || pro.talks.countered} onClick={counterTalks} className="text-ks-muted text-xs disabled:opacity-35">ASK FOR 5% MORE</button></div></div> : <><button disabled={!windowOpen || !!pro.loan} onClick={requestOffers} className="text-ks-gold text-xs mt-3 disabled:opacity-35">ASK AGENT FOR OFFERS →</button>{pro.marketOffers?.map(offer => <button key={offer.teamId} onClick={() => openTalks(offer.teamId)} className="block w-full text-left border-t border-ks-border/50 py-3 text-xs text-ks-ink">{offerName(offer.worldClubId, offer.teamId)}<span className="float-right text-ks-gold">{moneySymbol}{offer.weeklyWage.toLocaleString()}/wk →</span></button>)}</>}
-        {windowOpen && pro.freeAgentSinceWeek === undefined && !pro.loan && player.squadRole !== 'starting-xi' && <div className="border-t border-ks-border mt-4 pt-3"><p className="text-ks-muted text-xs">Need senior minutes? A temporary loan keeps your parent contract.</p>{division.teams.filter(team => team.id !== club.id).slice(0, 2).map(team => <button key={team.id} onClick={() => acceptLoan(team.id)} className="block text-ks-gold text-xs mt-2">REQUEST LOAN · {team.name} →</button>)}</div>}
-      </div>)}
-    </> : tab === 'fixtures' || tab === 'table' ? <>
+
       {cards('PROFESSIONAL LEAGUE TABLE', <div>{table.map((r, i) => <div key={r.teamId} className={`grid grid-cols-[1.5rem_1fr_2rem_2rem_2rem] gap-1 py-2 text-xs border-b border-ks-border/40 ${r.teamId === club.id ? 'text-ks-gold' : 'text-ks-ink'}`}><span>{i + 1}</span><span className="truncate">{r.teamName}</span><span>{r.played}</span><span>{r.goalsFor-r.goalsAgainst > 0 ? '+' : ''}{r.goalsFor-r.goalsAgainst}</span><b>{r.points}</b></div>)}</div>)}
       {cards('YOUR FIXTURES', <div>{division.fixtures.filter(f => f.homeTeamId === club.id || f.awayTeamId === club.id).map(f => { const other = division.teams.find(t => t.id === (f.homeTeamId === club.id ? f.awayTeamId : f.homeTeamId)); return <div key={f.id} className="flex justify-between py-2 text-xs border-b border-ks-border/40 text-ks-ink"><span>ROUND {f.week} · {f.homeTeamId === club.id ? 'H' : 'A'} · {other?.name}</span><b>{f.played ? `${f.homeGoals}–${f.awayGoals}` : '—'}</b></div> })}</div>)}
       {pro.backgroundWorld && <><button className="rounded-xl border border-ks-gold/50 text-ks-gold font-display text-sm py-4" onClick={() => setWorldOpen(!worldOpen)}>{worldOpen ? 'CLOSE WORLD FOOTBALL' : 'EXPLORE WORLD FOOTBALL →'}</button>{worldOpen && <ProWorldPanel world={pro.backgroundWorld} />}</>}

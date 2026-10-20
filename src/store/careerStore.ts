@@ -635,7 +635,14 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       world.players[id] = { ...world.players[id], overall: toOvr(computeCurrentAbility(graduate)) }
     }
     const migrated = syncPlayableProLeague({ ...base, ratingBalanceVersion: 1 })
-    setState({ player: { ...graduate, proCareer: migrated } })
+    const own = migrated.world.divisions[1].teams.find(team=>team.id===migrated.world.playerTeamId)
+    const teamOvr = own ? teamOverall(own) : 72
+    const seniorSquad = (graduate.squad ?? []).map(mate=>({
+      ...mate, quality: Math.max(mate.quality,Math.min(89,teamOvr-7)),
+    }))
+    setState({ player: { ...graduate,
+      squad: seniorSquad.length ? seniorSquad : generateSquad(Math.round(teamOvr/10)),
+      proCareer: migrated } })
     void getState().saveCurrent()
   },
   requestProRenewal: () => {

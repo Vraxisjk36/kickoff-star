@@ -572,12 +572,12 @@ assert.ok(proClubIdentity('fra',0).name.includes('Paris'))
 assert.ok(proClubIdentity('ita',0).name.includes('Turin'))
 assert.ok(proClubIdentity('eng',3).name.includes('London'))
 const renameWorld=createProWorld(93,'2026-07-18')
-const oldClub=renameWorld.clubs['club-fra-001']
-renameWorld.clubs['club-fra-001']={...oldClub,name:'Paris 17'}
+const oldClub=renameWorld.clubs['club-fra-01']
+renameWorld.clubs['club-fra-01']={...oldClub,name:'Paris 17'}
 const upgradedWorld=renameLegacyProClubs(renameWorld)
-assert.equal(upgradedWorld.clubs['club-fra-001'].id,oldClub.id)
-assert.notEqual(upgradedWorld.clubs['club-fra-001'].name,'Paris 17')
-assert.equal(renameWorld.clubs['club-fra-001'].name,'Paris 17',
+assert.equal(upgradedWorld.clubs['club-fra-01'].id,oldClub.id)
+assert.notEqual(upgradedWorld.clubs['club-fra-01'].name,'Paris 17')
+assert.equal(renameWorld.clubs['club-fra-01'].name,'Paris 17',
   'Renaming a saved world must not mutate its original object')
 assert.equal(mondayFrom('2026-07-18'),'2026-07-13')
 assert.equal(proMatchDay({...createProCareer('Calendar FC'),date:'2026-07-18'},'europe','2026-07-15'),2,

@@ -8,6 +8,10 @@ import { syncPlayableProLeague, offerProRenewal, releaseExpiredProContract, gene
 import { scheduleSeniorInternational, completeSeniorInternational, forfeitSeniorInternational } from '../src/engine/proInternational'
 import { INTERNATIONAL_GROUPS, INTERNATIONAL_WINDOWS, internationalCycle, internationalTournamentFixture, internationalProgress, visibleQualifyingTable } from '../src/engine/proInternationalTournament'
 import { NATIONS } from '../src/engine/nations'
+import { prepareProGraduate, proRatingTarget, seniorNationalTeamRating } from '../src/engine/proRatings'
+import { proWeekSchedule, proMatchDay, proTrainingAvailable } from '../src/engine/proWeeklySchedule'
+import { teamOverall } from '../src/engine/teams'
+import { toOvr, computeCurrentAbility } from '../src/engine/rating'
 import { selectSeniorNationalSquad } from '../src/engine/proNationalSquad'
 import { seniorNationRankings } from '../src/engine/proNationalRankings'
 import { buildNationalWorldResults, seniorWorldNationRankings } from '../src/engine/proNationWorldRankings'
@@ -517,3 +521,33 @@ assert.ok(fullWorldRankings.every(r=>Number.isFinite(r.points)))
 assert.ok(Date.now()-worldClock<30000,
   'Twenty-season national ranking reconstruction is too slow on CI')
 console.log('Phase 2: world AI-national results, score overrides, duplicate safety, 20-year ranking load passed')
+
+const youthGraduate={...unsignedPlayer,position:'CM',potential:15,attributes:{
+  kind:'outfield',values:{passing:4,shooting:3,dribbling:4,tackling:3,
+    pace:4,strength:3,stamina:4,agility:4,vision:4,composure:3,
+    positioning:3,concentration:4}}} as unknown as Player
+const seniorGraduate=prepareProGraduate(youthGraduate)
+assert.ok(toOvr(computeCurrentAbility(seniorGraduate))>=60,
+  'First professional contract must not leave an academy graduate rated 29 OVR')
+assert.ok(toOvr(computeCurrentAbility(seniorGraduate))<=68,
+  'First graduate adjustment should not create an elite international')
+assert.deepEqual(prepareProGraduate(seniorGraduate),seniorGraduate,
+  'Already balanced graduate must not be boosted a second time')
+for(const country of ['eng','esp','ger','ita','fra','por','ned','bra','rsa','sco']){
+  const pro=createProCareer('Rating Audit FC',4,country)
+  const first=pro.world.divisions[1].teams
+  assert.ok(first.every(t=>teamOverall(t)>=58),'No top-flight professional club should be youth-level')
+  if(['eng','esp','ger','ita'].includes(country))
+    assert.ok(first.some(t=>teamOverall(t)>=80),'Elite top flights need strong first teams')
+  const sevenDays=proWeekSchedule(pro,'Fictional United')
+  assert.equal(sevenDays.length,7)
+  assert.equal(sevenDays[5].kind,'match')
+  assert.equal(sevenDays[0].kind,'training')
+  assert.equal(proMatchDay(pro),5)
+  assert.ok(proTrainingAvailable(0,5))
+}
+assert.ok(proRatingTarget('eng',1,0,20)>proRatingTarget('eng',2,0,24),
+  'Top flight must rate stronger than lower divisions')
+assert.ok(proRatingTarget('eng',2,0,24)>proRatingTarget('eng',3,0,24))
+assert.ok(seniorNationalTeamRating('eng')>seniorNationalTeamRating('rsa'))
+console.log('Phase 2: pro graduation 60 OVR, national/club band separation, daily senior schedule passed')

@@ -37,6 +37,8 @@ export interface ProCareerState {
   season: number
   week: number
   welcomed: boolean
+  preseasonIntroducedSeason?: number
+  leagueIntroducedSeason?: number
   /** Career ends at age 38 after the final senior season. */
   retired?: boolean
   seasonRecords?: ProSeasonRecord[]
@@ -65,8 +67,8 @@ export interface ProCareerState {
   news?: import('./proNews').ProNewsArticle[]
 }
 
-const LEAGUE_WEEKS = Array.from({ length: 40 }, (_, index) => index + 3).filter(week => week !== 18 && week !== 29)
-const LONG_LEAGUE_WEEKS = Array.from({ length: 50 }, (_, index) => index + 2).filter(week => week !== 18 && week !== 29)
+const LEAGUE_WEEKS = Array.from({ length: 40 }, (_, index) => index + 5).filter(week => week !== 18 && week !== 29)
+const LONG_LEAGUE_WEEKS = Array.from({ length: 48 }, (_, index) => index + 5).filter(week => week !== 18 && week !== 29)
 
 export const PRO_CAREER_DESTINATIONS = [
   { id: 'eng', name: 'England', cities: ['London', 'Manchester', 'Liverpool', 'Leeds'] },
@@ -131,7 +133,7 @@ export function createProCareer(clubName: string, prestige = 4, associationId = 
  */
 export function proRound(week: number, teamCount = 20, scheduledRounds?: number): number | null {
   if (teamCount === 10 && (!scheduledRounds || scheduledRounds <= 18))
-    return week >= 4 && week <= 38 && (week - 4) % 2 === 0 ? (week - 4) / 2 + 1 : null
+    return week >= 5 && week <= 39 && (week - 5) % 2 === 0 ? (week - 5) / 2 + 1 : null
   const rounds = scheduledRounds ?? (teamCount === 12 ? 38 : (teamCount - 1) * 2)
   const weeks = rounds > LEAGUE_WEEKS.length ? LONG_LEAGUE_WEEKS : LEAGUE_WEEKS
   const index = weeks.indexOf(week)

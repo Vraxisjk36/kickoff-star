@@ -28,11 +28,11 @@ export function nextProMilestone(state:ProCareerState,cup?:ProFixture|null):ProM
     const records=proLeagueRecords(state.associationId??'eng',state.activeCompetitionId,
       state.seasonRecords??[],state)
     const achievement=records.find(item=>item.broken &&
-      !seen.has(`record:${state.activeCompetitionId}:${item.kind}:${item.current}`))
+      !seen.has(`record:${state.activeCompetitionId}:${item.kind}`))
     if(achievement){
       const name=achievement.kind==='career-goals'?'Career goals':
         achievement.kind==='season-goals'?'Single-season goals':'Single-season assists'
-      return {id:`record:${state.activeCompetitionId}:${achievement.kind}:${achievement.current}`,
+      return {id:`record:${state.activeCompetitionId} :${achievement.kind}`,
         kind:'record',eyebrow:'HISTORY HAS BEEN MADE',title:'A NEW LEAGUE RECORD!',
         description:`You have set a new ${name.toLowerCase()} record in ${proCompetitionName(achievement.competitionId)}.`,
         detail:`Your mark: ${achievement.current}. Previous benchmark: ${achievement.holder} (${achievement.mark}). Future opponents will remember your name.`}

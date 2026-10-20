@@ -67,7 +67,9 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
     id: national.nationId, name: getNation(national.nationId).name, short: getNation(national.nationId).short } : team
   const activeTeam = national ? nationalTeam : team
   const kind = national ? 'international' as const : cup ? (/final/i.test(cup.id) ? 'final' as const : /champions|europa|continental|conference/i.test(cup.competitionId) ? 'europe' as const : 'domestic-cup' as const) : 'league' as const
-  const matchDay = proMatchDay(pro,kind)
+  const matchDate = cup?.kickoffDate ??
+    (fixture ? pro.backgroundWorld?.fixtures[fixture.id]?.kickoffDate : undefined)
+  const matchDay = proMatchDay(pro,kind,matchDate)
   const day = pro.day ?? 0
   const canTrain = proTrainingAvailable(day,matchDay) &&
     !(pro.trainedDays??[]).includes(day) && !player.injury?.weeksRemaining && player.fitness.stamina>=12
@@ -100,7 +102,7 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
     setResult(null); setMode('hub')
   }} />
   return <div className="relative">
-    <WeeklyHub tab={tab} onTabChange={setTab} onOpenOffers={() => setTab('club')} onExitToMenu={onExitToMenu} league={world} academyLeague={null} playerTeam={team} playerDivision={division} proCalendar={calendar} onProTrain={beginTraining} proMatchKind={kind} proMatchOpponent={opponent?.name} />
+    <WeeklyHub tab={tab} onTabChange={setTab} onOpenOffers={() => setTab('club')} onExitToMenu={onExitToMenu} league={world} academyLeague={null} playerTeam={team} playerDivision={division} proCalendar={calendar} onProTrain={beginTraining} proMatchKind={kind} proMatchOpponent={opponent?.name} proMatchDate={matchDate} />
     <div className="career-continue fixed left-0 right-0 px-3 max-w-md mx-auto z-20" style={{ bottom: 'calc(var(--safe-bottom) + 4.5rem)' }}>
       <button className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-3.5 text-sm shadow-[0_0_25px_rgba(212,175,55,0.3)]" onClick={() => matchReady && day === matchDay && !player.injury && !(player.suspensionMatches ?? 0) && player.fitness.stamina >= 30 ? setMode('matchday') : advance()}>
         {matchReady && day===matchDay

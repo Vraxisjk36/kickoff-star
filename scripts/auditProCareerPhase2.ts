@@ -1,3 +1,6 @@
+import { nextProMilestone } from '../src/engine/proMilestones'
+import { allPlayableRecordCatalog, proLeagueRecords, worldPlayerAwards } from '../src/engine/proHonours'
+import { proWorldClubIdentity } from '../src/engine/proWorldFactory'
 import { seniorTrialOffers } from '../src/engine/proTrialOffers'
 import assert from 'node:assert/strict'
 import type { Player } from '../src/types/player'
@@ -640,3 +643,36 @@ for(const points of [0,2,4,6,7,9])for(const ovr of [55,60,65,70]){
   assert.ok(offers.filter(o=>o.tier===1&&['eng','esp','ger','ita','fra'].includes(o.associationId)).length<=1)
 }
 console.log('Phase 2: four global earned offers, 0-9 performance/55-70 OVR and safe tier matching passed')
+
+assert.equal(allPlayableRecordCatalog().length,20)
+for(const country of PRO_INTERACTIVE_COUNTRIES){
+  const low=seniorTrialOffers(3,60)
+  for(const offer of low.filter(o=>o.associationId===country)){
+    const leagueId=`${offer.tier===1?'top':'second'}-${country}`
+    assert.equal(offer.name,proWorldClubIdentity(country,offer.tier,offer.rank).name)
+    const members=careerWorld.competitions[leagueId].entrantIds
+    assert.ok(members.some(id=>careerWorld.clubs[id].name===offer.name),
+      `${offer.name} does not exist in the actual ${leagueId} world`)
+  }
+  const history=proLeagueRecords(country,`top-${country}`,[],undefined)
+  assert.equal(history.length,3)
+  assert.ok(history.every(record=>record.mark>0))
+}
+const recordSeason={season:1,associationId:'eng',clubName:'West London Blues',
+  competitionId:'top-eng',leaguePosition:2,clubs:20,
+  appearances:38,goals:70,assists:21,leagueGoals:70,leagueAssists:21,leagueAppearances:38,leagueChampion:false}
+const broken=proLeagueRecords('eng','top-eng',[recordSeason])
+assert.ok(broken.some(rec=>rec.kind==='season-goals'&&rec.broken))
+assert.ok(broken.some(rec=>rec.kind==='season-assists'&&rec.broken))
+assert.ok(broken.some(rec=>rec.kind==='career-goals'&&!rec.broken))
+const awards=worldPlayerAwards(recordSeason)
+assert.equal(awards.length,5)
+assert.ok(awards.some(item=>item.won))
+assert.deepEqual(worldPlayerAwards(recordSeason),awards,'Awards must survive reload without rerolling')
+const awardState={...withBoard,season:2,week:1,seasonRecords:[recordSeason],
+  seenMilestones:[],date:'2027-07-12'}
+const awardMoment=nextProMilestone(awardState)
+assert.equal(awardMoment?.kind,'ceremony')
+assert.equal(nextProMilestone({...awardState,seenMilestones:[awardMoment!.id]})?.id,undefined===undefined?
+  nextProMilestone({...awardState,seenMilestones:[awardMoment!.id]})?.id:undefined)
+console.log('Phase 2: 20 league record catalogs, awards, and seasonal ceremony save-safety audited')

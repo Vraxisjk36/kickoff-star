@@ -12,7 +12,7 @@ export interface ProMilestone {
 const awardCeremony=(season:ProSeasonRecord,pro:ProCareerState):ProMilestone=>({
   id:`awards:${season.season}`,kind:'ceremony',
   eyebrow:`SEASON ${season.season} · AWARDS NIGHT`,title:'THE FOOTBALL HONOURS',
-  description:`The season has ended. ${season.clubName} finished ${season.leaguePosition || 'unranked'} of ${season.clubs}. Here are this year's honours: ${worldPlayerAwards(season,pro).map(award=>`${award.title}: ${award.recipient}`).join(' · ')}.`,
+  description:`The season has ended. ${season.clubName} finished ${season.leaguePosition || 'unranked'} of ${season.clubs}. Here are this year's honours: ${worldPlayerAwards(season).map(award=>`${award.title}: ${award.recipient}`).join(' · ')}.`,
   detail:`Your campaign: ${season.appearances} appearances · ${season.goals} goals · ${season.assists} assists. Trophies are based on league achievements and deterministic fictional rival contenders; none is automatically given to the player.`,
 })
 export function nextProMilestone(state:ProCareerState,cup?:ProFixture|null):ProMilestone|null {

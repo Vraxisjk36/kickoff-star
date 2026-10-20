@@ -10,23 +10,25 @@ function ordinal(n: number): string {
   return `${n}${n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'}`
 }
 
-export default function ClubTab({ player, playerTeam, division, isAcademy }: {
+export default function ClubTab({ player, playerTeam, division, isAcademy, isPro = false }: {
   player: Player
   playerTeam: Team
   division: Division
   isAcademy: boolean
+  isPro?: boolean
 }) {
   const sorted = sortStandings(division.standings)
   const pos = sorted.findIndex((s) => s.teamId === playerTeam.id) + 1
   const standing = sorted.find((s) => s.teamId === playerTeam.id)
   const rivals = division.teams.filter((t) => t.id !== playerTeam.id)
-  const divName = isAcademy
+  const divName = isPro ? (player.proCareer?.activeCompetitionId ?
+    player.proCareer.activeCompetitionId.replace(/-/g,' ').toUpperCase() : 'Professional League') : isAcademy
     ? academyDivisionLabel(division.tier as 1 | 2, player.academyCountryId)
     : player.grassrootsPath === 'school' ? 'Local School League' : divisionLabel(division.tier)
 
   return (
     <div className="flex flex-col gap-2.5">
-      <section className="club-hero" style={{'--club-primary':playerTeam.primaryColor,'--club-secondary':playerTeam.secondaryColor} as React.CSSProperties}><div className="club-stand"/><small>{isAcademy?'ACADEMY CLUB':player.grassrootsPath==='school'?'SCHOOL TEAM':'GRASSROOTS CLUB'} · {divName}</small><div className="club-identity"><TeamCrest primary={playerTeam.primaryColor} secondary={playerTeam.secondaryColor} short={playerTeam.short} /><div><h2>{playerTeam.name}</h2><p>{pos>0?ordinal(pos):'—'} IN LEAGUE · PRESTIGE {playerTeam.prestige}/10</p></div><div className="club-strength"><b>{teamOverall(playerTeam)}</b><span>TEAM OVR</span></div></div><div className="club-record"><div><span>PLAYED</span><b>{standing?.played??0}</b></div><div><span>W-D-L</span><b>{standing?.won??0}-{standing?.drawn??0}-{standing?.lost??0}</b></div><div><span>POINTS</span><b>{standing?.points??0}</b></div><div><span>GD</span><b>{((standing?.goalsFor??0)-(standing?.goalsAgainst??0))>0?'+':''}{(standing?.goalsFor??0)-(standing?.goalsAgainst??0)}</b></div></div></section>
+      <section className="club-hero" style={{'--club-primary':playerTeam.primaryColor,'--club-secondary':playerTeam.secondaryColor} as React.CSSProperties}><div className="club-stand"/><small>{isPro ? 'PROFESSIONAL CLUB' : isAcademy?'ACADEMY CLUB':player.grassrootsPath==='school'?'SCHOOL TEAM':'GRASSROOTS CLUB'} · {divName}</small><div className="club-identity"><TeamCrest primary={playerTeam.primaryColor} secondary={playerTeam.secondaryColor} short={playerTeam.short} /><div><h2>{playerTeam.name}</h2><p>{pos>0?ordinal(pos):'—'} IN LEAGUE · PRESTIGE {playerTeam.prestige}/10</p></div><div className="club-strength"><b>{teamOverall(playerTeam)}</b><span>TEAM OVR</span></div></div><div className="club-record"><div><span>PLAYED</span><b>{standing?.played??0}</b></div><div><span>W-D-L</span><b>{standing?.won??0}-{standing?.drawn??0}-{standing?.lost??0}</b></div><div><span>POINTS</span><b>{standing?.points??0}</b></div><div><span>GD</span><b>{((standing?.goalsFor??0)-(standing?.goalsAgainst??0))>0?'+':''}{(standing?.goalsFor??0)-(standing?.goalsAgainst??0)}</b></div></div></section>
 
       <div className="home-section-label"><span>SQUAD PROFILE</span><i/></div><Panel title="💪 team strength">
         <div className="flex flex-col gap-1.5">
@@ -65,7 +67,7 @@ export default function ClubTab({ player, playerTeam, division, isAcademy }: {
             <span className="text-[9px] text-ks-muted">{player.position}</span>
             <span className="text-[9px] text-ks-gold uppercase">{player.squadRole ?? 'trial'}</span>
           </div>
-          {[...(player.squad ?? [])].sort((a, b) => (a.squadRole === b.squadRole ? b.quality - a.quality : a.squadRole === 'starter' ? -1 : 1)).map((mate) => (
+          {[...(isPro && player.proCareer?.backgroundWorld ? Object.values(player.proCareer.backgroundWorld.players).filter(mate => mate.clubId === player.proCareer?.clubWorldIds?.[playerTeam.id] && mate.id !== `career-${player.id}`).map(mate => ({...mate, quality: mate.overall, squadRole: 'starter' as const, seasonGoals: 0, seasonAssists: 0})) : player.squad ?? [])].sort((a, b) => (a.squadRole === b.squadRole ? b.quality - a.quality : a.squadRole === 'starter' ? -1 : 1)).map((mate) => (
             <div key={mate.id} className="flex items-center gap-2 px-2 py-1.5 border-b border-ks-border/35 last:border-0">
               <span className={`text-[8px] uppercase w-10 ${mate.squadRole === 'starter' ? 'text-green-500' : 'text-ks-muted'}`}>{mate.squadRole === 'starter' ? 'XI' : 'bench'}</span>
               <span className="text-[11px] text-ks-ink flex-1 truncate">{mate.name}</span>
@@ -90,7 +92,7 @@ export default function ClubTab({ player, playerTeam, division, isAcademy }: {
         </div>
       </Panel>
 
-      <TopScorers division={division} player={player} playerTeamId={playerTeam.id} competitionId={isAcademy ? 'academyLeague' : player.grassrootsPath === 'school' ? 'schoolLeague' : 'sundayLeague'} />
+      <TopScorers division={division} player={player} playerTeamId={playerTeam.id} competitionId={isPro ? 'proLeague' : isAcademy ? 'academyLeague' : player.grassrootsPath === 'school' ? 'schoolLeague' : 'sundayLeague'} />
 
       <Panel title="⚽ top scoring teams">
         <div className="flex flex-col gap-1.5">

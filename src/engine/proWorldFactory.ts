@@ -73,7 +73,6 @@ const identities = ['Athletic','United','City','Sporting','Rovers','Union','Albi
 const firstNames = ['Amir','Daniel','Leo','Jamal','Hiro','Thabo','Mateo','Samuel','Yusuf','Kai','André','Rafael','Kofi','Milan','Santiago','Noah']
 const lastNames = ['Silva','Kamara','Morales','Okafor','Diallo','Costa','Kim','Mokoena','Garcia','Sato','Mensah','Bennett','Ahmed','Santos','Novak','Reyes']
 const positions = ['GK','GK','RB','CB','CB','CB','LB','DM','CM','CM','AM','RW','LW','ST','ST','GK','CB','RB','LB','CM','CM','RW','LW','ST']
-const leagueStrength: Record<ProLeaguePlan['confederation'], number> = { uefa: 60, caf: 51, conmebol: 58, concacaf: 53, afc: 53, ofc: 43 }
 
 function clubName(league: ProLeaguePlan, index: number): { name: string; city: string } {
   const city = namedCities[league.associationId]?.[index % (namedCities[league.associationId].length)]

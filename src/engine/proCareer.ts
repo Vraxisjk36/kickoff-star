@@ -7,7 +7,8 @@ import { proClubIdentity, PRO_TOP_FLIGHT_IDENTITIES } from './proClubIdentities'
 import type { MatchLine, MatchRecord } from './matchLedger'
 import { netWage } from './agents'
 import type { ProWorldState } from './proWorld'
-import { plannedClubCount } from './proWorldFactory'
+import { plannedClubCount, proWorldClubIdentity } from './proWorldFactory'
+import { LOWER_DIVISIONS } from './proLeagueRegistry'
 import { recordHumanProLeagueMatch } from './proWorldSimulation'
 import { PRO_INTERACTIVE_COUNTRIES } from './proLeagueRegistry'
 import { scheduleSeniorInternational, forfeitSeniorInternational, type SeniorInternationalCareer } from './proInternational'
@@ -30,6 +31,7 @@ export interface ProSeasonRecord { season: number; associationId: string; clubNa
 export interface ProCareerState {
   world: LeagueWorld
   associationId?: string
+  openingTier?: 1 | 2
   ratingBalanceVersion?: number
   clubNameVersion?: number
   /** Actual living-world competition identity (may become second-tier after relegation). */
@@ -101,19 +103,19 @@ export function proTrialClubs(points: number, associationId = 'eng'): Team[] {
   })
 }
 
-export function createProCareer(clubName: string, prestige = 4, associationId = 'eng'): ProCareerState {
+export function createProCareer(clubName: string, prestige = 4, associationId = 'eng', tier:1|2=1): ProCareerState {
   if (!PRO_INTERACTIVE_COUNTRIES.includes(associationId)) throw new Error('Unavailable professional destination')
   const region = PRO_CAREER_DESTINATIONS.find(item => item.id === associationId) ?? PRO_CAREER_DESTINATIONS[0]
-  const count = plannedClubCount(associationId)
+  const count = tier===1 ? plannedClubCount(associationId) : (LOWER_DIVISIONS[associationId]?.clubs ?? 18)
   const own = calibrateSeniorTeam(generateTeam(Math.max(3, Math.min(6, prestige))),
-    proRatingTarget(associationId,1,Math.max(0,Math.round((10-prestige)/10*(count-1))),count))
+    proRatingTarget(associationId,tier,Math.max(0,Math.round((10-prestige)/10*(count-1))),count))
   own.name = clubName
   own.short = clubName.split(' ').map(part => part[0]).join('').slice(0, 3).toUpperCase()
   const others = Array.from({ length: count - 1 }, (_, index) => {
-    const chosen = (PRO_TOP_FLIGHT_IDENTITIES[associationId] ?? []).filter(name=>name!==clubName)
-    const name = chosen[index] ?? proClubIdentity(associationId,index+1,1,region.name).name
+    const chosen = tier===1 ? (PRO_TOP_FLIGHT_IDENTITIES[associationId] ?? []).filter(name=>name!==clubName) : []
+    const name = tier===1 ? (chosen[index] ?? proClubIdentity(associationId,index+1,1,region.name).name) : proWorldClubIdentity(associationId,2,index).name
     const team = calibrateSeniorTeam(generateTeam(3 + index % 4),
-      proRatingTarget(associationId,1,index+1,count))
+      proRatingTarget(associationId,tier,index+1,count))
     return { ...team, name, short: name.split(' ').map(part => part[0]).join('').slice(0, 3).toUpperCase() }
   })
   const teams = [own, ...others]
@@ -131,7 +133,7 @@ export function createProCareer(clubName: string, prestige = 4, associationId = 
   }
   const standings = teams.map(team => ({ teamId: team.id, teamName: team.name, teamShort: team.short, played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, points: 0 }))
   const division: Division = { tier: 1, teams, standings, fixtures: rounds, matchRecords: [] }
-  return { associationId, world: { divisions: { 1: division, 2: { ...division, teams: [], standings: [], fixtures: [], matchRecords: [] }, 3: { ...division, teams: [], standings: [], fixtures: [], matchRecords: [] } }, playerDivision: 1, playerTeamId: own.id, kind: 'pro' }, season: 1, week: 1, welcomed: false }
+  return { associationId, openingTier:tier, world: { divisions: { 1: division, 2: { ...division, teams: [], standings: [], fixtures: [], matchRecords: [] }, 3: { ...division, teams: [], standings: [], fixtures: [], matchRecords: [] } }, playerDivision: 1, playerTeamId: own.id, kind: 'pro' }, season: 1, week: 1, welcomed: false }
 }
 
 /** Professional calendars follow the number of fixtures in their competition.

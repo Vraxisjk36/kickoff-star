@@ -15,7 +15,8 @@ import { computeCurrentAbility, toOvr } from './rating'
 import { recordTournamentResult, proCompetitionName } from './proTournaments'
 import type { ProFixture, ProWorldState } from './proWorld'
 import type { MatchRecord } from './matchLedger'
-import { generateTeam } from './teams'
+import { generateTeam, teamOverall } from './teams'
+import { calibrateSeniorTeam, proRatingTarget } from './proRatings'
 import type { LeagueWorld, Division } from './league'
 
 const addDays = (date: string, days: number): string => new Date(Date.parse(`${date}T00:00:00Z`) + days * 86400000).toISOString().slice(0, 10)
@@ -67,7 +68,11 @@ export function syncPlayableProLeague(state: ProCareerState, world = state.backg
     const club = world.clubs[clubId]
     const existing = oldTeams.get(clubId)
     const generated = existing ?? generateTeam(Math.max(3, Math.min(8, Math.round(club.reputation / 14))))
-    return { ...generated, name: club.name,
+    const tier = competition.id.startsWith('top-') ? 1 : (club.tier ?? 2)
+    const target = Math.max(club.reputation,proRatingTarget(associationId,tier,index,competition.entrantIds.length))
+    const normalized = teamOverall(generated) < target-5
+      ? calibrateSeniorTeam(generated,target) : generated
+    return { ...normalized, name: club.name,
       short: club.name.split(' ').map(word => word[0]).join('').slice(0, 3).toUpperCase(),
       id: existing?.id ?? `career-club-${clubId}-${index}` }
   })

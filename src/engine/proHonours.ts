@@ -18,8 +18,9 @@ const historical:Record<string,{career:number;season:number;assists:number;holde
 export function proLeagueRecords(associationId:string,competitionId:string,
   records:readonly ProSeasonRecord[],current?:ProCareerState):LeagueRecord[]{
   const baseline=historical[associationId]??{career:175,season:30,assists:19,holder:'M. Legend'}
-  const tier=competitionId.startsWith('top-')?1:2
-  const factor=tier===1?1:.65
+  const tier=competitionId.startsWith('top-')?1:competitionId.startsWith('second-')?2:
+    competitionId.startsWith('third-')?3:competitionId.startsWith('fourth-')?4:5
+  const factor=[0,1,.65,.48,.36,.28][tier]
   const matching=records.filter(r=>(r.competitionId??`top-${r.associationId}`)===competitionId)
   const goals=matching.reduce((sum,r)=>sum+(r.leagueGoals??r.goals),0)+
     (current?.activeCompetitionId===competitionId?(current.seasonLeagueGoals??0):0)
@@ -28,9 +29,9 @@ export function proLeagueRecords(associationId:string,competitionId:string,
   const seasonAssists=Math.max(0,...matching.map(r=>r.leagueAssists??r.assists),
     current?.activeCompetitionId===competitionId?(current.seasonLeagueAssists??0):0)
   return [
-    {kind:'career-goals' as const,holder:baseline.holder,mark:Math.round(baseline.career*factor),current:goals},
-    {kind:'season-goals' as const,holder:baseline.holder,mark:Math.round(baseline.season*factor),current:seasonGoals},
-    {kind:'season-assists' as const,holder:baseline.holder,mark:Math.round(baseline.assists*factor),current:seasonAssists},
+    {kind:'career-goals' as const,holder:tier===1?baseline.holder:`${baseline.holder.split(' ')[0]} ${['','', 'Palmer','Ross','Bennett','Hughes'][tier]}`,mark:Math.round(baseline.career*factor),current:goals},
+    {kind:'season-goals' as const,holder:tier===1?baseline.holder:`${baseline.holder.split(' ')[0]} ${['','', 'Palmer','Ross','Bennett','Hughes'][tier]}`,mark:Math.round(baseline.season*factor),current:seasonGoals},
+    {kind:'season-assists' as const,holder:tier===1?baseline.holder:`${baseline.holder.split(' ')[0]} ${['','', 'Palmer','Ross','Bennett','Hughes'][tier]}`,mark:Math.round(baseline.assists*factor),current:seasonAssists},
   ].map(item=>({...item,associationId,competitionId,broken:item.current>item.mark}))
 }
 export function worldPlayerAwards(season:ProSeasonRecord):PlayerAward[]{

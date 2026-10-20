@@ -41,7 +41,7 @@ export function professionalDecisionModifier(playerOvr:number,opponentOvr:number
   const gap=opponentOvr-playerOvr
   return gap>0?1-Math.min(.32,gap*.009):1+Math.min(.06,-gap*.002)
 }
-function optionChance(player: Player, o: MomentOption, tier: string): number {
+export function optionChance(player: Player, o: MomentOption, tier: string): number {
   const avg = o.keyAttributes.length ? o.keyAttributes.reduce((s, a) => s + attrValue(player, a), 0) / o.keyAttributes.length : 10
   const attrMod = 0.68 + (avg / 20) * 0.42
   const risk = 1 - o.baseCeiling

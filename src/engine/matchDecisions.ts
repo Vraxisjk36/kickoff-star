@@ -1,4 +1,5 @@
 import type { Player } from '../types/player'
+import { toOvr, computeCurrentAbility } from './rating'
 import { effectiveValues } from './economy'
 import type { KeyMoment } from './match'
 import type { Decision, DecisionOption } from '../types/decision'
@@ -52,7 +53,15 @@ export function optionChance(player: Player, o: MomentOption, tier: string): num
   // the same option or penalising a new player's low starting attributes.
   const specialistBonus = Math.max(0, ...o.keyAttributes.map(attr =>
     clamp((attrValue(player, attr) - 5) / 10, 0, 1) * (specialistBonuses[attr] ?? 0)))
-  return clamp(o.baseCeiling * attrMod * mentalMod * tierMod + specialistBonus, 0.08, 0.96)
+  const normalChance=o.baseCeiling * attrMod * mentalMod * tierMod + specialistBonus
+  // Keep the tested school engine unchanged. In senior matches, your actual
+  // 1–20 attributes convert to player OVR and the opponent's adult-level OVR
+  // affects the chance of executing difficult decisions. No automatic wins:
+  // even 90-rated opponents can occasionally be beaten by a 60-rated player.
+  const gap=player.turnedPro&&player.matchOpponentOverall !== undefined
+    ? player.matchOpponentOverall-toOvr(computeCurrentAbility(player)) : 0
+  const seniorModifier=gap>0?1-Math.min(.32,gap*.009):1+Math.min(.06,-gap*.002)
+  return clamp(normalChance*seniorModifier,0.05,0.96)
 }
 
 function chanceLabel(chance: number): string {

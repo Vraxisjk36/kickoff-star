@@ -18,6 +18,7 @@ import TrainingScreen from './TrainingScreen'
 import AllocationScreen from '../components/AllocationScreen'
 import type { TrainingOutcome } from '../engine/training'
 import type { AttributeKey } from '../engine/xp'
+import ProSeasonCeremony from './ProSeasonCeremony'
 
 type Result = Parameters<NonNullable<React.ComponentProps<typeof MatchScreen>['onComplete']>>[0]
 
@@ -28,6 +29,7 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
   const completeCup = useCareerStore(s => s.completeProCupMatch)
   const completeNational = useCareerStore(s => s.completeSeniorNationalMatch)
   const completeTraining = useCareerStore(s => s.completeProTraining)
+  const acknowledgeCeremony = useCareerStore(s => s.acknowledgeProSeasonCeremony)
   const spendXp = useCareerStore(s => s.spendAttributeXp)
   const ensureLivingWorld = useCareerStore(s => s.ensureLivingWorld)
   const [tab, setTab] = useState<HubTab>('home')
@@ -70,6 +72,13 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
   const canTrain = proTrainingAvailable(day,matchDay) &&
     !(pro.trainedDays??[]).includes(day) && !player.injury?.weeksRemaining && player.fitness.stamina>=12
   const beginTraining=()=>{if(canTrain)setMode('training')}
+  if(pro.week===1 && (pro.day??0)===0 && pro.preseasonIntroducedSeason!==pro.season)
+    return <ProSeasonCeremony pro={pro} clubName={team.name} kind="preseason"
+      onContinue={()=>acknowledgeCeremony('preseason')}/>
+  if(pro.week===4 && (pro.day??0)===0 && pro.leagueIntroducedSeason!==pro.season)
+    return <ProSeasonCeremony pro={pro} clubName={team.name} kind="kickoff"
+      onContinue={()=>acknowledgeCeremony('kickoff')}/>
+
   if(mode==='training') return <TrainingScreen player={player} onComplete={(outcome:TrainingOutcome,spent,injury,xp,attrs)=>{
     completeTraining(outcome,spent,injury)
     setTrainingReward({xp,attrs})

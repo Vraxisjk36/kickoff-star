@@ -46,6 +46,7 @@ function ratingColor(r: number): string {
 
 export default function PlayerTab({ player, onOpenOffers }: { player: Player; onOpenOffers?: () => void }) {
   const calendar = useCareerStore(s => s.calendar)
+  const isPro = !!player.turnedPro && !!player.proCareer
   const requestSchoolTransfer = useCareerStore(s => s.requestSchoolTransfer)
   const [view, setView] = useState<'overview' | 'development' | 'career'>('overview')
   const c = player.career
@@ -85,7 +86,7 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
       </div>
 
       <div className="player-quick-strip"><div><span>APPS</span><b>{c?.appearances ?? 0}</b></div><div><span>GOALS</span><b>{c?.goals ?? 0}</b></div><div><span>ASSISTS</span><b>{c?.assists ?? 0}</b></div><div><span>BEST</span><b>{c?.bestRating?.toFixed(1) ?? '—'}</b></div></div>
-      {player.squadRole === 'released' && player.careerClock.phase !== 'academy' && <Panel title="School pathway · another chance">
+      {!isPro && player.squadRole === 'released' && player.careerClock.phase !== 'academy' && <Panel title="School pathway · another chance">
         <p className="text-xs text-ks-muted">Play development fixtures and train. Your school reviews you after weeks 12 and 23. Three appearances averaging 6.3 with at least 50% energy earn a reserve place.</p>
         {(() => { const record = currentPerformance(player, ['schoolDevelopmentLeague','schoolReserveLeague']); return <p className="text-xs text-ks-gold mt-2">Development record: {record.appearances} matches · {record.average.toFixed(1)} average</p> })()}
         {calendar && calendar.currentWeek.weekNumber >= 24 && calendar.currentWeek.weekNumber <= 31 && player.schoolTransferSeason !== calendar.currentWeek.seasonYear && <div className="mt-3 space-y-2">
@@ -99,7 +100,7 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
           weekly note that scrolled away. Now it's always visible: where you
           actually stand, and how long until it can change — the real
           substance behind the "sticky" selection system. */}
-      {player.squadRole && player.squadRole !== 'released' && (() => {
+      {!isPro && player.squadRole && player.squadRole !== 'released' && (() => {
         const verdict = decideSelection(player, player.squad)
         const evidence = promotionEvidence(player)
         const SETTLE_WEEKS = 3
@@ -181,7 +182,7 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
           <>
             <div className="form-track mb-3">{recent.map((r,i)=><div key={i} className="form-match"><span className={ratingColor(r)}>{r.toFixed(1)}</span><i style={{height:`${Math.max(14,(r-4)*18)}px`}}/><small>M{i+1}</small></div>)}</div>
             <div className="flex flex-col gap-1.5">
-              <StatRow label="matches played this season" value={(player.matchLedger ?? []).filter(record => record.season === calendar?.currentWeek.seasonYear && record.lines.some(line => line.playerId === player.id)).length} />
+              <StatRow label="matches played this season" value={isPro ? player.seasonAppearances ?? 0 : (player.matchLedger ?? []).filter(record => record.season === calendar?.currentWeek.seasonYear && record.lines.some(line => line.playerId === player.id)).length} />
               <StatRow label="recent form (last 10)" value={avg ? avg.toFixed(2) : '—'} />
               <StatRow label="season goals" value={player.seasonGoals ?? 0} />
               <StatRow label="season assists" value={player.seasonAssists ?? 0} />
@@ -190,7 +191,7 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
         )}
       </Section>
 
-      {player.seasonObjectives && <Section title="🎯 coach's season goals" defaultOpen>
+      {!isPro && player.seasonObjectives && <Section title="🎯 coach's season goals" defaultOpen>
         <p className="text-[11px] text-ks-muted mb-3">{completedSeasonObjectives(player.seasonObjectives, player)} of 4 reached. The coach reviews these at season's end; missing one never automatically changes your squad role.</p>
         <div className="flex flex-col gap-2">
           {player.seasonObjectives.objectives.map(objective => {
@@ -205,7 +206,7 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
 
       </>}
       {view === 'career' && <><Section title={<span className="flex items-center gap-1"><Icon src={iconScouts} />scouts & interest</span>}>
-        <ScoutsTab player={player} onOpenOffers={onOpenOffers ?? (() => {})} />
+        {isPro ? <p className="text-xs text-ks-muted">Professional opportunities, transfer talks and contract renewals are available in your Club tab.</p> : <ScoutsTab player={player} onOpenOffers={onOpenOffers ?? (() => {})} />}
       </Section>
 
       <Section title="🏅 career record">
@@ -276,7 +277,7 @@ export default function PlayerTab({ player, onOpenOffers }: { player: Player; on
           ))}
         </div>
         <p className="text-[10px] text-ks-muted leading-relaxed mt-2.5">
-          {player.careerClock.phase === 'academy' ? 'Perform in academy competitions, build scout interest and earn a professional contract.' : 'Build a school record through trials, fixtures and representative football. Academy scouting begins at 16 and reviews sustained performances.'}
+          {isPro ? 'Your school and academy chapters remain part of your story. Build your professional career through league football, transfers, international matches and trophies.' : player.careerClock.phase === 'academy' ? 'Perform in academy competitions, build scout interest and earn a professional contract.' : 'Build a school record through trials, fixtures and representative football. Academy scouting begins at 16 and reviews sustained performances.'}
         </p>
       </Section>
 

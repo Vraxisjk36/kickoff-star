@@ -7,13 +7,14 @@ interface Props {
   opponent?: string
   matchKind?: 'league'|'domestic-cup'|'europe'|'international'|'final'
   onTrain: () => void
+  matchDate?: string
 }
 /** Shared school-game visual language; each day is a real career action.
  * Month/year drawers show the recurring match and training structure.
  */
-export default function ProWeeklyCalendar({pro,opponent,matchKind='league',onTrain}:Props){
+export default function ProWeeklyCalendar({pro,opponent,matchKind='league',onTrain,matchDate}:Props){
   const [view,setView]=useState<'week'|'month'|'season'>('week')
-  const days=proWeekSchedule(pro,opponent,matchKind)
+  const days=proWeekSchedule(pro,opponent,matchKind,matchDate)
   const current=pro.day??0
   const selected=days[current]
   const formatWeek=(week:number)=>`Week ${week}`

@@ -81,6 +81,15 @@
 
 **Limitations:** The new ratings are intentionally **not** FIFA rankings or its officially calibrated SUM method. This system currently reacts to recorded human international fixtures, not every simulated NPC fixture across all national competitions.
 
+## Simulated national ranking world and mobile performance — October 2026
+
+- Senior rankings now include **all 24 modeled national teams**, not just results played by the human player. The ranking engine synthesizes deterministic scores for the elapsed Regional Nations Series and International Championship match windows, replacing individual simulated scores with the player's completed matches when available.
+- Only elapsed fixtures affect the table. Missed duty never inserts a fabricated 0–0 score, duplicate records cannot count twice, and the simulated fixture list is derived rather than written into every save.
+- The senior hub shows the updated rating table and points movement. The calculation is memoized by season, week and international-result history so React rerenders do not resimulate the national world.
+- Automated tests include national fixture uniqueness, exact player-score overrides, no future-result leakage, finite national ranking values and a 20-season bounded reconstruction check.
+
+**Scope:** This ranks the 24 nations currently represented in the senior match system. It does not yet create full squads or qualification calendars for all 100 country associations modeled in professional club competitions. This is a fictional strength-weighted rating system, not FIFA ranking methodology. Mobile rendering still requires device-based profiling in addition to CI timing.
+
 ## Remaining before Phase 2 is feature-complete
 - **Date-aligned play**: playable matchday fixture IDs and opponents now originate from the persistent league calendar; the weekly career UI still abstracts actual dates into a 44- or 52-week season. It must eventually support all exact event dates, reschedules and multiple matchdays in one week.
 - **Every domestic format**: Scottish split fixtures and league-specific cup calendars need to drive interactive matchday, not just the world simulator.

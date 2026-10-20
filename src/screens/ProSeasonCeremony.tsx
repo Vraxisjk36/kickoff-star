@@ -11,7 +11,9 @@ export default function ProSeasonCeremony({pro,clubName,kind,onContinue}:{
   const size=pro.world.divisions[1].teams.length
   const competitionName=pro.activeCompetitionId ? proCompetitionName(pro.activeCompetitionId) :
     `${PRO_CAREER_DESTINATIONS.find(c=>c.id===association)?.name??'Professional'} First Division`
-  const format=rules&&rules.topFlightClubs===size ? rules : null
+  const format=rules&&rules.topFlightClubs===size && (pro.activeCompetitionId?.startsWith('top-')??true) ? rules : null
+  const matches=format?.topFlightMatches??(size>=2?(size-1)*2:0)
+  const scottishSplit=association==='sco' && format!==null
   const continental=association==='eng'
     ? 'Places 1–4 qualify for the Champions tournament. Fifth enters the secondary continental tier; domestic cup winners receive additional berths, passed down to the highest eligible league clubs.'
     : association==='rsa'
@@ -28,7 +30,7 @@ export default function ProSeasonCeremony({pro,clubName,kind,onContinue}:{
           <p className="text-ks-muted text-sm mt-3">{clubName}</p>
           <div className="grid grid-cols-3 mt-6 border-t border-ks-gold/30 pt-4 gap-2">
             <div><div className="text-ks-gold text-2xl font-display">{size}</div><small className="uppercase text-[9px] text-ks-muted">Clubs</small></div>
-            <div><div className="text-ks-gold text-2xl font-display">{size>=2?(size-1)*2:0}</div><small className="uppercase text-[9px] text-ks-muted">League matches</small></div>
+            <div><div className="text-ks-gold text-2xl font-display">{matches}</div><small className="uppercase text-[9px] text-ks-muted">League matches</small></div>
             <div><div className="text-ks-gold text-2xl font-display">{pro.season}</div><small className="uppercase text-[9px] text-ks-muted">Season</small></div>
           </div>
         </div>
@@ -40,7 +42,7 @@ export default function ProSeasonCeremony({pro,clubName,kind,onContinue}:{
         <p className="text-ks-muted text-xs">Week 4 brings the league briefing and opening ceremony. The first league match is scheduled from Week 5.</p>
       </div>:<div className="mt-6 space-y-4">
         <h2 className="font-display text-xl">{competitionName}</h2>
-        <p className="text-ks-muted text-sm">{size} clubs face each other at home and away. A win earns three points, a draw one, and a defeat zero. The club finishing first becomes league champion.</p>
+        <p className="text-ks-muted text-sm">{size} clubs compete for the title. {scottishSplit ? 'The first 33 rounds are followed by a championship/relegation split to complete 38 matches.' : `Each team plays ${matches} league matches, home and away.`} A win earns three points, a draw one, and a defeat zero. The club finishing first becomes league champion.</p>
         <div className="rounded-xl border border-ks-gold/30 bg-[#141910] p-4">
           <div className="text-ks-gold font-display text-sm">THE TITLE & CONTINENTAL RACE</div>
           <p className="text-ks-muted mt-2 text-xs">1st place: league title. {continental} Cup results, registration and eligibility can change which teams earn those berths.</p>

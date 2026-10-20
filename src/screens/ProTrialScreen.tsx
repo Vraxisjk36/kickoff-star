@@ -84,6 +84,6 @@ export default function ProTrialScreen({ onComplete, onExitToMenu }: { onComplet
             <small className="block text-ks-gold mt-1">{offer.reason}</small>
           </span><span className="text-ks-gold">→</span>
         </button>)}
-      </div></>
+      </div></>}
   </div></div>
 }

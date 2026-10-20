@@ -78,7 +78,7 @@ export default function MatchDayScreen({ player, playerTeam, opponent, isHome, o
         background: 'radial-gradient(ellipse 70% 45% at 50% 30%, rgba(212,175,55,0.10), transparent 62%), linear-gradient(180deg,#0a0a09,#050504)',
       }} />
 
-{walkout && <div className="walkout-curtain"><span>THE PLAYERS ARE OUT</span><b>{playerTeam.short} · {opponent.short}</b></div>}
+{walkout && <div className="walkout-curtain"><span>THE PLAYERS ARE OUT</span><b>{playerTeam.name} · {opponent.name}</b></div>}
       <div className={`relative z-10 max-w-md mx-auto w-full transition-all duration-700 ${
         entered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
       }`}>
@@ -107,7 +107,7 @@ export default function MatchDayScreen({ player, playerTeam, opponent, isHome, o
           <p className="text-center text-[10px] text-ks-gold mb-3">YOUR WEEK: {player.weeklyFocus.kind === 'film' ? 'FILM STUDY' : player.weeklyFocus.kind === 'shift' ? 'COMMUNITY SHIFT' : 'RECOVERY'}</p>}
 
         <section className="rounded-xl border border-ks-border bg-[#0f0f0d] px-3 py-3 mb-3" aria-label="Pre-match team sheet">
-          <div className="flex items-center justify-between mb-2"><h2 className="font-display tracking-widest text-[10px] text-ks-gold uppercase">team sheet</h2><span className="text-[9px] text-ks-muted">{playerTeam.short} · starting XI</span></div>
+          <div className="flex items-center justify-between mb-2"><h2 className="font-display tracking-widest text-[10px] text-ks-gold uppercase">team sheet</h2><span className="text-[9px] text-ks-muted">{playerTeam.name} · starting XI</span></div>
           <div className="grid grid-cols-2 gap-x-3 gap-y-1">
             {sheet.starters.map(member => <div key={`${member.number}-${member.name}`} className={`flex items-center gap-1.5 min-w-0 text-[10px] ${member.isPlayer ? 'text-ks-gold' : 'text-ks-ink'}`}>
               <b className="w-5 shrink-0 text-right">{member.number}</b><span className="truncate">{member.name}</span><small className="ml-auto text-ks-muted">{member.position}</small>
@@ -116,7 +116,7 @@ export default function MatchDayScreen({ player, playerTeam, opponent, isHome, o
           <div className="border-t border-ks-border/60 mt-2 pt-2"><span className="text-[9px] uppercase tracking-widest text-ks-muted">bench</span>
             <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">{sheet.bench.map(member => <span key={`${member.number}-${member.name}`} className={`text-[9px] ${member.isPlayer ? 'text-ks-gold' : 'text-ks-muted'}`}>{member.number} {member.name} · {member.position}</span>)}</div>
           </div>
-          {(opponent.notablePlayers?.length ?? 0) > 0 && <div className="border-t border-ks-border/60 mt-2 pt-2"><span className="text-[9px] uppercase tracking-widest text-ks-muted">{opponent.short} players to watch</span>
+          {(opponent.notablePlayers?.length ?? 0) > 0 && <div className="border-t border-ks-border/60 mt-2 pt-2"><span className="text-[9px] uppercase tracking-widest text-ks-muted">{opponent.name} players to watch</span>
             <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">{opponent.notablePlayers.map(member => <span key={`${member.name}-${member.position}`} className="text-[9px] text-ks-muted">{member.name} · {member.position}</span>)}</div>
           </div>}
         </section>

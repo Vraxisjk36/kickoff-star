@@ -86,6 +86,16 @@ function clubName(league:ProLeaguePlan,index:number,tier=1,offset=index):{name:s
   return {city,name:`${city} ${style} ${distinction}`}
 }
 
+/** Expose the same generated club identities used by the actual living league.
+ * Do not hand applicants a trial offer from an invented separate roster.
+ */
+export function proWorldClubIdentity(associationId: string, tier: 1 | 2, rank: number): {name:string;city:string} {
+  const league=PRO_LEAGUE_PLAN.find(item=>item.associationId===associationId)
+  if(!league)throw new Error(`Unknown association: ${associationId}`)
+  const index=tier===1?rank:plannedClubCount(associationId)+rank
+  return clubName(league,index,tier,rank)
+}
+
 function createSquad(club: ProClub, seed: number, year: number): ProPlayer[] {
   const wageBudget = Math.floor(club.finances.annualSquadCostLimit * .66)
   const rosterPositions = club.tier === 3 && (club.associationId in GROUPED_THIRD || ['fra', 'bra'].includes(club.associationId))

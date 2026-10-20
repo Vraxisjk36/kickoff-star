@@ -33,7 +33,7 @@ export function proLeagueRecords(associationId:string,competitionId:string,
     {kind:'season-assists' as const,holder:baseline.holder,mark:Math.round(baseline.assists*factor),current:seasonAssists},
   ].map(item=>({...item,associationId,competitionId,broken:item.current>item.mark}))
 }
-export function worldPlayerAwards(season:ProSeasonRecord,pro:ProCareerState):PlayerAward[]{
+export function worldPlayerAwards(season:ProSeasonRecord):PlayerAward[]{
   const seed=(season.season*71+season.associationId.split('').reduce((s,c)=>s+c.charCodeAt(0),0))
   const npc=['Luca Valenti','Yanis Laurent','Diego Castillo','Mikkel Holm','Andre Moreira','Gabriel Ferreira','Tariq Mensah','Leon Weiss']
   const competitor=(i:number)=>npc[(seed+i*3)%npc.length]

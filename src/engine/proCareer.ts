@@ -85,6 +85,10 @@ export const PRO_CAREER_DESTINATIONS = [
   { id: 'sco', name: 'Scotland', cities: ['Glasgow', 'Edinburgh', 'Aberdeen', 'Dundee'] },
 ] as const
 
+/** Scouting scores are earned from timed mini-game performance plus current ability. */
+export function seniorTrialPoints(quality:number,ability:number):number{
+  return Math.max(0,Math.min(3,Math.round((Math.max(0,Math.min(1,quality))*.78+(ability/99)*.22)*3)))
+}
 export function proTrialClubs(points: number, associationId = 'eng'): Team[] {
   const region = PRO_CAREER_DESTINATIONS.find(item => item.id === associationId) ?? PRO_CAREER_DESTINATIONS[0]
   const base = points >= 5 ? 5 : points >= 3 ? 4 : 3

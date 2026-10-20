@@ -119,7 +119,7 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
         {(pro.seasonRecords??[]).length?[...(pro.seasonRecords??[])].reverse().slice(0,4).map(record=>
           <div key={record.season} className="rounded-lg bg-[#151710] border border-ks-border/40 p-3 mb-3">
             <div className="font-display text-ks-gold text-xs mb-2">SEASON {record.season} · AWARDS NIGHT</div>
-            {worldPlayerAwards(record,pro).map(award=><div key={award.id} className="flex gap-2 text-xs items-center justify-between py-1.5 border-t border-ks-border/30">
+            {worldPlayerAwards(record).map(award=><div key={award.id} className="flex gap-2 text-xs items-center justify-between py-1.5 border-t border-ks-border/30">
               <span className="text-ks-muted max-w-[62%]">{award.title}</span>
               <span className={award.won?'text-ks-gold font-display':'text-ks-ink'}>{award.won?'🏆 YOU':award.recipient}</span>
             </div>)}

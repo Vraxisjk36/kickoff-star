@@ -55,14 +55,14 @@ import { addStoryMoment, createStoryMoment, type StoryMoment } from '../engine/p
 import { academyEntryOpen, academyRecruitmentReport, academyTrialAvailable, academyTrialBase, academyOfferCleared, academyRegistrationOpen, migrateAcademyRecruitment, reviewAcademyShowcase } from '../engine/academyRecruitment'
 import { ageGroupFor, initYouthPathway, representativeSelection, selectionPassed } from '../engine/pathway'
 import { initOctoberLeague, recordOctoberResult, simulateOctoberWeek, octoberStandings } from '../engine/octoberLeague'
-import { createProCareer, advanceProWeek, resolveProMatch, proRound } from '../engine/proCareer'
+import { createProCareer, advanceProWeek, resolveProMatch, proRound, proFixture } from '../engine/proCareer'
 import { prepareProGraduate } from '../engine/proRatings'
 import { renameLegacyProClubs } from '../engine/proClubIdentities'
 import { computeCurrentAbility, toOvr } from '../engine/rating'
 import { proTrainingAvailable, proMatchDay } from '../engine/proWeeklySchedule'
 import { canStartInteractiveProCareer } from '../engine/proLeagueRegistry'
 import { completeSeniorInternational } from '../engine/proInternational'
-import { offerProRenewal, attachProWorld, syncPlayableProLeague, advanceLivingWorld, generateMarketOffers, finalizeProMove, resolveProCup } from '../engine/proIntegration'
+import { offerProRenewal, attachProWorld, syncPlayableProLeague, pendingProCup, advanceLivingWorld, generateMarketOffers, finalizeProMove, resolveProCup } from '../engine/proIntegration'
 import { startProLoan, registrationOpen } from '../engine/proMovement'
 import { assessProDeal } from '../engine/proClubFinance'
 
@@ -558,7 +558,11 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const pro = player?.proCareer
     if (!player || !pro) return
     const day=pro.day ?? 0
-    const matchDay=proMatchDay(pro)
+    const cup=pendingProCup(pro)
+    const league=proFixture(pro)
+    const kickoff=cup?.kickoffDate ?? (league?pro.backgroundWorld?.fixtures[league.id]?.kickoffDate:undefined)
+    const kind=cup ? (/champions|europa|continental|conference/i.test(cup.competitionId)?'europe':'domestic-cup') : 'league'
+    const matchDay=proMatchDay(pro,kind,kickoff)
     if (!proTrainingAvailable(day,matchDay) || (pro.trainedDays??[]).includes(day) ||
         player.injury?.weeksRemaining || pro.retired ||
         player.fitness.stamina < 12) return

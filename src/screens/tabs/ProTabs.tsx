@@ -60,7 +60,7 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
   return <div className="flex flex-col gap-2.5 stagger-children">
     {tab === 'home' ? <>
       {header}
-      {cards('NEXT UP · YOUR WEEK', <div><p className="text-ks-ink text-lg font-display">{fixture && pro.resolvedWeek !== pro.week ? `${fixture.homeTeamId === club.id ? 'HOME' : 'AWAY'} · ${opponent?.name}` : 'Training & recovery'}</p><p className="text-ks-muted text-xs mt-2">{fixture ? (pro.associationId ?? 'eng').toUpperCase() + ' League · matchweek ' + proRound(pro.week, division.teams.length, Math.max(0, ...division.fixtures.map(f => f.week))) : nextOpponent ? `Next fixture: ${nextOpponent.name}` : 'The next league calendar is being prepared.'}</p></div>)}
+      {cards('NEXT UP · YOUR WEEK', <div><p className="text-ks-ink text-lg font-display">{pro.international?.pending ? `INTERNATIONAL · ${getNation(pro.international.pending.opponentId).name}` : fixture && pro.resolvedWeek !== pro.week ? `${fixture.homeTeamId === club.id ? 'HOME' : 'AWAY'} · ${opponent?.name}` : 'Training & recovery'}</p><p className="text-ks-muted text-xs mt-2">{fixture ? (pro.associationId ?? 'eng').toUpperCase() + ' League · matchweek ' + proRound(pro.week, division.teams.length, Math.max(0, ...division.fixtures.map(f => f.week))) : nextOpponent ? `Next fixture: ${nextOpponent.name}` : 'The next league calendar is being prepared.'}</p></div>)}
       <div className="rounded-xl border border-ks-gold/25 bg-[#122018] px-4 py-3 flex items-center justify-between gap-3">
         <div><span className="font-display tracking-widest text-[10px] text-ks-gold">PROFESSIONAL PATHWAY</span>
           <p className="text-sm text-ks-ink mt-1">First team → International football → Hall of Fame</p></div>
@@ -79,6 +79,21 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
         <span><span className="font-display text-xs text-ks-gold">INTERNATIONAL FOOTBALL</span><span className="block text-ks-ink text-sm mt-1">{getNation(player.nationality).name} · {pro.international?.caps ?? 0} caps · {pro.international?.goals ?? 0} goals</span></span>
         <span className="text-ks-gold text-xl">→</span>
       </button>
+      {pro.clubObjective && <button onClick={() => onGoTo('club')} className="rounded-xl border border-ks-gold/30 bg-gradient-to-r from-[#191a0e] to-[#101510] px-4 py-4 text-left">
+        <div className="font-display text-xs text-ks-gold tracking-widest">MANAGER'S SEASON GOALS <span className="float-right">→</span></div>
+        <div className="text-ks-ink text-sm mt-2">Finish #{pro.clubObjective.targetPosition} or higher</div>
+        <div className="text-ks-muted text-xs mt-1">Current #{table.findIndex(r=>r.teamId===club.id)+1} · Board confidence {pro.clubObjective.boardConfidence}/100</div>
+        <div className="h-1.5 rounded-full bg-white/10 overflow-hidden mt-3"><span className="block h-full bg-ks-gold" style={{width:`${pro.clubObjective.boardConfidence}%`}}/></div>
+      </button>}
+      <Section title="CALENDAR, NEWS & ENERGY">
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          <div className="rounded-lg bg-[#171910] p-3 text-center"><div className="text-ks-gold font-display text-lg">{pro.week}</div><div className="text-[10px] text-ks-muted">WEEK</div></div>
+          <div className="rounded-lg bg-[#171910] p-3 text-center"><div className="text-ks-gold font-display text-lg">{Math.round(player.fitness.stamina)}%</div><div className="text-[10px] text-ks-muted">ENERGY</div></div>
+          <div className="rounded-lg bg-[#171910] p-3 text-center"><div className="text-ks-gold font-display text-lg">{row.points}</div><div className="text-[10px] text-ks-muted">POINTS</div></div>
+        </div>
+        <div className="text-xs text-ks-muted mb-3">Next opponent: {nextOpponent?.name ?? 'Awaiting the next fixture'}</div>
+        <button onClick={() => setNewsOpen(true)} className="text-ks-gold font-display text-xs">READ THE GAZETTE →</button>
+      </Section>
       {cards('WEEKLY TRAINING', <div><p className="text-ks-muted text-xs mb-3">One team session per week. Costs 12 energy and improves your standing with the coach.</p><button disabled={pro.trainedWeek === pro.week || player.fitness.stamina < 12} onClick={train} className="rounded-lg bg-ks-gold px-4 py-2 text-ks-black font-display text-xs disabled:opacity-35">{pro.trainedWeek === pro.week ? 'SESSION COMPLETE' : 'TRAIN WITH THE SQUAD →'}</button></div>)}
       {cards('THE GAZETTE · PRO EDITION', <div><p className="font-display text-ks-ink text-lg">{pro.news?.at(-1)?.headline ?? 'The season opens'}</p><p className="text-ks-muted text-xs mt-2">Club, country and world stories from recorded events.</p><button className="text-ks-gold text-xs mt-4" onClick={() => setNewsOpen(true)}>BROWSE THE GAZETTE →</button></div>)}
       <div className="grid grid-cols-2 gap-2"><button className="rounded-xl border border-ks-border p-4 text-left text-ks-gold" onClick={() => onGoTo('fixtures')}>LEAGUE <span className="block text-xs text-ks-muted mt-1">Table & fixtures →</span></button><button className="rounded-xl border border-ks-border p-4 text-left text-ks-gold" onClick={() => onGoTo('club')}>CONTRACT <span className="block text-xs text-ks-muted mt-1">Your first team deal →</span></button></div>

@@ -57,6 +57,7 @@ import { ageGroupFor, initYouthPathway, representativeSelection, selectionPassed
 import { initOctoberLeague, recordOctoberResult, simulateOctoberWeek, octoberStandings } from '../engine/octoberLeague'
 import { createProCareer, advanceProWeek, resolveProMatch, proRound } from '../engine/proCareer'
 import { prepareProGraduate } from '../engine/proRatings'
+import { renameLegacyProClubs } from '../engine/proClubIdentities'
 import { computeCurrentAbility, toOvr } from '../engine/rating'
 import { proTrainingAvailable, proMatchDay } from '../engine/proWeeklySchedule'
 import { canStartInteractiveProCareer } from '../engine/proLeagueRegistry'

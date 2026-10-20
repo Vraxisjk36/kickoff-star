@@ -57,6 +57,7 @@ import { ageGroupFor, initYouthPathway, representativeSelection, selectionPassed
 import { initOctoberLeague, recordOctoberResult, simulateOctoberWeek, octoberStandings } from '../engine/octoberLeague'
 import { createProCareer, advanceProWeek, resolveProMatch, proRound } from '../engine/proCareer'
 import { prepareProGraduate } from '../engine/proRatings'
+import { proTrainingAvailable, proMatchDay } from '../engine/proWeeklySchedule'
 import { canStartInteractiveProCareer } from '../engine/proLeagueRegistry'
 import { completeSeniorInternational } from '../engine/proInternational'
 import { offerProRenewal, attachProWorld, advanceLivingWorld, generateMarketOffers, finalizeProMove, resolveProCup } from '../engine/proIntegration'
@@ -147,6 +148,7 @@ interface CareerStore {
   acknowledgeProSigning: () => void
   advanceProCareer: () => void
   trainProCareer: () => void
+  completeProTraining: (outcome: TrainingOutcome, energySpent: number, injury?: {severity: string; weeksOut: number; description: string} | null) => void
   completeProMatch: (result: Parameters<typeof resolveProMatch>[2]) => void
   completeProCupMatch: (fixtureId: string, result: Parameters<typeof resolveProMatch>[2]) => void
   completeSeniorNationalMatch: (result: { scored: number; conceded: number; goals: number; assists: number; rating: number; minutes: number; energy: number }) => void
@@ -521,16 +523,44 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   advanceProCareer: () => {
     const { player } = getState()
     if (!player?.proCareer) return
+    // Senior player progresses day-by-day, like the original school career.
+    // The league simulation and salary settle only after Sunday's duties.
+    const day = player.proCareer.day ?? 0
+    if (day < 6) {
+      setState({ player: { ...player, proCareer: { ...player.proCareer, day: day + 1 },
+        fitness: { stamina: Math.min(100, player.fitness.stamina + (day === 5 ? 5 : 3)) } } })
+      void getState().saveCurrent()
+      return
+    }
     const result = advanceProWeek(player.proCareer, player)
     const living = advanceLivingWorld(player.proCareer, result.state, result.player)
     setState({ player: { ...living.player, proCareer: living.state } })
     void getState().saveCurrent()
   },
   trainProCareer: () => {
+    // Old one-click senior training replaced by the original interactive drill
+    // screen. Completion is recorded by completeProTraining below.
+  },
+  completeProTraining: (outcome, energySpent, injury) => {
     const { player } = getState()
-    if (!player?.proCareer || player.proCareer.trainedWeek === player.proCareer.week || player.fitness.stamina < 12) return
-    setState({ player: { ...player, proCareer: { ...player.proCareer, trainedWeek: player.proCareer.week },
-      fitness: { stamina: player.fitness.stamina - 12 }, coachTrust: Math.min(100, player.coachTrust + 1), trainingMomentum: Math.min(3, player.trainingMomentum + 1) } })
+    const pro = player?.proCareer
+    if (!player || !pro) return
+    const day=pro.day ?? 0
+    const matchDay=proMatchDay(pro)
+    if (!proTrainingAvailable(day,matchDay) || (pro.trainedDays??[]).includes(day) ||
+        player.injury?.weeksRemaining || pro.retired ||
+        player.fitness.stamina < energySpent) return
+    const trustDelta=outcome.grade==='A'?2:outcome.grade==='B'?1:0
+    const updated={...player,
+      proCareer:{...pro,trainedWeek:pro.week,trainedDays:[...(pro.trainedDays??[]),day]},
+      fitness:{stamina:Math.max(0,player.fitness.stamina-energySpent)},
+      coachTrust:Math.max(0,Math.min(100,(player.coachTrust??50)+trustDelta)),
+      trainingMomentum:Math.min(3,(player.trainingMomentum??0)+1),
+      injury: injury?.weeksOut ? { severity:injury.severity,weeksRemaining:injury.weeksOut,description:injury.description } : player.injury,
+      trainingStreak:(player.trainingStreak??0)+1,
+      lastTrainingWeek:pro.week,
+    }
+    setState({player:updated})
     void getState().saveCurrent()
   },
   completeProMatch: (result) => {

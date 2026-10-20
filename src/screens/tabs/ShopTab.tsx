@@ -83,6 +83,7 @@ export default function ShopTab({ player }: { player: Player }) {
   // number, people love it." Only animates on a REAL change — prevMoney
   // lags one render behind, so AnimatedNumber gets a genuine from->to on
   // the render right after money changes, not a restart every re-render.
+  const isPro = !!player.turnedPro && !!player.proCareer
   const currentMoney = player.money ?? 0
   const prevMoneyRef = useRef(currentMoney)
   const [displayFrom, setDisplayFrom] = useState(currentMoney)
@@ -127,10 +128,10 @@ export default function ShopTab({ player }: { player: Player }) {
             <div className="font-display text-3xl text-ks-gold tabular-nums leading-none">£<AnimatedNumber from={displayFrom} to={currentMoney} duration={700} /></div>
           </div>
           <div className="text-right">
-            <div className="text-[9px] text-ks-muted uppercase tracking-wider">allowance</div>
-            <div className="text-[11px] text-ks-ink">{formatMoney(monthlyAllowance(player))} / {ALLOWANCE_INTERVAL_WEEKS}wks</div>
+            <div className="text-[9px] text-ks-muted uppercase tracking-wider">{isPro ? 'professional wage' : 'allowance'}</div>
+            <div className="text-[11px] text-ks-ink">{isPro ? formatMoney(player.contract?.terms.weeklyWage ?? 0) : formatMoney(monthlyAllowance(player))} / {isPro ? 'week' : `${ALLOWANCE_INTERVAL_WEEKS}wks`}</div>
             <div className="text-[9px] text-ks-muted">
-              {allowanceDue(player) ? 'due now' : `in ${Math.max(0, weeksToAllowance)}w`}
+              {isPro ? player.proCareer?.freeAgentSinceWeek !== undefined ? 'free agent' : 'first team' : allowanceDue(player) ? 'due now' : `in ${Math.max(0, weeksToAllowance)}w`}
             </div>
           </div>
         </div>
@@ -159,7 +160,7 @@ export default function ShopTab({ player }: { player: Player }) {
             <div className="flex items-end justify-between">
               <div>
                 <div className="text-[11px] text-ks-ink">{player.contract.clubName}</div>
-                <div className="text-[9px] text-ks-muted uppercase tracking-wider">scholarship</div>
+                <div className="text-[9px] text-ks-muted uppercase tracking-wider">{isPro ? 'professional contract' : 'scholarship'}</div>
               </div>
               <div className="text-right">
                 <div className="font-display text-xl text-ks-gold leading-none">
@@ -175,7 +176,7 @@ export default function ShopTab({ player }: { player: Player }) {
             <div className="border-t border-ks-border/60 pt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
               <MiniRow label="per appearance" value={formatMoney(player.contract.terms.appearanceFee)} />
               <MiniRow label="per goal" value={formatMoney(player.contract.terms.goalBonus)} />
-              <MiniRow label="digs & travel" value={`−${formatMoney(weeklyLivingCost(player))}/wk`} />
+              <MiniRow label={isPro ? 'monthly residence' : 'digs & travel'} value={isPro ? formatMoney(player.proCareer?.residence?.monthlyRent ?? 0) : `−${formatMoney(weeklyLivingCost(player))}/wk`} />
               <MiniRow label="career earnings" value={formatMoney(player.careerEarnings ?? 0)} />
               <MiniRow label="agent fees paid" value={formatMoney(player.agentFeesPaid ?? 0)} />
             </div>
@@ -281,7 +282,7 @@ export default function ShopTab({ player }: { player: Player }) {
       </Panel>
 
       <div className="flex gap-1.5 p-1 rounded-xl bg-[#0f0f0d] border border-ks-border">
-        {(['kit', 'jobs'] as const).map((v) => (
+        {(['kit', ...(!isPro ? ['jobs' as const] : [])] as const).map((v) => (
           <button
             key={v}
             onClick={() => setSection(v)}

@@ -9,7 +9,7 @@ import MatchScreen from './MatchScreen'
 import MatchSummary from './MatchSummary'
 import { sfx } from '../engine/audio'
 import { pendingProCup, cupLabel } from '../engine/proIntegration'
-import { generateTeam } from '../engine/teams'
+import { generateTeam, teamOverall } from '../engine/teams'
 import { proCompetitionName } from '../engine/proTournaments'
 import { getNation } from '../engine/nations'
 import { calibrateSeniorTeam, seniorNationalTeamRating } from '../engine/proRatings'
@@ -60,7 +60,7 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
   // WeeklyHub's familiar frame owns the six destinations; professional content
   // replaces only the inner panels. The school calendar is never advanced here.
   const calendar = { currentWeek: { weekNumber: pro.week, seasonYear: pro.season, events: [] }, history: [] } as NonNullable<ReturnType<typeof useCareerStore.getState>['calendar']>
-  const selected = playerForMatch(player, 'proLeague')
+  const selected = { ...playerForMatch(player, 'proLeague'), matchOpponentOverall: opponent ? teamOverall(opponent) : undefined }
   const nationalTeam = national ? { ...calibrateSeniorTeam(generateTeam(getNation(national.nationId).strength),seniorNationalTeamRating(national.nationId)),
     id: national.nationId, name: getNation(national.nationId).name, short: getNation(national.nationId).short } : team
   const activeTeam = national ? nationalTeam : team

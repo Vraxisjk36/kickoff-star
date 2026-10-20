@@ -1,16 +1,19 @@
 import assert from 'node:assert/strict'
 import type { Player } from '../src/types/player'
 import type { ProWorldState } from '../src/engine/proWorld'
-import { createProCareer, advanceProWeek, professionalSeasonWeeks, proRound, proFixture, proTrialClubs, PRO_CAREER_DESTINATIONS } from '../src/engine/proCareer'
+import { createProCareer, advanceProWeek, professionalSeasonWeeks, proRound, proFixture, proTrialClubs, PRO_CAREER_DESTINATIONS, seniorTrialPoints } from '../src/engine/proCareer'
 import { plannedClubCount, createProWorld } from '../src/engine/proWorldFactory'
 import { recordHumanProLeagueMatch } from '../src/engine/proWorldSimulation'
 import { syncPlayableProLeague, offerProRenewal, releaseExpiredProContract, generateMarketOffers, finalizeProMove } from '../src/engine/proIntegration'
 import { scheduleSeniorInternational, completeSeniorInternational, forfeitSeniorInternational } from '../src/engine/proInternational'
 import { INTERNATIONAL_GROUPS, INTERNATIONAL_WINDOWS, internationalCycle, internationalTournamentFixture, internationalProgress, visibleQualifyingTable } from '../src/engine/proInternationalTournament'
 import { NATIONS } from '../src/engine/nations'
-import { prepareProGraduate, proRatingTarget, seniorNationalTeamRating } from '../src/engine/proRatings'
-import { proWeekSchedule, proMatchDay, proTrainingAvailable } from '../src/engine/proWeeklySchedule'
+import { prepareProGraduate, proRatingTarget, seniorNationalTeamRating, calibrateSeniorTeam } from '../src/engine/proRatings'
+import { proWeekSchedule, proMatchDay, proTrainingAvailable, mondayFrom } from '../src/engine/proWeeklySchedule'
 import { teamOverall } from '../src/engine/teams'
+import { PRO_TOP_FLIGHT_IDENTITIES, proClubIdentity, renameLegacyProClubs } from '../src/engine/proClubIdentities'
+import { professionalDecisionModifier } from '../src/engine/matchDecisions'
+import { simulateMatchV2 } from '../src/engine/matchSimulationV2'
 import { toOvr, computeCurrentAbility } from '../src/engine/rating'
 import { selectSeniorNationalSquad } from '../src/engine/proNationalSquad'
 import { seniorNationRankings } from '../src/engine/proNationalRankings'
@@ -551,3 +554,52 @@ assert.ok(proRatingTarget('eng',1,0,20)>proRatingTarget('eng',2,0,24),
 assert.ok(proRatingTarget('eng',2,0,24)>proRatingTarget('eng',3,0,24))
 assert.ok(seniorNationalTeamRating('eng')>seniorNationalTeamRating('rsa'))
 console.log('Phase 2: pro graduation 60 OVR, national/club band separation, daily senior schedule passed')
+
+for(const country of PRO_INTERACTIVE_COUNTRIES) {
+  const sample=createProCareer('Local Test',4,country)
+  const names=sample.world.divisions[1].teams.map(t=>t.name)
+  assert.equal(new Set(names).size,names.length,`${country}: duplicated professional club name`)
+  assert.ok(names.every(name=>!/\b\d{1,4}\b/.test(name)),`${country}: numeric name placeholder`)
+  assert.ok((PRO_TOP_FLIGHT_IDENTITIES[country]??[]).length>=10)
+  assert.equal(proRound(1,sample.world.divisions[1].teams.length),null)
+  assert.equal(proRound(2,sample.world.divisions[1].teams.length),null)
+  assert.equal(proRound(3,sample.world.divisions[1].teams.length),null)
+  assert.equal(proRound(4,sample.world.divisions[1].teams.length),null)
+  assert.equal(proRound(5,sample.world.divisions[1].teams.length),1)
+}
+assert.equal(proRound(4,10),1,'Old ten-team saves retain legacy round mapping')
+assert.ok(proClubIdentity('fra',0).name.includes('Paris'))
+assert.ok(proClubIdentity('ita',0).name.includes('Turin'))
+assert.ok(proClubIdentity('eng',3).name.includes('London'))
+const renameWorld=createProWorld(93,'2026-07-18')
+const oldClub=renameWorld.clubs['club-fra-001']
+renameWorld.clubs['club-fra-001']={...oldClub,name:'Paris 17'}
+const upgradedWorld=renameLegacyProClubs(renameWorld)
+assert.equal(upgradedWorld.clubs['club-fra-001'].id,oldClub.id)
+assert.notEqual(upgradedWorld.clubs['club-fra-001'].name,'Paris 17')
+assert.equal(renameWorld.clubs['club-fra-001'].name,'Paris 17',
+  'Renaming a saved world must not mutate its original object')
+assert.equal(mondayFrom('2026-07-18'),'2026-07-13')
+assert.equal(proMatchDay({...createProCareer('Calendar FC'),date:'2026-07-18'},'europe','2026-07-15'),2,
+  'Dated Wednesday fixture must appear on Wednesday')
+assert.equal(proMatchDay({...createProCareer('Calendar FC'),date:'2026-07-18'},'domestic-cup','2026-07-14'),1)
+assert.equal(seniorTrialPoints(0,60)>=0,true)
+assert.ok(seniorTrialPoints(.9,62)>seniorTrialPoints(.2,62),
+  'Timed mini-game quality must change three-week trial scoring')
+assert.ok(professionalDecisionModifier(60,90)<.80,'Low-rated senior facing elite opposition should be disadvantaged')
+assert.equal(professionalDecisionModifier(60,60),1)
+assert.ok(professionalDecisionModifier(90,60)>1)
+let seed=39
+const seeded=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296}
+const low=calibrateSeniorTeam(createProCareer('Low Tier',3,'eng').world.divisions[1].teams[0],61)
+const elite=calibrateSeniorTeam(createProCareer('Elite FC',6,'eng').world.divisions[1].teams[0],88)
+let lowGoals=0,eliteGoals=0,rareHighScores=0
+for(let i=0;i<160;i++){
+  const match=simulateMatchV2(low,elite,seeded)
+  lowGoals+=match.homeGoals;eliteGoals+=match.awayGoals
+  if(match.homeGoals>=5)rareHighScores++
+}
+assert.ok(eliteGoals>lowGoals,'Pro match balance must favor the much stronger team')
+assert.ok(rareHighScores<=3,
+  'Five goals for a 61-rated team against an 88-rated team must be a rare event')
+console.log('Phase 2: club identities, preseason kickoff, playable mini-game scoring, dated cup weeks and 160 balanced football results passed')

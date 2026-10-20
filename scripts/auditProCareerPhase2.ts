@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import type { Player } from '../src/types/player'
 import type { ProWorldState } from '../src/engine/proWorld'
-import { createProCareer, advanceProWeek, professionalSeasonWeeks, proRound, proFixture, proTrialClubs, PRO_CAREER_DESTINATIONS, seniorTrialPoints } from '../src/engine/proCareer'
+import { createProCareer, advanceProWeek, professionalSeasonWeeks, proRound, proFixture, resolveProMatch, proTrialClubs, PRO_CAREER_DESTINATIONS, seniorTrialPoints } from '../src/engine/proCareer'
 import { plannedClubCount, createProWorld } from '../src/engine/proWorldFactory'
 import { recordHumanProLeagueMatch } from '../src/engine/proWorldSimulation'
 import { syncPlayableProLeague, offerProRenewal, releaseExpiredProContract, generateMarketOffers, finalizeProMove } from '../src/engine/proIntegration'
@@ -19,7 +19,7 @@ import { selectSeniorNationalSquad } from '../src/engine/proNationalSquad'
 import { seniorNationRankings } from '../src/engine/proNationalRankings'
 import { buildNationalWorldResults, seniorWorldNationRankings } from '../src/engine/proNationWorldRankings'
 import { CONTINENTAL_WINDOWS, continentalCycle, continentalNations, continentalRound, continentalNationsProgress, confederationForNation } from '../src/engine/proContinentalNations'
-import { PRO_INTERACTIVE_COUNTRIES, canStartInteractiveProCareer } from '../src/engine/proLeagueRegistry'
+import { PRO_INTERACTIVE_COUNTRIES, PRO_LEAGUE_PLAN, canStartInteractiveProCareer } from '../src/engine/proLeagueRegistry'
 
 assert.equal(PRO_INTERACTIVE_COUNTRIES.length, 10, 'Phase 2 must permit ten professional destinations')
 assert.equal(new Set(PRO_INTERACTIVE_COUNTRIES).size, 10)
@@ -603,3 +603,28 @@ assert.ok(eliteGoals>lowGoals,'Pro match balance must favor the much stronger te
 assert.ok(rareHighScores<=3,
   'Five goals for a 61-rated team against an 88-rated team must be a rare event')
 console.log('Phase 2: club identities, preseason kickoff, playable mini-game scoring, dated cup weeks and 160 balanced football results passed')
+
+for(const country of PRO_LEAGUE_PLAN){
+  const clubNames=Array.from({length:plannedClubCount(country.associationId)},(_,i)=>
+    proClubIdentity(country.associationId,i,1,country.associationName).name)
+  assert.equal(new Set(clubNames).size,clubNames.length,
+    `${country.associationId} first-division club names must stay unique`)
+  assert.ok(clubNames.every(name=>!/\\b\\d{1,3}\\b/.test(name)),
+    `${country.associationId} contains unnamed/numbered professional club`)
+}
+const noAppearance=createProCareer('North London Gunners',4,'eng')
+const missedFixture=proFixture({...noAppearance,week:5})
+assert.ok(missedFixture,'First senior league match must be scheduled after preseason')
+const missedOpponentId=missedFixture!.homeTeamId===noAppearance.world.playerTeamId
+  ?missedFixture!.awayTeamId:missedFixture!.homeTeamId
+const missedOpponent=noAppearance.world.divisions[1].teams.find(team=>team.id===missedOpponentId)!
+const missedHome=missedFixture!.homeTeamId===noAppearance.world.playerTeamId
+const missed=resolveProMatch({...noAppearance,week:5},unsignedPlayer,{
+  opponent:missedOpponent,home:missedHome,scored:1,conceded:2,
+  goals:0,assists:0,rating:6,energy:70,minutes:0,yellowCards:0,redCarded:false,
+})
+assert.equal(missed.state.resolvedWeek,5)
+assert.equal(missed.state.world.divisions[1].fixtures.find(f=>f.id===missedFixture!.id)?.played,true,
+  'Senior fixture must count even when the human does not appear')
+assert.equal(missed.record.lines.find(line=>line.playerId===unsignedPlayer.id)?.minutes,0)
+console.log('Phase 2: all national professional club names and missed-match league reconciliation passed')

@@ -98,9 +98,14 @@ export function syncPlayableProLeague(state: ProCareerState, world = state.backg
   const sameSeason = state.activeSeasonId === competition.seasonId &&
     state.activeCompetitionId === competition.id
   const previous = new Map(sameSeason ? current.standings.map(row => [row.teamId, row]) : [])
-  const standings = teams.map(team => previous.get(team.id) ?? {
+  const standings = teams.map(team => ({
     teamId: team.id, teamName: team.name, teamShort: team.short,
-    played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, points: 0 })
+    played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, points: 0,
+    ...(previous.get(team.id) ?? {}),
+    // The original save might have "Paris 17" in a standing. Never preserve
+    // stale display identities when the club has been renamed in the world.
+    teamName: team.name, teamShort: team.short,
+  }))
   const division: Division = { ...current, teams, standings, fixtures,
     matchRecords: sameSeason ? current.matchRecords : [], tier: 1 }
   const leagues: LeagueWorld = { ...state.world, kind: 'pro',

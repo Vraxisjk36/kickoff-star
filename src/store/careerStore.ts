@@ -151,6 +151,7 @@ interface CareerStore {
   advanceProCareer: () => void
   trainProCareer: () => void
   acknowledgeProSeasonCeremony: (kind:'preseason'|'kickoff') => void
+  completeProPreseasonFriendly: (rating:number, energy:number, goals:number, assists:number) => void
   completeProTraining: (outcome: TrainingOutcome, energySpent: number, injury?: {severity: string; weeksOut: number; description: string} | null) => void
   completeProMatch: (result: Parameters<typeof resolveProMatch>[2]) => void
   completeProCupMatch: (fixtureId: string, result: Parameters<typeof resolveProMatch>[2]) => void
@@ -538,6 +539,21 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const result = advanceProWeek(player.proCareer, player)
     const living = advanceLivingWorld(player.proCareer, result.state, result.player)
     setState({ player: { ...living.player, proCareer: living.state } })
+    void getState().saveCurrent()
+  },
+  completeProPreseasonFriendly: (rating,energy,goals,assists) => {
+    const {player}=getState()
+    const pro=player?.proCareer
+    if(!player||!pro||![2,3].includes(pro.week)|| (pro.preseasonPlayedWeeks??[]).includes(pro.week))return
+    // Preseason is competitive practice, never a league-table result.
+    const changed={...pro,preseasonPlayedWeeks:[...(pro.preseasonPlayedWeeks??[]),pro.week],
+      resolvedWeek:pro.week}
+    setState({player:{...player,proCareer:changed,
+      fitness:{stamina:Math.max(0,Math.min(100,energy))},
+      coachTrust:Math.max(0,Math.min(100,(player.coachTrust??50)+
+        (rating>=7.5?3:rating>=6.5?1:-1))),
+      matchRatings:[...player.matchRatings,rating].slice(-10),
+      reputation:Math.max(0,Math.min(100,(player.reputation??20)+(goals+assists>0?1:0)))}})
     void getState().saveCurrent()
   },
   acknowledgeProSeasonCeremony: (kind) => {

@@ -2,6 +2,7 @@ import { VERIFIED_PRO_RULES } from '../engine/proRulebook'
 import type { ProCareerState } from '../engine/proCareer'
 import { proCompetitionName } from '../engine/proTournaments'
 import { PRO_CAREER_DESTINATIONS } from '../engine/proCareer'
+import { LOWER_DIVISIONS } from '../engine/proLeagueRegistry'
 
 export default function ProSeasonCeremony({pro,clubName,kind,onContinue}:{
   pro:ProCareerState;clubName:string;kind:'preseason'|'kickoff';onContinue:()=>void
@@ -11,7 +12,9 @@ export default function ProSeasonCeremony({pro,clubName,kind,onContinue}:{
   const size=pro.world.divisions[1].teams.length
   const competitionName=pro.activeCompetitionId ? proCompetitionName(pro.activeCompetitionId) :
     `${PRO_CAREER_DESTINATIONS.find(c=>c.id===association)?.name??'Professional'} First Division`
-  const format=rules&&rules.topFlightClubs===size && (pro.activeCompetitionId?.startsWith('top-')??true) ? rules : null
+  const isLower=!!pro.activeCompetitionId && !pro.activeCompetitionId.startsWith('top-')
+  const promotionRules=isLower ? LOWER_DIVISIONS[association] : undefined
+  const format=rules&&rules.topFlightClubs===size && !isLower ? rules : null
   const matches=format?.topFlightMatches??(size>=2?(size-1)*2:0)
   const scottishSplit=association==='sco' && format!==null
   const continental=association==='eng'
@@ -44,12 +47,12 @@ export default function ProSeasonCeremony({pro,clubName,kind,onContinue}:{
         <h2 className="font-display text-xl">{competitionName}</h2>
         <p className="text-ks-muted text-sm">{size} clubs compete for the title. {scottishSplit ? 'The first 33 rounds are followed by a championship/relegation split to complete 38 matches.' : `Each team plays ${matches} league matches, home and away.`} A win earns three points, a draw one, and a defeat zero. The club finishing first becomes league champion.</p>
         <div className="rounded-xl border border-ks-gold/30 bg-[#141910] p-4">
-          <div className="text-ks-gold font-display text-sm">THE TITLE & CONTINENTAL RACE</div>
-          <p className="text-ks-muted mt-2 text-xs">1st place: league title. {continental} Cup results, registration and eligibility can change which teams earn those berths.</p>
+          <div className="text-ks-gold font-display text-sm">{isLower?'THE PROMOTION RACE':'THE TITLE & CONTINENTAL RACE'}</div>
+          <p className="text-ks-muted mt-2 text-xs">{isLower ? `Top clubs chase promotion into the division above. ${promotionRules?.promoted ?? 2} promotion places are available in this country's second tier; the final place may depend on play-offs. The champion earns the divisional title.` : `1st place: league title. ${continental} Cup results, registration and eligibility can change which teams earn those berths.`}</p>
         </div>
         <div className="rounded-xl border border-red-700/30 bg-[#190f0e] p-4">
           <div className="text-red-300 font-display text-sm">THE RELEGATION BATTLE</div>
-          <p className="text-ks-muted mt-2 text-xs">{format? `Bottom ${format.directRelegation} clubs go down automatically${format.relegationPlayoff ? `; one additional club faces a promotion/relegation play-off`:''}.`:'Relegation and play-off places depend on this division’s competition format.'}</p>
+          <p className="text-ks-muted mt-2 text-xs">{format? `Bottom ${format.directRelegation} clubs go down automatically${format.relegationPlayoff ? `; one additional club faces a promotion/relegation play-off`:''}.` : promotionRules ? `Normally ${promotionRules.relegated} clubs face relegation, subject to licensing and the modeled federation's promotion/relegation play-offs.` : 'Relegation and play-off places depend on this division’s competition format.'}</p>
         </div>
         <p className="text-[11px] text-ks-muted">These are the game's fictional tournament rules; continental qualification remains subject to the competition engine's actual berth calculations.</p>
       </div>}

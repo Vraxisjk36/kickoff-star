@@ -65,8 +65,6 @@ export interface ProCareerState {
   news?: import('./proNews').ProNewsArticle[]
 }
 
-const CLUB_NAMES = ['North London Athletic', 'South London Blue', 'Mersey Red', 'West Midlands United', 'Brighton Coast', 'Yorkshire White', 'Severn City', 'East London Iron', 'Tyne Albion', 'Lancashire Rovers',
-  'Manchester Sky', 'North London White', 'Mersey Blue', 'West London Cottage', 'South Coast Saints', 'Nottingham Forest Green', 'West London Bees', 'Crystal South', 'Suffolk Town', 'Lancashire Wanderers']
 const LEAGUE_WEEKS = Array.from({ length: 40 }, (_, index) => index + 3).filter(week => week !== 18 && week !== 29)
 const LONG_LEAGUE_WEEKS = Array.from({ length: 50 }, (_, index) => index + 2).filter(week => week !== 18 && week !== 29)
 
@@ -86,7 +84,7 @@ export const PRO_CAREER_DESTINATIONS = [
 export function proTrialClubs(points: number, associationId = 'eng'): Team[] {
   const region = PRO_CAREER_DESTINATIONS.find(item => item.id === associationId) ?? PRO_CAREER_DESTINATIONS[0]
   const base = points >= 5 ? 5 : points >= 3 ? 4 : 3
-  return region.cities.map((city, index) => {
+  return region.cities.map((_, index) => {
     const team = generateTeam(Math.min(6, base + (index === 3 ? 1 : 0)))
     const options = PRO_TOP_FLIGHT_IDENTITIES[associationId] ?? []
     const name = options[(index * 3 + Math.min(2,Math.floor(points/3))) % Math.max(1,options.length)]

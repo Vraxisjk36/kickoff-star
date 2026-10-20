@@ -12,6 +12,7 @@ import ClubTab from './ClubTab'
 import ShopTab from './ShopTab'
 import StandingsTable from '../../components/StandingsTable'
 import ProWeeklyCalendar from './ProWeeklyCalendar'
+import { proMatchDay, proTrainingAvailable } from '../../engine/proWeeklySchedule'
 import { useCareerStore } from '../../store/careerStore'
 import { useMemo, useState } from 'react'
 import ProNewsScreen from '../ProNewsScreen'
@@ -105,8 +106,9 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
       </Section>
       {cards('FIRST-TEAM TRAINING', <div>
         <p className="text-xs text-ks-muted mb-3">Train on scheduled weekdays. Each interactive session uses the original school drills and opens attribute XP allocation afterward.</p>
-        <button onClick={onTrain} disabled={(pro.trainedDays??[]).includes(pro.day??0)||player.fitness.stamina<12}
-          className="rounded-xl bg-ks-gold px-4 py-3 text-ks-black font-display text-sm disabled:opacity-35">OPEN TODAY'S TRAINING →</button>
+        <button onClick={onTrain} disabled={!proTrainingAvailable(pro.day??0,proMatchDay(pro,matchKind??'league')) ||
+          (pro.trainedDays??[]).includes(pro.day??0)||player.fitness.stamina<12||!!player.injury?.weeksRemaining}
+          className="rounded-xl bg-ks-gold px-4 py-3 text-ks-black font-display text-sm disabled:opacity-35">{proTrainingAvailable(pro.day??0,proMatchDay(pro,matchKind??'league')) ? (pro.trainedDays??[]).includes(pro.day??0) ? 'TRAINING COMPLETE ✓' : 'OPEN TODAY\'S TRAINING →' : 'NO TRAINING SESSION TODAY'}</button>
       </div>)}
       {cards('THE GAZETTE · PRO EDITION', <div><p className="font-display text-ks-ink text-lg">{pro.news?.at(-1)?.headline ?? 'The season opens'}</p><p className="text-ks-muted text-xs mt-2">Club, country and world stories from recorded events.</p><button className="text-ks-gold text-xs mt-4" onClick={() => setNewsOpen(true)}>BROWSE THE GAZETTE →</button></div>)}
       <div className="grid grid-cols-2 gap-2"><button className="rounded-xl border border-ks-border p-4 text-left text-ks-gold" onClick={() => onGoTo('fixtures')}>LEAGUE <span className="block text-xs text-ks-muted mt-1">Table & fixtures →</span></button><button className="rounded-xl border border-ks-border p-4 text-left text-ks-gold" onClick={() => onGoTo('club')}>CONTRACT <span className="block text-xs text-ks-muted mt-1">Your first team deal →</span></button></div>

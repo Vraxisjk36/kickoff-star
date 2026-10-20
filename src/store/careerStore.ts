@@ -654,7 +654,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const { player } = getState()
     if (!player?.proCareer) return
     const existing = player.proCareer
-    if (existing.backgroundWorld && existing.ratingBalanceVersion === 1 && existing.clubNameVersion === 1) return
+    if (existing.backgroundWorld && existing.ratingBalanceVersion === 1 && existing.clubNameVersion === 2) return
     // Upgrade old professional saves once, without touching youth saves or
     // established late-career players. Do not reset contracts, fixtures or XP.
     const graduate = (existing.ratingBalanceVersion !== 1 && existing.season <= 3)
@@ -665,17 +665,28 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       const id = `career-${graduate.id}`
       world.players[id] = { ...world.players[id], overall: toOvr(computeCurrentAbility(graduate)) }
     }
-    const properWorld = base.backgroundWorld && base.clubNameVersion!==1
-      ? renameLegacyProClubs(base.backgroundWorld,base.clubWorldIds?.[base.world.playerTeamId])
+    const ownWorldId=base.clubWorldIds?.[base.world.playerTeamId]
+    const ownBefore=ownWorldId?base.backgroundWorld?.clubs[ownWorldId]?.name:undefined
+    // Preserve personally chosen names unless the original save actually used
+    // a generic placeholder such as "Paris 17" or "Manchester 3".
+    const anonymousOwn=!!ownBefore && (/\\b\\d{1,4}\\b/.test(ownBefore) ||
+      /\\b(?:North|South) (?:Athletic|United|City|Sporting)\\b/i.test(ownBefore))
+    const properWorld = base.backgroundWorld
+      ? renameLegacyProClubs(base.backgroundWorld,anonymousOwn?undefined:ownWorldId)
       : base.backgroundWorld
     const migrated = syncPlayableProLeague({ ...base, backgroundWorld:properWorld,
-      ratingBalanceVersion: 1, clubNameVersion: 1 })
+      ratingBalanceVersion: 1, clubNameVersion: 2 })
+    const renamedOwn=ownWorldId?properWorld?.clubs[ownWorldId]?.name:undefined
     const own = migrated.world.divisions[1].teams.find(team=>team.id===migrated.world.playerTeamId)
     const teamOvr = own ? teamOverall(own) : 72
     const seniorSquad = (graduate.squad ?? []).map(mate=>({
       ...mate, quality: Math.max(mate.quality,Math.min(89,teamOvr-7)),
     }))
     setState({ player: { ...graduate,
+      contract: anonymousOwn && renamedOwn && graduate.contract
+        ? {...graduate.contract,clubName:renamedOwn}:graduate.contract,
+      turnedPro: anonymousOwn && renamedOwn && graduate.turnedPro
+        ? {...graduate.turnedPro,clubName:renamedOwn}:graduate.turnedPro,
       squad: seniorSquad.length ? seniorSquad : generateSquad(Math.round(teamOvr/10)),
       proCareer: migrated } })
     void getState().saveCurrent()

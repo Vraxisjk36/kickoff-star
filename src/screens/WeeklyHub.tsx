@@ -116,7 +116,7 @@ export default function WeeklyHub({
 
       <div key={tab} className="hub-content flex-1 px-3 pt-3 pb-40 flex flex-col gap-2.5 max-w-md mx-auto w-full">
         <BroadcastHeader tab={tab} player={player} team={playerTeam} division={playerDivision} week={calendar.currentWeek.weekNumber} />
-        {player.turnedPro && player.proCareer ? <ProTabs player={player} tab={tab} onGoTo={onTabChange} /> : <>
+        {player.turnedPro && player.proCareer ? <ProTabs player={player} tab={tab} onGoTo={onTabChange} onOpenInbox={() => setInboxOpen(true)} onOpenEnergy={() => setEnergyOpen(true)} /> : <>
         {tab === 'home' && (
           <HomeTab
             player={player}

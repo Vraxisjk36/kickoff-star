@@ -59,6 +59,7 @@ import { createProCareer, advanceProWeek, resolveProMatch, proRound, proFixture 
 import { prepareProGraduate } from '../engine/proRatings'
 import { renameLegacyProClubs } from '../engine/proClubIdentities'
 import { computeCurrentAbility, toOvr } from '../engine/rating'
+import { simulateMatchV2 } from '../engine/matchSimulationV2'
 import { proTrainingAvailable, proMatchDay } from '../engine/proWeeklySchedule'
 import { canStartInteractiveProCareer } from '../engine/proLeagueRegistry'
 import { completeSeniorInternational } from '../engine/proInternational'
@@ -154,6 +155,7 @@ interface CareerStore {
   completeProPreseasonFriendly: (rating:number, energy:number, goals:number, assists:number) => void
   completeProTraining: (outcome: TrainingOutcome, energySpent: number, injury?: {severity: string; weeksOut: number; description: string} | null) => void
   completeProMatch: (result: Parameters<typeof resolveProMatch>[2]) => void
+  sitOutProMatch: () => void
   completeProCupMatch: (fixtureId: string, result: Parameters<typeof resolveProMatch>[2]) => void
   completeSeniorNationalMatch: (result: { scored: number; conceded: number; goals: number; assists: number; rating: number; minutes: number; energy: number }) => void
   completeProTrialWeek: (points: number) => void
@@ -594,6 +596,30 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     }
     setState({player:updated})
     void getState().saveCurrent()
+  },
+  sitOutProMatch: () => {
+    const { player } = getState()
+    const pro = player?.proCareer
+    if (!player || !pro || pro.resolvedWeek === pro.week) return
+    const fixture = proFixture(pro)
+    if (!fixture) return
+    const division=pro.world.divisions[1]
+    const homeTeam=division.teams.find(t=>t.id===fixture.homeTeamId)
+    const awayTeam=division.teams.find(t=>t.id===fixture.awayTeamId)
+    if (!homeTeam || !awayTeam) return
+    const opponent=fixture.homeTeamId===pro.world.playerTeamId?awayTeam:homeTeam
+    const home=fixture.homeTeamId===pro.world.playerTeamId
+    let seed=2166136261
+    for(const ch of `${player.id}:${pro.season}:${pro.week}:${fixture.id}`)
+      seed=Math.imul(seed^ch.charCodeAt(0),16777619)>>>0
+    const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296}
+    const simulated=simulateMatchV2(homeTeam,awayTeam,random)
+    getState().completeProMatch({
+      opponent,home,scored:home?simulated.homeGoals:simulated.awayGoals,
+      conceded:home?simulated.awayGoals:simulated.homeGoals,
+      goals:0,assists:0,rating:6,energy:player.fitness.stamina,minutes:0,
+      yellowCards:0,redCarded:false,injury:null,
+    })
   },
   completeProMatch: (result) => {
     const { player } = getState()

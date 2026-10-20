@@ -56,6 +56,7 @@ import { academyEntryOpen, academyRecruitmentReport, academyTrialAvailable, acad
 import { ageGroupFor, initYouthPathway, representativeSelection, selectionPassed } from '../engine/pathway'
 import { initOctoberLeague, recordOctoberResult, simulateOctoberWeek, octoberStandings } from '../engine/octoberLeague'
 import { createProCareer, advanceProWeek, resolveProMatch, proRound } from '../engine/proCareer'
+import { prepareProGraduate } from '../engine/proRatings'
 import { canStartInteractiveProCareer } from '../engine/proLeagueRegistry'
 import { completeSeniorInternational } from '../engine/proInternational'
 import { offerProRenewal, attachProWorld, advanceLivingWorld, generateMarketOffers, finalizeProMove, resolveProCup } from '../engine/proIntegration'
@@ -668,7 +669,8 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     if (!player?.proTrial || player.proTrial.week !== 3) return
     const wage = 350 + prestige * 175 + player.proTrial.points * 45
     const terms = { weeklyWage: wage, years: 2, appearanceFee: Math.round(wage * .08), goalBonus: Math.round(wage * .12), signingBonus: wage * 2 }
-    setState({ player: { ...player, proTrial: undefined, trialWeekCompleted: 3, squadRole: player.proTrial.points >= 6 ? 'starting-xi' : 'bench', squad: generateSquad(prestige),
+    const graduate = prepareProGraduate(player)
+    setState({ player: { ...graduate, proTrial: undefined, trialWeekCompleted: 3, squadRole: player.proTrial.points >= 6 ? 'starting-xi' : 'bench', squad: generateSquad(prestige),
       careerClock: { ...player.careerClock, ageYears: 18, phase: 'academy' }, agentId: player.agentId ?? 'independent',
       contract: { clubName, terms, signedWeek: 0, expiresWeek: 88 }, turnedPro: { clubName, weekSigned: 0, countryId: associationId },
       proCareer: createProCareer(clubName, prestige, associationId), money: (player.money ?? 0) + terms.signingBonus } })

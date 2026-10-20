@@ -138,7 +138,11 @@ export function proClubIdentity(country:string,index:number,tier=1,associationNa
   const qualifiers=['Athletic','Town','United','Wanderers','County','Rovers','Borough','Sporting']
   const district= districts[Math.floor(index/cities.length)%districts.length]
   const qualifier=qualifiers[Math.floor(index/(cities.length*districts.length))%qualifiers.length]
-  const name=tier>1 ? [city,district,style,qualifier].join(' ') : [city,style].join(' ')
+  // Lower-league sides use grounded city + neighbourhood + club suffix,
+  // rather than four-word procedural strings or arbitrary "Paris 17" labels.
+  // Only cycle the suffix if the district group itself repeats.
+  const name=tier>1 ? [city,district,Math.floor(index/(cities.length*districts.length))>0?qualifier:style].join(' ')
+    : [city,style].join(' ')
   return {name,city}
 }
 /** Keep existing human club identity (contract, player story), while mapping

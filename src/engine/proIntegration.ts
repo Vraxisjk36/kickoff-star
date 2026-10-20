@@ -130,12 +130,17 @@ export function attachProWorld(state: ProCareerState, player: Player): ProCareer
   const world = createProWorld(player.id.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) + 17, date)
   const playable = state.world.divisions[1].teams
   const country = state.associationId ?? 'eng'
-  const global = world.competitions[`top-${country}`]?.entrantIds.map(id => world.clubs[id]) ?? []
-  if (global.length !== playable.length) throw new Error(`Professional league size mismatch: ${country}`)
-  const clubWorldIds = Object.fromEntries(playable.map((team, index) => {
-    global[index].name = team.name
-    return [team.id, global[index].id]
-  }))
+  const targetCompetition = world.competitions[`${state.openingTier===2?'second':'top'}-${country}`]
+  const global = targetCompetition?.entrantIds.map(id=>world.clubs[id]) ?? []
+  if(global.length!==playable.length)throw new Error(`Professional league size mismatch: ${country} tier ${state.openingTier??1}`)
+  const ownName=playable.find(team=>team.id===state.world.playerTeamId)?.name
+  // The chosen offer must connect to its *real* persistent club, not a
+  // placeholder assigned to a high-ranking team by array index.
+  const chosen=global.find(club=>club.name===ownName)
+  if(!chosen)throw new Error(`Offered club ${ownName} is missing from the living world`)
+  const remaining=global.filter(club=>club.id!==chosen.id)
+  const clubWorldIds=Object.fromEntries(playable.map((team,index)=>
+    [team.id,index===0?chosen.id:remaining[index-1].id]))
   const ownClubId = clubWorldIds[state.world.playerTeamId]
   const club = world.clubs[ownClubId]
   const annualWage = Math.round((player.contract?.terms.weeklyWage ?? 1200) * 52)

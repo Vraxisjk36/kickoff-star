@@ -55,7 +55,7 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
   const cupClub = cupOpponentId ? pro.backgroundWorld?.clubs[cupOpponentId] : null
   const nationalOpponent = national ? getNation(national.opponentId) : null
   const opponent = nationalOpponent ? { ...calibrateSeniorTeam(generateTeam(nationalOpponent.strength),seniorNationalTeamRating(nationalOpponent.id)),
-    id: nationalOpponent.id, name: nationalOpponent.name, short: nationalOpponent.short } : cupClub ? { ...generateTeam(Math.max(3, Math.min(8, Math.round(cupClub.reputation / 12)))),
+    id: nationalOpponent.id, name: nationalOpponent.name, short: nationalOpponent.short } : cupClub ? { ...calibrateSeniorTeam(generateTeam(Math.max(3, Math.min(8, Math.round(cupClub.reputation / 12)))),cupClub.reputation),
     id: cupClub.id, name: cupClub.name, short: cupClub.name.split(' ').map(word => word[0]).join('').slice(0, 3).toUpperCase() }
     : warmupOpponent ?? division.teams.find(t => t.id === (home ? fixture?.awayTeamId : fixture?.homeTeamId))
   const matchReady = !!national || (pro.freeAgentSinceWeek === undefined && (!!preseason || !!cup || (!!fixture && pro.resolvedWeek !== pro.week)))

@@ -29,6 +29,7 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
   const completeCup = useCareerStore(s => s.completeProCupMatch)
   const completeNational = useCareerStore(s => s.completeSeniorNationalMatch)
   const completeTraining = useCareerStore(s => s.completeProTraining)
+  const completePreseason = useCareerStore(s=>s.completeProPreseasonFriendly)
   const acknowledgeCeremony = useCareerStore(s => s.acknowledgeProSeasonCeremony)
   const spendXp = useCareerStore(s => s.spendAttributeXp)
   const ensureLivingWorld = useCareerStore(s => s.ensureLivingWorld)
@@ -43,21 +44,23 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
   const world = pro.world
   const division = world.divisions[1]
   const team = division.teams.find(t => t.id === world.playerTeamId)!
+  const preseason = (pro.week===2 || pro.week===3) && !(pro.preseasonPlayedWeeks??[]).includes(pro.week)
+  const warmupOpponent=preseason ? division.teams.filter(club=>club.id!==team.id)[(pro.week-2)%Math.max(1,division.teams.length-1)] : undefined
   const national = pro.international?.pending
   const cup = national ? null : pro.freeAgentSinceWeek === undefined ? pendingProCup(pro) : null
   const fixture = national ? undefined : proFixture(pro)
-  const home = national ? national.home : cup ? cup.homeId === pro.clubWorldIds?.[world.playerTeamId] : fixture?.homeTeamId === world.playerTeamId
+  const home = national ? national.home : cup ? cup.homeId === pro.clubWorldIds?.[world.playerTeamId] : preseason ? pro.week===2 : fixture?.homeTeamId === world.playerTeamId
   const cupOpponentId = cup ? home ? cup.awayId : cup.homeId : null
   const cupClub = cupOpponentId ? pro.backgroundWorld?.clubs[cupOpponentId] : null
   const nationalOpponent = national ? getNation(national.opponentId) : null
   const opponent = nationalOpponent ? { ...calibrateSeniorTeam(generateTeam(nationalOpponent.strength),seniorNationalTeamRating(nationalOpponent.id)),
     id: nationalOpponent.id, name: nationalOpponent.name, short: nationalOpponent.short } : cupClub ? { ...generateTeam(Math.max(3, Math.min(8, Math.round(cupClub.reputation / 12)))),
     id: cupClub.id, name: cupClub.name, short: cupClub.name.split(' ').map(word => word[0]).join('').slice(0, 3).toUpperCase() }
-    : division.teams.find(t => t.id === (home ? fixture?.awayTeamId : fixture?.homeTeamId))
-  const matchReady = !!national || (pro.freeAgentSinceWeek === undefined && (!!cup || (!!fixture && pro.resolvedWeek !== pro.week)))
+    : warmupOpponent ?? division.teams.find(t => t.id === (home ? fixture?.awayTeamId : fixture?.homeTeamId))
+  const matchReady = !!national || (pro.freeAgentSinceWeek === undefined && (!!preseason || !!cup || (!!fixture && pro.resolvedWeek !== pro.week)))
   const destination = PRO_CAREER_DESTINATIONS.find(item => item.id === (pro.associationId ?? 'eng'))
   const internationalLabel = ({ qualifier: 'Championship Qualifier', 'finals-group': 'Championship Finals · Group Stage', continental: 'Regional Nations Series', semifinal: 'Championship Semifinal', final: 'International Championship Final', 'third-place': 'Championship Third Place', friendly: 'International Friendly' } as Record<string,string>)[national?.competition ?? 'friendly']
-  const label = national ? `${getNation(national.nationId).name} · ${internationalLabel}` : cup ? cupLabel(cup) : pro.activeCompetitionId
+  const label = preseason ? 'PRESEASON FRIENDLY · TRAINING CAMP' : national ? `${getNation(national.nationId).name} · ${internationalLabel}` : cup ? cupLabel(cup) : pro.activeCompetitionId
     ? proCompetitionName(pro.activeCompetitionId) : `${destination?.name ?? 'Professional'} Premier Division`
   // WeeklyHub's familiar frame owns the six destinations; professional content
   // replaces only the inner panels. The school calendar is never advanced here.
@@ -91,11 +94,12 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
     totalXp={trainingReward.xp} attrs={trainingReward.attrs}
     values={player.attributes.values as Record<string,number>} potential={player.potential}
     onSpend={(attr,amount)=>spendXp(attr,amount)} onDone={()=>{setTrainingReward(null);setMode('hub')}}/>
-  if (mode === 'matchday' && matchReady && opponent) return <MatchDayScreen player={selected} playerTeam={activeTeam} opponent={opponent} isHome={home} competitionId={national ? 'seniorInternational' : cup?.competitionId ?? 'proLeague'} competitionLabel={label} matchKey={`${player.id}:${pro.season}:${pro.week}:${national?.id ?? cup?.id ?? fixture?.id}`} onSitOut={() => { advance(); setMode('hub') }} onKickOff={() => { sfx.whistle(); setMode('match') }} />
+  if (mode === 'matchday' && matchReady && opponent) return <MatchDayScreen player={selected} playerTeam={activeTeam} opponent={opponent} isHome={home} competitionId={national ? 'seniorInternational' : cup?.competitionId ?? 'proLeague'} competitionLabel={label} matchKey={`${player.id}:${pro.season}:${pro.week}:${national?.id ?? cup?.id ?? fixture?.id ?? 'preseason'}`} onSitOut={() => { if(preseason)completePreseason(6,player.fitness.stamina,0,0); else advance(); setMode('hub') }} onKickOff={() => { sfx.whistle(); setMode('match') }} />
   if (mode === 'match' && matchReady && opponent) return <MatchScreen player={selected} playerTeam={activeTeam} opponent={opponent} playerIsHome={home} autoResolve={autoResolve} onToggleAutoResolve={() => setAutoResolve(v => !v)} onComplete={r => { setResult(r); setMode('summary') }} />
   if (mode === 'summary' && result && matchReady && opponent) return <MatchSummary rating={result.rating} goals={result.goals} assists={result.assists} won={result.won} drew={result.drew} injury={result.injury} wasSubbed={result.wasSubbed} redCarded={result.redCarded} playerStats={result.playerStats} ratingBreakdown={result.ratingBreakdown} minutesPlayed={result.minutesPlayed} yellowCards={result.yellowCards} onDone={() => {
     const outcome = { opponent, home, scored: result.playerScore, conceded: result.opponentScore, goals: result.goals, assists: result.assists, rating: result.rating, energy: result.finalMatchStamina, minutes: result.minutesPlayed, yellowCards: result.yellowCards, redCarded: result.redCarded, injury: result.injury }
-    if (national) completeNational({scored:outcome.scored, conceded:outcome.conceded, goals:outcome.goals,
+    if (preseason) completePreseason(outcome.rating,outcome.energy,outcome.goals,outcome.assists)
+    else if (national) completeNational({scored:outcome.scored, conceded:outcome.conceded, goals:outcome.goals,
       assists:outcome.assists, rating:outcome.rating, minutes:outcome.minutes, energy:outcome.energy})
     else if (cup) completeCup(cup.id, outcome)
     else complete(outcome)

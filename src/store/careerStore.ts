@@ -61,7 +61,7 @@ import { computeCurrentAbility, toOvr } from '../engine/rating'
 import { proTrainingAvailable, proMatchDay } from '../engine/proWeeklySchedule'
 import { canStartInteractiveProCareer } from '../engine/proLeagueRegistry'
 import { completeSeniorInternational } from '../engine/proInternational'
-import { offerProRenewal, attachProWorld, advanceLivingWorld, generateMarketOffers, finalizeProMove, resolveProCup } from '../engine/proIntegration'
+import { offerProRenewal, attachProWorld, syncPlayableProLeague, advanceLivingWorld, generateMarketOffers, finalizeProMove, resolveProCup } from '../engine/proIntegration'
 import { startProLoan, registrationOpen } from '../engine/proMovement'
 import { assessProDeal } from '../engine/proClubFinance'
 

@@ -24,6 +24,14 @@ export function proRatingTarget(country:string,tier:number,rank:number,clubs:num
   const floor=base-5
   return Math.max(34,Math.min(89,Math.round(peak-(peak-floor)*position-(tier-1)*10)))
 }
+const SENIOR_NATION_TARGETS:Readonly<Record<string,number>>={
+  eng:84,esp:86,fra:85,arg:86,bra:85,por:83,ger:83,ned:82,ita:83,
+  bel:81,sco:76,mar:78,sen:77,nga:76,gha:72,rsa:70,
+  usa:76,mex:76,jpn:78,kor:76,aus:73,tur:77,aut:77,sui:78,
+}
+export function seniorNationalTeamRating(nation:string):number {
+  return SENIOR_NATION_TARGETS[nation]??72
+}
 export function calibrateSeniorTeam(team:Team,target:number):Team {
   const o=Math.round(target)
   return {...team,prestige:Math.max(1,Math.round(o/10)),

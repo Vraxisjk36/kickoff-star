@@ -2,6 +2,7 @@ import type { Player } from '../types/player'
 import type { LeagueWorld, Division, Fixture } from './league'
 import { batchSimDivisionRound, recordPlayerMatchResult, resetSchoolLeagueSeason } from './league'
 import { generateTeam, type Team } from './teams'
+import { calibrateSeniorTeam, proRatingTarget } from './proRatings'
 import type { MatchLine, MatchRecord } from './matchLedger'
 import { netWage } from './agents'
 import type { ProWorldState } from './proWorld'
@@ -91,15 +92,17 @@ export function proTrialClubs(points: number, associationId = 'eng'): Team[] {
 export function createProCareer(clubName: string, prestige = 4, associationId = 'eng'): ProCareerState {
   if (!PRO_INTERACTIVE_COUNTRIES.includes(associationId)) throw new Error('Unavailable professional destination')
   const region = PRO_CAREER_DESTINATIONS.find(item => item.id === associationId) ?? PRO_CAREER_DESTINATIONS[0]
-  const own = generateTeam(Math.max(3, Math.min(6, prestige)))
+  const count = plannedClubCount(associationId)
+  const own = calibrateSeniorTeam(generateTeam(Math.max(3, Math.min(6, prestige))),
+    proRatingTarget(associationId,1,Math.max(0,Math.round((10-prestige)/10*(count-1))),count))
   own.name = clubName
   own.short = clubName.split(' ').map(part => part[0]).join('').slice(0, 3).toUpperCase()
-  const count = plannedClubCount(associationId)
   const others = Array.from({ length: count - 1 }, (_, index) => {
     const city = region.cities[index % region.cities.length]
     const name = associationId === 'eng' ? CLUB_NAMES.filter(name => name !== clubName)[index] :
       `${city} ${['Rovers', 'Albion', 'Wanderers', 'Olympic', 'Union'][Math.floor(index / region.cities.length) % 5]} ${index + 1}`
-    const team = generateTeam(3 + index % 4)
+    const team = calibrateSeniorTeam(generateTeam(3 + index % 4),
+      proRatingTarget(associationId,1,index+1,count))
     return { ...team, name, short: name.split(' ').map(part => part[0]).join('').slice(0, 3).toUpperCase() }
   })
   const teams = [own, ...others]

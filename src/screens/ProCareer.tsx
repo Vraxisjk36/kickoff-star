@@ -12,6 +12,7 @@ import { pendingProCup, cupLabel } from '../engine/proIntegration'
 import { generateTeam } from '../engine/teams'
 import { proCompetitionName } from '../engine/proTournaments'
 import { getNation } from '../engine/nations'
+import { calibrateSeniorTeam, seniorNationalTeamRating } from '../engine/proRatings'
 import { proMatchDay, proTrainingAvailable, PRO_WEEKDAYS } from '../engine/proWeeklySchedule'
 import TrainingScreen from './TrainingScreen'
 import AllocationScreen from '../components/AllocationScreen'
@@ -47,7 +48,7 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
   const cupOpponentId = cup ? home ? cup.awayId : cup.homeId : null
   const cupClub = cupOpponentId ? pro.backgroundWorld?.clubs[cupOpponentId] : null
   const nationalOpponent = national ? getNation(national.opponentId) : null
-  const opponent = nationalOpponent ? { ...generateTeam(nationalOpponent.strength),
+  const opponent = nationalOpponent ? { ...calibrateSeniorTeam(generateTeam(nationalOpponent.strength),seniorNationalTeamRating(nationalOpponent.id)),
     id: nationalOpponent.id, name: nationalOpponent.name, short: nationalOpponent.short } : cupClub ? { ...generateTeam(Math.max(3, Math.min(8, Math.round(cupClub.reputation / 12)))),
     id: cupClub.id, name: cupClub.name, short: cupClub.name.split(' ').map(word => word[0]).join('').slice(0, 3).toUpperCase() }
     : division.teams.find(t => t.id === (home ? fixture?.awayTeamId : fixture?.homeTeamId))
@@ -60,7 +61,7 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
   // replaces only the inner panels. The school calendar is never advanced here.
   const calendar = { currentWeek: { weekNumber: pro.week, seasonYear: pro.season, events: [] }, history: [] } as NonNullable<ReturnType<typeof useCareerStore.getState>['calendar']>
   const selected = playerForMatch(player, 'proLeague')
-  const nationalTeam = national ? { ...generateTeam(getNation(national.nationId).strength),
+  const nationalTeam = national ? { ...calibrateSeniorTeam(generateTeam(getNation(national.nationId).strength),seniorNationalTeamRating(national.nationId)),
     id: national.nationId, name: getNation(national.nationId).name, short: getNation(national.nationId).short } : team
   const activeTeam = national ? nationalTeam : team
   const kind = national ? 'international' as const : cup ? (/champions|europa|continental|conference/i.test(cup.competitionId) ? 'europe' as const : 'domestic-cup' as const) : 'league' as const

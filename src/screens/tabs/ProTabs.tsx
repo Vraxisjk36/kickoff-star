@@ -9,6 +9,8 @@ import { TeamCrest, Panel, Section, Bar } from '../../components/ui'
 import PlayerTab from './PlayerTab'
 import PeopleTab from './PeopleTab'
 import ClubTab from './ClubTab'
+import ShopTab from './ShopTab'
+import StandingsTable from '../../components/StandingsTable'
 import { useCareerStore } from '../../store/careerStore'
 import { useMemo, useState } from 'react'
 import ProNewsScreen from '../ProNewsScreen'
@@ -39,6 +41,7 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
   const acceptLoan = useCareerStore(s => s.acceptProLoan)
   const [newsOpen, setNewsOpen] = useState(false)
   const [worldOpen, setWorldOpen] = useState(false)
+  const [proLeagueView, setProLeagueView] = useState<'fixtures' | 'table' | 'international' | 'world'>('fixtures')
   const windowOpen = pro.freeAgentSinceWeek !== undefined || (pro.date ? registrationOpen(pro.associationId ?? 'eng', pro.date) : false)
   const championshipCycle = internationalCycle(pro.season)
   const championship = player.nationality && pro.international
@@ -113,7 +116,43 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
         {windowOpen && pro.freeAgentSinceWeek === undefined && !pro.loan && player.squadRole !== 'starting-xi' && <div className="border-t border-ks-border mt-4 pt-3"><p className="text-ks-muted text-xs">Need senior minutes? A temporary loan keeps your parent contract.</p>{division.teams.filter(team => team.id !== club.id).slice(0, 2).map(team => <button key={team.id} onClick={() => acceptLoan(team.id)} className="block text-ks-gold text-xs mt-2">REQUEST LOAN · {team.name} →</button>)}</div>}
       </div>)}
     </> : tab === 'fixtures' || tab === 'table' ? <>
-      {cards('SENIOR NATIONAL TEAM', <div>
+      <nav className="flex gap-1 p-1 rounded-xl border border-ks-border bg-[#0f0d0d]" aria-label="Professional competition views">
+        {(['fixtures','table','international','world'] as const).map(view =>
+          <button key={view} onClick={() => setProLeagueView(view)}
+            className={`flex-1 py-3 rounded-lg font-display text-[10px] uppercase tracking-wide ${proLeagueView===view?'bg-ks-gold text-ks-black':'text-ks-muted'}`}>{view}</button>)}
+      </nav>
+      <section className="table-hero"><small>PROFESSIONAL FOOTBALL · COMPETITION CENTRE</small>
+        <h1>{pro.activeCompetitionId ? proCompetitionName(pro.activeCompetitionId) : 'Professional League'}</h1>
+        <div className="table-story"><div><span>YOUR POSITION</span><b>{table.findIndex(r => r.teamId === club.id)+1}</b></div>
+          <div><span>POINTS</span><b>{row.points}</b></div><div><span>LEADER</span><strong>{table[0]?.teamName??'—'}</strong></div>
+          <div><span>GAP</span><b>{Math.max(0,(table[0]?.points??0)-row.points)}</b></div></div>
+      </section>
+      {proLeagueView==='table' && <>
+        <StandingsTable division={division} playerTeamId={club.id} hideZones />
+        <Section title="Your professional season">
+          {stat('League record', `${row.won}W · ${row.drawn}D · ${row.lost}L`)}
+          {stat('Goal difference', row.goalsFor-row.goalsAgainst)}
+          {stat('Season goals', player.seasonGoals??0)}
+          {stat('Season assists', player.seasonAssists??0)}
+        </Section>
+      </>}
+      {proLeagueView==='fixtures' && <div className="rounded-xl border border-ks-border overflow-hidden bg-[#10110e]">
+        <div className="px-4 py-3 border-b border-ks-gold/20 font-display text-xs tracking-widest text-ks-gold">YOUR MATCH CALENDAR</div>
+        {division.fixtures.filter(f=>f.homeTeamId===club.id||f.awayTeamId===club.id).map(f=>{
+          const isHome=f.homeTeamId===club.id
+          const other=division.teams.find(t=>t.id===(isHome?f.awayTeamId:f.homeTeamId))
+          const score=f.played && f.homeGoals!==null&&f.awayGoals!==null
+            ? `${isHome?f.homeGoals:f.awayGoals}–${isHome?f.awayGoals:f.homeGoals}` : 'UPCOMING'
+          return <div key={f.id} className="flex items-center gap-3 px-3 py-3 border-b border-ks-border/30 last:border-0">
+            {other && <TeamCrest primary={other.primaryColor} secondary={other.secondaryColor} short={other.short} size="sm"/>}
+            <div className="min-w-0 flex-1"><div className="text-ks-ink text-xs truncate">{other?.name??'Opponent'}</div>
+              <div className="text-ks-muted text-[10px]">ROUND {f.week} · {isHome?'HOME':'AWAY'}</div></div>
+            <span className={`text-xs font-display ${f.played?'text-ks-ink':'text-ks-gold'}`}>{score}</span>
+          </div>
+        })}
+      </div>}
+      {proLeagueView==='international' && <Section title="SENIOR NATIONAL TEAM · COMPETITIONS" defaultOpen>
+      <div>
         {stat('Nation', getNation(player.nationality).name)}
         {stat('International caps', pro.international?.caps ?? 0)}
         {stat('International goals', pro.international?.goals ?? 0)}
@@ -154,15 +193,16 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
         </div>}
         {pro.international?.pending ? <p className="text-ks-gold text-xs mt-2">CALLED UP · {pro.international.pending.competition.toUpperCase()} AGAINST {getNation(pro.international.pending.opponentId).name.toUpperCase()} · PLAY YOUR INTERNATIONAL MATCH</p>
           : <p className="text-ks-muted text-xs mt-2">Senior selection depends on your current performances, reputation and previous international experience.</p>}
-      </div>)}
-
-      {cards('PROFESSIONAL LEAGUE TABLE', <div>{table.map((r, i) => <div key={r.teamId} className={`grid grid-cols-[1.5rem_1fr_2rem_2rem_2rem] gap-1 py-2 text-xs border-b border-ks-border/40 ${r.teamId === club.id ? 'text-ks-gold' : 'text-ks-ink'}`}><span>{i + 1}</span><span className="truncate">{r.teamName}</span><span>{r.played}</span><span>{r.goalsFor-r.goalsAgainst > 0 ? '+' : ''}{r.goalsFor-r.goalsAgainst}</span><b>{r.points}</b></div>)}</div>)}
-      {cards('YOUR FIXTURES', <div>{division.fixtures.filter(f => f.homeTeamId === club.id || f.awayTeamId === club.id).map(f => { const other = division.teams.find(t => t.id === (f.homeTeamId === club.id ? f.awayTeamId : f.homeTeamId)); return <div key={f.id} className="flex justify-between py-2 text-xs border-b border-ks-border/40 text-ks-ink"><span>ROUND {f.week} · {f.homeTeamId === club.id ? 'H' : 'A'} · {other?.name}</span><b>{f.played ? `${f.homeGoals}–${f.awayGoals}` : '—'}</b></div> })}</div>)}
-      {pro.backgroundWorld && <><button className="rounded-xl border border-ks-gold/50 text-ks-gold font-display text-sm py-4" onClick={() => setWorldOpen(!worldOpen)}>{worldOpen ? 'CLOSE WORLD FOOTBALL' : 'EXPLORE WORLD FOOTBALL →'}</button>{worldOpen && <ProWorldPanel world={pro.backgroundWorld} />}</>}
+      </div>
+      </Section>}
+      {proLeagueView==='world' && pro.backgroundWorld && <ProWorldPanel world={pro.backgroundWorld}/>}
     </> : <>
+      <ShopTab player={player}/>
+      <Section title="PROFESSIONAL PAY & RESIDENCE">
       {cards('PROFESSIONAL FINANCES', <>{stat('Balance', `£${(player.money ?? 0).toLocaleString()}`)}{stat('Career gross earnings', `£${(player.careerEarnings ?? 0).toLocaleString()}`)}{stat('Weekly wage', `£${(player.contract?.terms.weeklyWage ?? 1200).toLocaleString()}`)}{stat('Pending match bonuses', `£${(pro.pendingBonus ?? 0).toLocaleString()}`)}<p className="text-ks-muted text-xs mt-3">Monthly pay includes estimated deductions, your agent and accommodation. Figures are part of the game economy.</p></>)}
       {cards('YOUR RESIDENCE', <>{stat('City', pro.residence?.city ?? 'Settling in')}{stat('Monthly rent', `£${(pro.residence?.monthlyRent ?? 0).toLocaleString()}`)}{stat('Hotel until', pro.residence?.hotelUntil ?? '—')}</>)}
       {cards('PAY STATEMENTS', <div>{[...(pro.payStatements ?? [])].reverse().slice(0, 6).map(statement => <div key={statement.month} className="border-b border-ks-border/40 py-3 text-xs"><strong className="text-ks-gold">{statement.month} · NET £{statement.net.toLocaleString()}</strong><div className="grid grid-cols-2 gap-1 text-ks-muted mt-2"><span>Gross £{statement.gross.toLocaleString()}</span><span>Bonus £{statement.bonus.toLocaleString()}</span><span>Withholding £{statement.estimatedWithholding.toLocaleString()}</span><span>Agent £{statement.agentFee.toLocaleString()}</span><span>Housing £{statement.housing.toLocaleString()}</span></div></div>)}{!pro.payStatements?.length && <p className="text-ks-muted text-xs">Your first statement arrives at the end of the month.</p>}</div>)}
+      </Section>
     </>}
     {newsOpen && <ProNewsScreen articles={pro.news ?? []} onClose={() => setNewsOpen(false)} />}
   </div>

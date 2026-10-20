@@ -57,6 +57,7 @@ import { ageGroupFor, initYouthPathway, representativeSelection, selectionPassed
 import { initOctoberLeague, recordOctoberResult, simulateOctoberWeek, octoberStandings } from '../engine/octoberLeague'
 import { createProCareer, advanceProWeek, resolveProMatch, proRound } from '../engine/proCareer'
 import { prepareProGraduate } from '../engine/proRatings'
+import { computeCurrentAbility, toOvr } from '../engine/rating'
 import { proTrainingAvailable, proMatchDay } from '../engine/proWeeklySchedule'
 import { canStartInteractiveProCareer } from '../engine/proLeagueRegistry'
 import { completeSeniorInternational } from '../engine/proInternational'
@@ -620,8 +621,21 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   },
   ensureLivingWorld: () => {
     const { player } = getState()
-    if (!player?.proCareer || player.proCareer.backgroundWorld) return
-    setState({ player: { ...player, proCareer: attachProWorld(player.proCareer, player) } })
+    if (!player?.proCareer) return
+    const existing = player.proCareer
+    if (existing.backgroundWorld && existing.ratingBalanceVersion === 1) return
+    // Upgrade old professional saves once, without touching youth saves or
+    // established late-career players. Do not reset contracts, fixtures or XP.
+    const graduate = (existing.ratingBalanceVersion !== 1 && existing.season <= 3)
+      ? prepareProGraduate(player) : player
+    const base = existing.backgroundWorld ? existing : attachProWorld(existing, graduate)
+    const world = base.backgroundWorld
+    if (world?.players[`career-${graduate.id}`]) {
+      const id = `career-${graduate.id}`
+      world.players[id] = { ...world.players[id], overall: toOvr(computeCurrentAbility(graduate)) }
+    }
+    const migrated = syncPlayableProLeague({ ...base, ratingBalanceVersion: 1 })
+    setState({ player: { ...graduate, proCareer: migrated } })
     void getState().saveCurrent()
   },
   requestProRenewal: () => {

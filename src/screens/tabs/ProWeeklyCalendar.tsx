@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ProCareerState } from '../../engine/proCareer'
-import { proWeekSchedule, PRO_WEEKDAYS } from '../../engine/proWeeklySchedule'
+import { proWeekSchedule, PRO_WEEKDAYS, mondayFrom } from '../../engine/proWeeklySchedule'
 import { professionalSeasonWeeks, proRound } from '../../engine/proCareer'
 interface Props {
   pro: ProCareerState
@@ -19,13 +19,33 @@ export default function ProWeeklyCalendar({pro,opponent,matchKind='league',onTra
   const selected=days[current]
   const formatWeek=(week:number)=>`Week ${week}`
   const weeks=professionalSeasonWeeks(pro)
-  const starts=pro.date?Date.parse(`${pro.date}T00:00:00Z`):Date.UTC(2026,7,1)+(pro.week-1)*7*86400000
+  const starts=pro.date?Date.parse(`${mondayFrom(pro.date)}T00:00:00Z`):Date.UTC(2026,6,13)+(pro.week-1)*7*86400000
   const actualMonth=new Date(starts).getUTCMonth()
   const baseDate=starts-(pro.week-1)*7*86400000
   const weeksOnView=Array.from({length:weeks},(_,n)=>n+1)
     .filter(week=>view==='season'||new Date(baseDate+(week-1)*7*86400000).getUTCMonth()===actualMonth)
   const division=pro.world.divisions[1]
   const maxRounds=Math.max(0,...division.fixtures.map(f=>f.week))
+  const cupSchedule=useMemo(()=>{
+    const world=pro.backgroundWorld
+    const ownId=pro.clubWorldIds?.[pro.world.playerTeamId]
+    if(!world||!ownId)return [] as {week:number;name:string;day:string;kind:string}[]
+    const events:{week:number;name:string;day:string;kind:string}[]=[]
+    for(const fixture of Object.values(world.fixtures)){
+      if(fixture.homeId!==ownId&&fixture.awayId!==ownId)continue
+      const competition=world.competitions[fixture.competitionId]
+      if(!competition || competition.kind==='league' || competition.kind==='national-team')continue
+      const time=Date.parse(`${fixture.kickoffDate}T00:00:00Z`)
+      const gameWeek=Math.floor((time-baseDate)/604800000)+1
+      if(gameWeek<1||gameWeek>weeks)continue
+      const away=fixture.homeId===ownId
+      const rival=world.clubs[away?fixture.awayId:fixture.homeId]
+      events.push({week:gameWeek,name:rival?.name??'Cup opponent',
+        day:PRO_WEEKDAYS[(new Date(time).getUTCDay()+6)%7],
+        kind:fixture.competitionId.includes('continental')?'EUROPEAN':'CUP'})
+    }
+    return events
+  },[pro.backgroundWorld,pro.clubWorldIds,pro.world.playerTeamId,baseDate,weeks])
   const nextLeagueMatch=(week:number)=>{
     const round=proRound(week,division.teams.length,maxRounds)
     if(round===null)return null
@@ -64,8 +84,14 @@ export default function ProWeeklyCalendar({pro,opponent,matchKind='league',onTra
       {weeksOnView.map(week=><div key={week} className={`rounded-lg border p-2 ${week===pro.week?'border-ks-gold bg-ks-gold/10':'border-ks-border/60'}`}>
         <span className="text-xs text-ks-ink">{formatWeek(week)}</span>
         <div className="text-[10px] text-ks-muted mt-1">{new Date(baseDate+(week-1)*7*86400000).toLocaleDateString('en-GB',{month:'short',timeZone:'UTC'})}</div>
-        {nextLeagueMatch(week) ? <div className="text-[10px] text-ks-gold mt-1">SAT · {nextLeagueMatch(week)!.home?'HOME':'AWAY'} · {nextLeagueMatch(week)!.name}</div>
-          : <div className="text-[10px] text-ks-muted mt-1">Training · Recovery</div>}
+        {week===1&&<div className="text-[10px] text-green-400 mt-1">PRESEASON · TRAINING CAMP</div>}
+        {(week===2||week===3)&&<div className="text-[10px] text-green-400 mt-1">SAT · PRESEASON FRIENDLY</div>}
+        {week===4&&<div className="text-[10px] text-ks-gold mt-1">LEAGUE OPENING CEREMONY</div>}
+        {nextLeagueMatch(week)&&<div className="text-[10px] text-ks-gold mt-1">LEAGUE · {nextLeagueMatch(week)!.home?'HOME':'AWAY'} · {nextLeagueMatch(week)!.name}</div>}
+        {cupSchedule.filter(event=>event.week===week).slice(0,2).map((event,index)=><div key={index}
+          className="text-[10px] text-ks-gold mt-1">{event.day} · {event.kind} · {event.name}</div>)}
+        {!nextLeagueMatch(week)&&cupSchedule.every(event=>event.week!==week)&&![1,2,3,4].includes(week)&&
+          <div className="text-[10px] text-ks-muted mt-1">Training · Recovery</div>}
       </div>)}
       </div>}
   </div>

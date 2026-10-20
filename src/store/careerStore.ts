@@ -159,7 +159,7 @@ interface CareerStore {
   completeProCupMatch: (fixtureId: string, result: Parameters<typeof resolveProMatch>[2]) => void
   completeSeniorNationalMatch: (result: { scored: number; conceded: number; goals: number; assists: number; rating: number; minutes: number; energy: number }) => void
   completeProTrialWeek: (points: number) => void
-  signOpeningProClub: (clubName: string, prestige: number, associationId?: string) => void
+  signOpeningProClub: (clubName: string, prestige: number, associationId?: string, tier?: 1 | 2) => void
   ensureLivingWorld: () => void
   requestProOffers: () => void
   requestProRenewal: () => boolean
@@ -787,13 +787,13 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     setState({ player: { ...player, proTrial: { week: player.proTrial.week + 1, points: player.proTrial.points + Math.max(0, Math.min(3, points)) } } })
     void getState().saveCurrent()
   },
-  signOpeningProClub: (clubName, prestige, associationId = 'eng') => {
+  signOpeningProClub: (clubName, prestige, associationId = 'eng', tier:1|2=1) => {
     const { player } = getState()
     if (!player?.proTrial || player.proTrial.week !== 3) return
     const wage = 350 + prestige * 175 + player.proTrial.points * 45
     const terms = { weeklyWage: wage, years: 2, appearanceFee: Math.round(wage * .08), goalBonus: Math.round(wage * .12), signingBonus: wage * 2 }
     const graduate = prepareProGraduate(player)
-    const professional = createProCareer(clubName, prestige, associationId)
+    const professional = createProCareer(clubName, prestige, associationId, tier)
     const ownTeam = professional.world.divisions[1].teams.find(team => team.id === professional.world.playerTeamId)!
     const squadPrestige = Math.max(5,Math.min(9,Math.round(teamOverall(ownTeam)/10)))
     setState({ player: { ...graduate, proTrial: undefined, trialWeekCompleted: 3, squadRole: player.proTrial.points >= 6 ? 'starting-xi' : 'bench', squad: generateSquad(squadPrestige),

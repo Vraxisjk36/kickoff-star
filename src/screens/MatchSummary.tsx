@@ -20,6 +20,10 @@ interface MatchSummaryProps {
   ratingBreakdown?: RatingBreakdown
   minutesPlayed: number
   yellowCards: number
+  homeTeamName?: string
+  awayTeamName?: string
+  homeGoals?: number
+  awayGoals?: number
   onDone: () => void
 }
 
@@ -28,7 +32,7 @@ function deltaText(value: number): string {
   return `${value > 0 ? '+' : '−'}${Math.abs(value).toFixed(2)}`
 }
 
-export default function MatchSummary({ rating, goals, assists, won, drew, injury, wasSubbed, redCarded, shootout, playerStats, ratingBreakdown, minutesPlayed, yellowCards, onDone }: MatchSummaryProps) {
+export default function MatchSummary({ rating, goals, assists, won, drew, injury, wasSubbed, redCarded, shootout, playerStats, ratingBreakdown, minutesPlayed, yellowCards, homeTeamName, awayTeamName, homeGoals, awayGoals, onDone }: MatchSummaryProps) {
   // P60 — reference: a "round results" list showing the rest of the
   // division's results, not just your own. The data already existed
   // (batch-sim computes every fixture in the round, not just yours) — it
@@ -113,6 +117,15 @@ export default function MatchSummary({ rating, goals, assists, won, drew, injury
         <div className="text-center mb-6">
           <div className="font-display tracking-widest text-[11px] text-ks-muted uppercase mb-2">match summary</div>
           <div className={`font-display text-4xl tracking-wide ${resultColor}`}>{resultText}</div>
+          {homeTeamName && awayTeamName && <div className="mt-5 rounded-xl border border-ks-gold/30 bg-[#151711] px-3 py-4">
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+              <span className="text-xs text-ks-ink text-left leading-snug">{homeTeamName}</span>
+              <span className="font-display text-xl text-ks-gold tabular-nums">{homeGoals ?? '–'} : {awayGoals ?? '–'}</span>
+              <span className="text-xs text-ks-ink text-right leading-snug">{awayTeamName}</span>
+            </div>
+            <div className="mt-2 text-[10px] uppercase tracking-widest text-ks-muted">FULL TIME · PROFESSIONAL FOOTBALL</div>
+          </div>}
+
         </div>
 
         <div className={`rating-reveal-hero ${tallyComplete ? 'rating-reveal-complete' : ''}`}>

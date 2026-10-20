@@ -10,6 +10,7 @@ import { INTERNATIONAL_GROUPS, INTERNATIONAL_WINDOWS, internationalCycle, intern
 import { NATIONS } from '../src/engine/nations'
 import { selectSeniorNationalSquad } from '../src/engine/proNationalSquad'
 import { seniorNationRankings } from '../src/engine/proNationalRankings'
+import { buildNationalWorldResults, seniorWorldNationRankings } from '../src/engine/proNationWorldRankings'
 import { CONTINENTAL_WINDOWS, continentalCycle, continentalNations, continentalRound, continentalNationsProgress, confederationForNation } from '../src/engine/proContinentalNations'
 import { PRO_INTERACTIVE_COUNTRIES, canStartInteractiveProCareer } from '../src/engine/proLeagueRegistry'
 
@@ -472,3 +473,47 @@ const injuredCallup={...nationalPlayer, injury:{kind:'hamstring',weeksRemaining:
 assert.equal(scheduleSeniorInternational({...withBoard,season:5,week:12},injuredCallup).international?.pending,
   undefined,'Injured player must not be called up for senior national duty')
 console.log('Phase 2: nation ratings, correct home-away transfers, no future records, injury eligibility passed')
+
+const worldFirst=buildNationalWorldResults(1,1)
+assert.equal(worldFirst.length,0,'No international result before first scheduled window')
+const worldWeek8=buildNationalWorldResults(1,8)
+assert.ok(worldWeek8.length>0,'Global national simulations must include regional AI fixtures')
+assert.ok(worldWeek8.every(r=>r.season===1&&r.week<=8))
+assert.equal(new Set(worldWeek8.map(r=>[r.season,r.week,
+  r.home?r.nationId:r.opponentId,r.home?r.opponentId:r.nationId].join(':'))).size,worldWeek8.length,
+  'Simulated world national fixtures must never repeat')
+const worldWeek12=buildNationalWorldResults(1,12)
+assert.ok(worldWeek12.length>worldWeek8.length,
+  'Global rankings need national championship qualification fixtures too')
+const againstEngland=worldWeek12.find(r=>
+  (r.nationId==='eng'||r.opponentId==='eng')&&r.week===12)!
+assert.ok(againstEngland)
+const realHome=againstEngland.home?againstEngland.nationId:againstEngland.opponentId
+const realAway=againstEngland.home?againstEngland.opponentId:againstEngland.nationId
+const actualWorld={...againstEngland,id:'user-controlled-ranking',
+  nationId:realHome,opponentId:realAway,home:true,
+  scored:10,conceded:0,goals:1,assists:0,rating:9,minutes:90}
+const overridden=buildNationalWorldResults(1,12,[actualWorld])
+const overriddenGame=overridden.find(r=>r.id==='user-controlled-ranking')
+assert.equal(overriddenGame?.scored,10)
+assert.equal(overridden.length,worldWeek12.length,
+  'A real result must replace, not duplicate, a simulated fixture')
+assert.ok(overridden.every(r=>r.id!=='user-controlled-ranking'||r.minutes===90))
+const overriddenRatings=seniorWorldNationRankings(1,12,[actualWorld])
+const baselineRatings=seniorWorldNationRankings(1,12)
+assert.notDeepEqual(overriddenRatings,baselineRatings,
+  'User international scores must change worldwide ranking points')
+assert.deepEqual(seniorWorldNationRankings(1,12,[actualWorld,actualWorld]),overriddenRatings,
+  'Duplicate human records cannot duplicate world ranking points')
+assert.deepEqual(seniorWorldNationRankings(1,8,[actualWorld]),seniorWorldNationRankings(1,8),
+  'Future human international result cannot change earlier world rankings')
+const worldClock=Date.now()
+const twentyWorld=buildNationalWorldResults(20,44)
+const fullWorldRankings=seniorWorldNationRankings(20,44)
+assert.equal(fullWorldRankings.length,NATIONS.length)
+assert.ok(twentyWorld.length>800 && twentyWorld.length<4000,
+  'Long-career international events must stay reasonably bounded')
+assert.ok(fullWorldRankings.every(r=>Number.isFinite(r.points)))
+assert.ok(Date.now()-worldClock<30000,
+  'Twenty-season national ranking reconstruction is too slow on CI')
+console.log('Phase 2: world AI-national results, score overrides, duplicate safety, 20-year ranking load passed')

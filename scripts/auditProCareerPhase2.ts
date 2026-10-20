@@ -673,6 +673,6 @@ const awardState={...withBoard,season:2,week:1,seasonRecords:[recordSeason],
   seenMilestones:[],date:'2027-07-12'}
 const awardMoment=nextProMilestone(awardState)
 assert.equal(awardMoment?.kind,'ceremony')
-assert.equal(nextProMilestone({...awardState,seenMilestones:[awardMoment!.id]})?.id,undefined===undefined?
-  nextProMilestone({...awardState,seenMilestones:[awardMoment!.id]})?.id:undefined)
+assert.notEqual(nextProMilestone({...awardState,seenMilestones:[awardMoment!.id]})?.id,awardMoment?.id,
+  'Award ceremony must only appear once per saved season')
 console.log('Phase 2: 20 league record catalogs, awards, and seasonal ceremony save-safety audited')

@@ -40,7 +40,6 @@ export default function ProTabs({ player, tab, onGoTo }: { player: Player; tab: 
   const signMove = useCareerStore(s => s.signProTransfer)
   const acceptLoan = useCareerStore(s => s.acceptProLoan)
   const [newsOpen, setNewsOpen] = useState(false)
-  const [worldOpen, setWorldOpen] = useState(false)
   const [proLeagueView, setProLeagueView] = useState<'fixtures' | 'table' | 'international' | 'world'>('fixtures')
   const windowOpen = pro.freeAgentSinceWeek !== undefined || (pro.date ? registrationOpen(pro.associationId ?? 'eng', pro.date) : false)
   const championshipCycle = internationalCycle(pro.season)

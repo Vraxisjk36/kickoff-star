@@ -149,6 +149,7 @@ interface CareerStore {
   acknowledgeProSigning: () => void
   advanceProCareer: () => void
   trainProCareer: () => void
+  acknowledgeProSeasonCeremony: (kind:'preseason'|'kickoff') => void
   completeProTraining: (outcome: TrainingOutcome, energySpent: number, injury?: {severity: string; weeksOut: number; description: string} | null) => void
   completeProMatch: (result: Parameters<typeof resolveProMatch>[2]) => void
   completeProCupMatch: (fixtureId: string, result: Parameters<typeof resolveProMatch>[2]) => void
@@ -536,6 +537,15 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const result = advanceProWeek(player.proCareer, player)
     const living = advanceLivingWorld(player.proCareer, result.state, result.player)
     setState({ player: { ...living.player, proCareer: living.state } })
+    void getState().saveCurrent()
+  },
+  acknowledgeProSeasonCeremony: (kind) => {
+    const {player}=getState()
+    if(!player?.proCareer)return
+    const pro=player.proCareer
+    const update=kind==='preseason'?{preseasonIntroducedSeason:pro.season}:
+      {leagueIntroducedSeason:pro.season}
+    setState({player:{...player,proCareer:{...pro,...update}}})
     void getState().saveCurrent()
   },
   trainProCareer: () => {

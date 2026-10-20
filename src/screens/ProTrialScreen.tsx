@@ -20,17 +20,17 @@ const WEEKS:readonly {title:string;text:string;drill:MiniGameKind;label:string}[
 ]
 export default function ProTrialScreen({ onComplete, onExitToMenu }: { onComplete: () => void; onExitToMenu: () => void }) {
   const [destination, setDestination] = useState('eng')
-  const [phase,setPhase]=useState<'intro'|'drill'|'result'>('intro')
+  const [phase,setPhase]=useState<'intro'|'drill'|'reaction'|'result'>('intro')
   const [earned,setEarned]=useState(0)
   const [drillIndex,setDrillIndex]=useState(0)
   const [drillScores,setDrillScores]=useState<number[]>([])
   const [lastQuality,setLastQuality]=useState(0)
-  const miniGames:readonly MiniGameKind[] = trialDrillsForWeek(player?.proTrial?.week ?? 0)
   const player = useCareerStore(s => s.player)
   const completeWeek = useCareerStore(s => s.completeProTrialWeek)
   const signClub = useCareerStore(s => s.signOpeningProClub)
   if (!player?.proTrial) return null
   const trial = player.proTrial
+  const miniGames:readonly MiniGameKind[] = trialDrillsForWeek(trial.week)
   const scene = WEEKS[trial.week]
   return <div className="relative min-h-screen bg-ks-black px-5 py-8"><div className="max-w-md mx-auto"><div className="flex justify-between text-ks-gold font-display tracking-widest text-xs"><span>KICKOFF STAR · PRO TRIAL</span><button onClick={onExitToMenu}>☰ MENU</button></div>
     {scene ? <><div className="mt-8 text-ks-gold tracking-[.2em] text-xs">WEEK {trial.week+1} / 3 · SENIOR TRIALS</div>

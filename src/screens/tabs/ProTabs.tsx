@@ -24,7 +24,7 @@ import { internationalCycle, internationalProgress, visibleQualifyingTable } fro
 import { continentalNationsProgress } from '../../engine/proContinentalNations'
 import { seniorWorldNationRankings } from '../../engine/proNationWorldRankings'
 
-export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy, onTrain, matchKind, matchOpponent }: { player: Player; tab: HubTab; onGoTo: (tab: HubTab) => void; onOpenInbox: () => void; onOpenEnergy: () => void; onTrain: () => void; matchKind?: 'league'|'domestic-cup'|'europe'|'international'|'final'; matchOpponent?: string }) {
+export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy, onTrain, matchKind, matchOpponent, matchDate }: { player: Player; tab: HubTab; onGoTo: (tab: HubTab) => void; onOpenInbox: () => void; onOpenEnergy: () => void; onTrain: () => void; matchKind?: 'league'|'domestic-cup'|'europe'|'international'|'final'; matchOpponent?: string; matchDate?: string }) {
   const pro = player.proCareer!
   const division = pro.world.divisions[1]
   const club = division.teams.find(t => t.id === pro.world.playerTeamId)!
@@ -61,7 +61,7 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
   return <div className="flex flex-col gap-2.5 stagger-children">
     {tab === 'home' ? <>
       {header}
-      <ProWeeklyCalendar pro={pro} opponent={matchOpponent ?? (pro.international?.pending ? getNation(pro.international.pending.opponentId).name : opponent?.name)} matchKind={matchKind ?? 'league'} onTrain={onTrain}/>
+      <ProWeeklyCalendar pro={pro} opponent={matchOpponent ?? (pro.international?.pending ? getNation(pro.international.pending.opponentId).name : opponent?.name)} matchKind={matchKind ?? 'league'} matchDate={matchDate} onTrain={onTrain}/>
       {cards('NEXT UP · YOUR WEEK', <div><p className="text-ks-ink text-lg font-display">{pro.international?.pending ? `INTERNATIONAL · ${getNation(pro.international.pending.opponentId).name}` : fixture && pro.resolvedWeek !== pro.week ? `${fixture.homeTeamId === club.id ? 'HOME' : 'AWAY'} · ${opponent?.name}` : 'Training & recovery'}</p><p className="text-ks-muted text-xs mt-2">{fixture ? (pro.associationId ?? 'eng').toUpperCase() + ' League · matchweek ' + proRound(pro.week, division.teams.length, Math.max(0, ...division.fixtures.map(f => f.week))) : nextOpponent ? `Next fixture: ${nextOpponent.name}` : 'The next league calendar is being prepared.'}</p></div>)}
       <div className="rounded-xl border border-ks-gold/25 bg-[#122018] px-4 py-3 flex items-center justify-between gap-3">
         <div><span className="font-display tracking-widest text-[10px] text-ks-gold">PROFESSIONAL PATHWAY</span>

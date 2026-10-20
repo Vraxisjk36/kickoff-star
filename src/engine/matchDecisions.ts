@@ -34,7 +34,7 @@ function attrValue(player: Player, attr: AnyAttribute): number {
 // heavily that players could repeatedly make a good read and still feel doomed.
 // Attributes still matter strongly, but a football-correct choice now starts from
 // a healthier baseline. Half-chances remain meaningfully harder than clear looks.
-export /** Senior football is harder when a youth graduate faces elite opposition.
+/** Senior football is harder when a youth graduate faces elite opposition.
  * This modifier affects ONLY senior choices; original school odds are intact.
  */
 export function professionalDecisionModifier(playerOvr:number,opponentOvr:number):number{

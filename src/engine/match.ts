@@ -36,6 +36,8 @@ export interface MatchState {
   homeTeam: Team
   awayTeam: Team
   playerIsHome: boolean
+  /** Senior commentary uses full club names; school commentary stays unchanged. */
+  professional?: boolean
   minute: number
   addedTime: number
   homeScore: number
@@ -147,6 +149,7 @@ export function initMatch(player: Player, playerTeam: Team, opponent: Team, play
     homeTeam: playerIsHome ? playerTeam : opponent,
     awayTeam: playerIsHome ? opponent : playerTeam,
     playerIsHome,
+    professional: !!player.turnedPro,
     minute: 0,
     addedTime: 1 + Math.floor(rand() * 6),
     homeScore: 0,
@@ -207,11 +210,11 @@ function ctxOf(s: MatchState): CommentaryContext {
   const oppScore = s.playerIsHome ? s.awayScore : s.homeScore
   return {
     player: s.playerSurname,
-    team: pt.short,
-    opp: opp.short,
+    team: s.professional ? pt.name : pt.short,
+    opp: s.professional ? opp.name : opp.short,
     minute: s.minute,
-    homeShort: s.homeTeam.short,
-    awayShort: s.awayTeam.short,
+    homeShort: s.professional ? s.homeTeam.name : s.homeTeam.short,
+    awayShort: s.professional ? s.awayTeam.name : s.awayTeam.short,
     homeScore: s.homeScore,
     awayScore: s.awayScore,
     diff: playerScore - oppScore,

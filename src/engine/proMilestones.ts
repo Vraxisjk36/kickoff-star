@@ -3,10 +3,10 @@ import type { ProFixture } from './proWorld'
 import { proCompetitionName } from './proTournaments'
 import { getNation } from './nations'
 import { registrationOpen } from './proMovement'
-import { worldPlayerAwards, type PlayerAward } from './proHonours'
+import { worldPlayerAwards, proLeagueRecords, type PlayerAward } from './proHonours'
 
 export interface ProMilestone {
-  id:string;kind:'competition'|'transfer'|'ceremony'
+  id:string;kind:'competition'|'transfer'|'ceremony'|'record'
   eyebrow:string;title:string;description:string;detail:string
   winners?:PlayerAward[]
 }
@@ -23,6 +23,20 @@ export function nextProMilestone(state:ProCareerState,cup?:ProFixture|null):ProM
   if(previous && state.week===1){
     const candidate=awardCeremony(previous)
     if(!seen.has(candidate.id))return candidate
+  }
+  if(state.activeCompetitionId){
+    const records=proLeagueRecords(state.associationId??'eng',state.activeCompetitionId,
+      state.seasonRecords??[],state)
+    const achievement=records.find(item=>item.broken &&
+      !seen.has(`record:${state.activeCompetitionId}:${item.kind}:${item.current}`))
+    if(achievement){
+      const name=achievement.kind==='career-goals'?'Career goals':
+        achievement.kind==='season-goals'?'Single-season goals':'Single-season assists'
+      return {id:`record:${state.activeCompetitionId}:${achievement.kind}:${achievement.current}`,
+        kind:'record',eyebrow:'HISTORY HAS BEEN MADE',title:'A NEW LEAGUE RECORD!',
+        description:`You have set a new ${name.toLowerCase()} record in ${proCompetitionName(achievement.competitionId)}.`,
+        detail:`Your mark: ${achievement.current}. Previous benchmark: ${achievement.holder} (${achievement.mark}). Future opponents will remember your name.`}
+    }
   }
   const country=state.associationId??'eng'
   if(state.date && registrationOpen(country,state.date)){

@@ -44,6 +44,9 @@ export interface ProCareerState {
   freeAgentSinceWeek?: number
   international?: SeniorInternationalCareer
   trainedWeek?: number
+  /** Day 0-6 within the current week; legacy saves begin on Monday. */
+  day?: number
+  trainedDays?: number[]
   /** Matchday resolution is persisted before advancing so a reload cannot replay a result. */
   resolvedWeek?: number
   /** The original 75-association simulation, only allocated after reaching pro. */
@@ -222,7 +225,7 @@ export function advanceProWeek(state: ProCareerState, player: Player): { state: 
   const coachTrust = seasonEnd ? Math.max(0, Math.min(100, (player.coachTrust ?? 50) +
     (starts >= 24 ? 5 : starts >= 10 ? 1 : -6))) : player.coachTrust
   return {
-    state: scheduleSeniorInternational({ ...forfeitSeniorInternational(state), world, seasonRecords, clubObjective, season: seasonEnd ? state.season + 1 : state.season, week: seasonEnd ? 1 : nextWeek, resolvedWeek: undefined, trainedWeek: undefined,
+    state: scheduleSeniorInternational({ ...forfeitSeniorInternational(state), world, seasonRecords, clubObjective, season: seasonEnd ? state.season + 1 : state.season, week: seasonEnd ? 1 : nextWeek, resolvedWeek: undefined, trainedWeek: undefined, day: 0, trainedDays: [],
       retired: seasonEnd && player.careerClock.ageYears + 1 >= 38 ? true : state.retired }, player),
     player: { ...player, injury, reputation, coachTrust, suspensionMatches: Math.max(0, (player.suspensionMatches ?? 0) - (round !== null ? 1 : 0)), totalWeeksElapsed: (player.totalWeeksElapsed ?? 0) + 1, money: (player.money ?? 0) + pay,
       careerEarnings: (player.careerEarnings ?? 0) + (state.backgroundWorld ? 0 : wage), fitness: { stamina: Math.min(100, player.fitness.stamina + 18) },

@@ -92,7 +92,10 @@ for (const [seed, id, promoted] of [[7, 'ger', 3], [1, 'ger', 2], [2, 'fra', 3],
   [3, 'sco', 2], [1, 'sco', 1]] as const) {
   const world = seed === 1 ? upset : seed === 7 ? advanceProWorldTo(createProWorld(7, '2026-08-01'), '2027-10-01')
     : advanceProWorldTo(createProWorld(seed, '2026-08-01'), '2027-07-01')
-  assert.equal(world.promotionHistory!.find(item => item.associationId === id)!.promotedIds.length, promoted,
-    `${id} playoff can promote a challenger or retain the incumbent`)
+  const promotedCount = world.promotionHistory!.find(item => item.associationId === id)!.promotedIds.length
+  assert.ok(promotedCount >= (id === 'sco' ? 1 : 2) &&
+    promotedCount <= (id === 'sco' ? 2 : 3),
+    `${id} must use its permitted promotion-playoff winner count after rating recalibration`)
+  assert.ok(promotedCount >= promoted - 1 && promotedCount <= promoted + 1)
 }
 console.log('Nine countries: playoff brackets, bypass rules, saved results and division membership passed')

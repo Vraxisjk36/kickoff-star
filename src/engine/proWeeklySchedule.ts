@@ -1,9 +1,22 @@
 import type { ProCareerState } from './proCareer'
 import { proFixture } from './proCareer'
 export const PRO_WEEKDAYS=['MON','TUE','WED','THU','FRI','SAT','SUN'] as const
-export function proMatchDay(state:ProCareerState,competition:'league'|'domestic-cup'|'europe'|'international'|'final'='league'):number {
+export function mondayFrom(date:string):string {
+  const stamp=Date.parse(`${date}T00:00:00Z`)
+  if(!Number.isFinite(stamp))return date
+  const weekday=(new Date(stamp).getUTCDay()+6)%7
+  return new Date(stamp-weekday*86400000).toISOString().slice(0,10)
+}
+export function proMatchDay(state:ProCareerState,competition:'league'|'domestic-cup'|'europe'|'international'|'final'='league',
+  kickoffDate?:string):number {
+  if(kickoffDate && state.date) {
+    const base=Date.parse(`${mondayFrom(state.date)}T00:00:00Z`)
+    const played=Date.parse(`${kickoffDate}T00:00:00Z`)
+    const offset=Math.round((played-base)/86400000)
+    if(offset>=0&&offset<=6)return offset
+  }
   if(competition==='final')return 5
-  if(competition==='europe')return state.week%3+1 // Tue/Wed/Thu
+  if(competition==='europe')return state.week%3+1 // Tue/Wed/Thu fallback when no dated fixture
   if(competition==='domestic-cup')return 2
   if(competition==='international')return 3
   return 5
@@ -12,8 +25,8 @@ export function proTrainingAvailable(day:number,matchDay:number):boolean {
   return day>=0&&day<=4&&day!==matchDay&&Math.abs(day-matchDay)>1
 }
 export interface ProDaySchedule {day:number;label:string;kind:'training'|'match'|'recovery'|'rest';title:string;completed:boolean}
-export function proWeekSchedule(state:ProCareerState,opponent?:string,kind:'league'|'domestic-cup'|'europe'|'international'|'final'='league'):ProDaySchedule[]{
-  const matchDay=proMatchDay(state,kind)
+export function proWeekSchedule(state:ProCareerState,opponent?:string,kind:'league'|'domestic-cup'|'europe'|'international'|'final'='league',kickoffDate?:string):ProDaySchedule[]{
+  const matchDay=proMatchDay(state,kind,kickoffDate)
   const hasMatch=!!opponent || !!proFixture(state)
   return PRO_WEEKDAYS.map((label,day)=>{
     const match=hasMatch&&day===matchDay

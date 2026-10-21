@@ -25,8 +25,8 @@ import { buildNationalWorldResults, seniorWorldNationRankings } from '../src/eng
 import { CONTINENTAL_WINDOWS, continentalCycle, continentalNations, continentalRound, continentalNationsProgress, confederationForNation } from '../src/engine/proContinentalNations'
 import { PRO_INTERACTIVE_COUNTRIES, PRO_LEAGUE_PLAN, canStartInteractiveProCareer } from '../src/engine/proLeagueRegistry'
 
-assert.equal(PRO_INTERACTIVE_COUNTRIES.length, 10, 'Phase 2 must permit ten professional destinations')
-assert.equal(new Set(PRO_INTERACTIVE_COUNTRIES).size, 10)
+assert.equal(PRO_INTERACTIVE_COUNTRIES.length, 9, 'Initial Phase 2 release must permit nine professional destinations')
+assert.equal(new Set(PRO_INTERACTIVE_COUNTRIES).size, 9)
 for (const destination of PRO_CAREER_DESTINATIONS) {
   const country = destination.id
   assert.ok(canStartInteractiveProCareer(country), `${country} unavailable`)
@@ -61,7 +61,7 @@ for (const destination of PRO_CAREER_DESTINATIONS) {
 }
 assert.equal(createProCareer('North London Athletic').associationId, 'eng', 'Old pro careers must default to England')
 assert.equal(proRound(4,10), 1, 'Legacy ten-team week alignment changed')
-console.log('Phase 2: ten countries, trial contracts, fixtures, round calendars and legacy saves passed')
+console.log('Phase 2: nine countries, trial contracts, fixtures, round calendars and legacy saves passed')
 
 const worldSeed = createProWorld(1907, '2026-08-01')
 const firstFixture = Object.values(worldSeed.fixtures).find(f => f.competitionId === 'top-esp')!
@@ -145,7 +145,7 @@ const secondFixture = Object.values(careerWorld.fixtures).find(f => f.competitio
 const secondScore = recordHumanProLeagueMatch(careerWorld, 'eng', secondFixture.homeId,
   secondFixture.awayId, 2, 0, secondFixture.id, 'second-eng')
 assert.equal(secondScore.standings['second-eng'].find(r => r.clubId === secondFixture.homeId)!.points, 3)
-console.log('Phase 2: ten real fixture calendars, second-tier club membership and playable result audit passed')
+console.log('Phase 2: nine real fixture calendars, second-tier club membership and playable result audit passed')
 
 assert.equal(professionalSeasonWeeks(secondSynced), 52)
 const secondRoundCount = Math.max(...secondSynced.world.divisions[1].fixtures.map(f => f.week))

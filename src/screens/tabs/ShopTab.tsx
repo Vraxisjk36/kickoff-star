@@ -4,7 +4,7 @@ import { useCareerStore } from '../../store/careerStore'
 import {
   shopFor, itemById, equipmentBoosts, monthlyAllowance, allowanceDue,
   availableJobs, rewardForStreak, formatMoney, canWorkThisWeek, weeklyLivingCost, ALLOWANCE_INTERVAL_WEEKS,
-  type ShopItem,
+  playerShopPrice, rewardedCashAmount, type ShopItem,
 } from '../../engine/economy'
 import { Panel, EmptyNote, Icon } from '../../components/ui'
 import iconContract from '../../assets/icons/contract.png'
@@ -37,7 +37,8 @@ function Money({ amount }: { amount: number }) {
 }
 
 function ItemCard({ item, player, onBuy }: { item: ShopItem; player: Player; onBuy: (id: string) => void }) {
-  const affordable = (player.money ?? 0) >= item.price
+  const price=playerShopPrice(player,item)
+  const affordable = (player.money ?? 0) >= price
   const owned = (player.equipment ?? []).find((o) => o.itemId === item.id)
   const held = (player.consumables ?? {})[item.id] ?? 0
 
@@ -72,7 +73,7 @@ function ItemCard({ item, player, onBuy }: { item: ShopItem; player: Player; onB
             : 'border border-ks-border text-ks-muted/50'
         }`}
       >
-        {affordable ? `buy · ${formatMoney(item.price)}` : `${formatMoney(item.price)} — can't afford`}
+        {affordable ? `buy · ${formatMoney(price)}` : `${formatMoney(item.price)} — can't afford`}
       </button>
     </div>
   )
@@ -84,6 +85,7 @@ export default function ShopTab({ player }: { player: Player }) {
   // lags one render behind, so AnimatedNumber gets a genuine from->to on
   // the render right after money changes, not a restart every re-render.
   const isPro = !!player.turnedPro && !!player.proCareer
+  const cashReward=rewardedCashAmount(player)
   const currentMoney = player.money ?? 0
   const prevMoneyRef = useRef(currentMoney)
   const [displayFrom, setDisplayFrom] = useState(currentMoney)
@@ -139,16 +141,16 @@ export default function ShopTab({ player }: { player: Player }) {
 
       {rewardedAdsAvailable() && remainingToday('cash') > 0 && <section className="rounded-xl border border-ks-gold/50 bg-gradient-to-r from-[#1d1b11] to-[#11130e] p-4">
         <div className="font-display tracking-widest text-[10px] text-ks-gold">EXTRA POCKET MONEY</div>
-        <p className="text-xs text-ks-ink mt-1">£10 toward recovery or kit. No energy cost.</p>
+        <p className="text-xs text-ks-ink mt-1">{formatMoney(cashReward)} toward recovery or kit. No energy cost.</p>
         <button type="button" disabled={cashAdBusy} onClick={async () => {
           if (cashAdBusy) return
           setCashAdBusy(true)
           try {
             const reward = await watchRewardedAd('cash')
-            if (reward) { grantCashFromAd(10); say('earned £10') }
+            if (reward) { grantCashFromAd(cashReward); say('earned '+formatMoney(cashReward)) }
             else say('ad unavailable or not completed')
           } finally { setCashAdBusy(false) }
-        }} className="mt-3 w-full min-h-12 rounded-lg bg-ks-gold text-ks-black font-display text-sm disabled:opacity-50">{cashAdBusy ? 'LOADING AD…' : 'WATCH AD · GET £10'}</button>
+        }} className="mt-3 w-full min-h-12 rounded-lg bg-ks-gold text-ks-black font-display text-sm disabled:opacity-50">{cashAdBusy ? 'LOADING AD…' : 'WATCH AD · GET '+formatMoney(cashReward)}</button>
         <p className="mt-2 text-[10px] text-ks-muted">Optional · {remainingToday('cash')} available today · odd jobs and allowance still work as usual</p>
       </section>}
 

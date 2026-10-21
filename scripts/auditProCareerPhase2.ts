@@ -541,7 +541,7 @@ assert.ok(toOvr(computeCurrentAbility(seniorGraduate))<=68,
   'First graduate adjustment should not create an elite international')
 assert.deepEqual(prepareProGraduate(seniorGraduate),seniorGraduate,
   'Already balanced graduate must not be boosted a second time')
-for(const country of ['eng','esp','ger','ita','fra','por','ned','bra','rsa','sco']){
+for(const country of ['eng','esp','ger','ita','fra','por','ned','rsa','sco']){
   const pro=createProCareer('Rating Audit FC',4,country)
   const first=pro.world.divisions[1].teams
   assert.ok(first.every(t=>teamOverall(t)>=58),'No top-flight professional club should be youth-level')

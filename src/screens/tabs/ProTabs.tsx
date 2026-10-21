@@ -11,6 +11,7 @@ import PeopleTab from './PeopleTab'
 import ClubTab from './ClubTab'
 import ShopTab from './ShopTab'
 import ProLifestyleTab from './ProLifestyleTab'
+import ProSponsorshipTab from './ProSponsorshipTab'
 import StandingsTable from '../../components/StandingsTable'
 import ProWeeklyCalendar from './ProWeeklyCalendar'
 import { proMatchDay, proTrainingAvailable } from '../../engine/proWeeklySchedule'
@@ -265,6 +266,7 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
       </Section>}
       {proLeagueView==='world' && pro.backgroundWorld && <ProWorldPanel world={pro.backgroundWorld}/>}
     </> : <>
+      <ProSponsorshipTab player={player}/>
       <ProLifestyleTab player={player}/>
       <ShopTab player={player}/>
       <Section title="PROFESSIONAL PAY & RESIDENCE">

@@ -6,6 +6,8 @@ import { PRO_SATELLITE_ASSOCIATIONS } from '../src/engine/proSatelliteRegistry'
 import { INTERNATIONAL_GROUPS, internationalProgress, internationalTournamentFixture } from '../src/engine/proInternationalTournament'
 import { confederationForNation, continentalNations, continentalRound } from '../src/engine/proContinentalNations'
 import { createProWorld } from '../src/engine/proWorldFactory'
+import { PRO_CAREER_DESTINATIONS } from '../src/engine/proCareer'
+import { seniorTrialOffers } from '../src/engine/proTrialOffers'
 import { selectSeniorNationalSquad } from '../src/engine/proNationalSquad'
 import { beginWorldQualifiers, beginWorldSeason } from '../src/engine/proTournaments'
 
@@ -14,6 +16,13 @@ assert.equal(SENIOR_NATIONS.length,218,'Every professional-world association mus
 assert.equal(new Set(SENIOR_NATIONS.map(n=>n.id)).size,218)
 assert.deepEqual([...PRO_INTERACTIVE_COUNTRIES].sort(),['eng','esp','ger','fra','ita','ned','por','rsa','sco'].sort())
 assert.equal(canStartInteractiveProCareer('bra'),false)
+assert.deepEqual(PRO_CAREER_DESTINATIONS.map(destination => destination.id).sort(),
+  [...PRO_INTERACTIVE_COUNTRIES].sort(), 'Career picker must match exactly nine launch destinations')
+for (const score of [0,3,6,9]) for (const overall of [35,55,65,80]) {
+  const offers = seniorTrialOffers(score,overall)
+  assert.ok(offers.every(offer => PRO_INTERACTIVE_COUNTRIES.includes(offer.countryId)),
+    'A career trial must never offer an unplayable country')
+}
 assert.ok(PRO_LEAGUE_PLAN.some(l=>l.associationId==='bra'),'Brazil stays simulated')
 const ids=new Set([...PRO_LEAGUE_PLAN.map(l=>l.associationId),...PRO_SATELLITE_ASSOCIATIONS.map(a=>a.id)])
 assert.deepEqual(new Set(SENIOR_NATIONS.map(n=>n.id)),ids)

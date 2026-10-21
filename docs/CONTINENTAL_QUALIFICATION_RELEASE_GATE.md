@@ -1,10 +1,10 @@
-# Phase 2 — Continental qualification realism (release scope: 10 career countries)
+# Phase 2 — Continental qualification realism (release scope: 9 career countries)
 
 ## Core rule (21 October 2026)
 
-**Career selection is NOT the qualification list.** The next release enables exactly England, Spain, Germany, France, Italy, Netherlands, Portugal, Brazil, South Africa and Scotland for the human player's professional club contracts. Every association with a simulated domestic league remains eligible to send its own clubs to international club competitions. The remaining national-only associations cannot conjure nonexistent league clubs.
+**Career selection is NOT the qualification list.** The initial release enables exactly England, Spain, Germany, France, Italy, Netherlands, Portugal, South Africa and Scotland for the human player's professional club contracts. Brazil is simulated-only for career selection, but its domestic pyramid and Libertadores qualification remain active. Every association with a simulated domestic league remains eligible to send its own clubs to international club competitions. The remaining national-only associations cannot conjure nonexistent league clubs.
 
-The ten selectable leagues have no reserved continental places. Qualification always consumes saved domestic results from ALL eligible domestic associations. The current `beginContinentalSeason` has a first functional two-leg preliminary stage based on all simulated domestic leagues. It is **not yet release-ready continental qualification**: stage counts are provisional, and each confederation still needs its own edition-specific routes and entry allocations. Do not label it completed until the gates below pass.
+The nine selectable leagues have no reserved continental places. Qualification always consumes saved domestic results from ALL eligible domestic associations. The current `beginContinentalSeason` has a first functional two-leg preliminary stage based on all simulated domestic leagues. It is **not yet release-ready continental qualification**: stage counts are provisional, and each confederation still needs its own edition-specific routes and entry allocations. Do not label it completed until the gates below pass.
 
 ## Required source-of-truth chain
 
@@ -44,7 +44,7 @@ Avoid recomputing access lists from the human player's country or from `PRO_INTE
 
 ## QA / release gates
 
-- Ten selectable countries remain unchanged; a player cannot sign for a background-country club.
+- Nine selectable countries remain unchanged; a player cannot sign for Brazil or another background-country club.
 - Every available background club association can enter its own champion subject to its edition's real access allocation.
 - Finish England, South Africa, Brazil, and a simulated non-career association's seasons with intentionally varied champions; verify the next edition's continental selections change accordingly.
 - Verify UEFA includes actual qualifiers from non-playable leagues even when ten selectable countries already provide 36+ candidates.
@@ -58,7 +58,14 @@ Avoid recomputing access lists from the human player's country or from `PRO_INTE
 ## Immediate known gaps after the first correction
 
 - All-country domestic ranking feeds a functional first-pass two-leg qualifying stage, with aggregates and subsequent main-stage entry. It does not yet reproduce every real preliminary round or the complete actual direct-entry exemptions.
-- The current `PLAYABLE_CONTINENTAL_RULES` covers the ten career countries while other associations use generic allocations. There is no preferential treatment of the ten playable countries in candidate ordering.
+- The current `PLAYABLE_CONTINENTAL_RULES` covers the nine career countries while other associations use generic allocations. There is no preferential treatment of the nine playable countries in candidate ordering.
 - The present UEFA league-phase scheduler and advancement do not yet fully follow current competition formats.
 - The present CONCACAF and CAF main-stage counts do not reproduce official entry paths.
 - Award and historical record improvements are intentionally separate from this first qualification integration pass.
+
+## Initial release focus (revised)
+
+- Prioritize full **UEFA** and **CAF** qualification, tournament stage and league/cup access-list fidelity.
+- Retain all other confederations as background simulations, including Brazilian league and CONMEBOL club qualification. They are not in the initial deep-realism QA release gate, but must not regress.
+- Keep Brazil's clubs, results, promotions, continental berths and historical records in existing saves; only prohibit choosing a Brazilian professional club as the human player's destination.
+- Verify any other signing and trial paths use `canStartInteractiveProCareer` rather than raw league-plan mode flags.

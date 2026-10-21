@@ -4,7 +4,7 @@
 
 **Career selection is NOT the qualification list.** The next release enables exactly England, Spain, Germany, France, Italy, Netherlands, Portugal, Brazil, South Africa and Scotland for the human player's professional club contracts. Every association with a simulated domestic league remains eligible to send its own clubs to international club competitions. The remaining national-only associations cannot conjure nonexistent league clubs.
 
-The ten selectable leagues have no reserved continental places. Qualification always consumes saved domestic results from ALL eligible domestic associations. The current simplified `beginContinentalSeason` is a transitional implementation, **not release-ready continental qualification**: it still puts a fixed number of clubs directly into competitions and has no authentic qualifying rounds. Do not label it completed until the gates below pass.
+The ten selectable leagues have no reserved continental places. Qualification always consumes saved domestic results from ALL eligible domestic associations. The current `beginContinentalSeason` has a first functional two-leg preliminary stage based on all simulated domestic leagues. It is **not yet release-ready continental qualification**: stage counts are provisional, and each confederation still needs its own edition-specific routes and entry allocations. Do not label it completed until the gates below pass.
 
 ## Required source-of-truth chain
 
@@ -57,8 +57,8 @@ Avoid recomputing access lists from the human player's country or from `PRO_INTE
 
 ## Immediate known gaps after the first correction
 
-- All-country domestic ranking is used in the current candidate pool, but **there are no actual qualifying rounds yet**.
-- The current `PLAYABLE_CONTINENTAL_RULES` covers the ten career countries while other associations use generic allocations.
+- All-country domestic ranking feeds a functional first-pass two-leg qualifying stage, with aggregates and subsequent main-stage entry. It does not yet reproduce every real preliminary round or the complete actual direct-entry exemptions.
+- The current `PLAYABLE_CONTINENTAL_RULES` covers the ten career countries while other associations use generic allocations. There is no preferential treatment of the ten playable countries in candidate ordering.
 - The present UEFA league-phase scheduler and advancement do not yet fully follow current competition formats.
 - The present CONCACAF and CAF main-stage counts do not reproduce official entry paths.
 - Award and historical record improvements are intentionally separate from this first qualification integration pass.

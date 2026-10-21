@@ -49,7 +49,8 @@ export const PRO_LEAGUE_PLAN: readonly ProLeaguePlan[] = planned.flatMap(group =
 /** Planned destinations and shipped interactive destinations are deliberately separate. */
 export const PRO_CAREER_COUNTRY_TARGETS: readonly string[] = PRO_LEAGUE_PLAN
   .filter(league => league.mode === 'playable').map(league => league.associationId)
-export const PRO_INTERACTIVE_COUNTRIES: readonly string[] = ['eng', 'esp', 'ger', 'fra', 'ita', 'ned', 'por', 'bra', 'rsa', 'sco']
+/** Initial release: Europe and South Africa only. Brazil retains its full simulated pyramid and continental eligibility. */
+export const PRO_INTERACTIVE_COUNTRIES: readonly string[] = ['eng', 'esp', 'ger', 'fra', 'ita', 'ned', 'por', 'rsa', 'sco']
 export function canStartInteractiveProCareer(associationId: string): boolean {
   return PRO_INTERACTIVE_COUNTRIES.includes(associationId)
 }

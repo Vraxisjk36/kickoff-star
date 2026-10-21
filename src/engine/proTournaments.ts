@@ -1,7 +1,7 @@
 import { LOWER_DIVISIONS, PRO_FIFTH_LEAGUE_PLAN, PRO_GROUPED_FOURTH_LEAGUE_PLAN, PRO_GROUPED_FIFTH_LEAGUE_PLAN, PRO_DEEP_LEAGUE_PLAN, PRO_GROUPED_LEAGUE_PLAN, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN, type ProConfederation } from './proLeagueRegistry'
 import { proRoll } from './proWorldFactory'
 import type { IsoDate, ProCompetition, ProFixture, ProStandingRow, ProWorldState } from './proWorld'
-import { domesticContinentalBerths } from './proQualification'
+import { domesticContinentalBerths, PLAYABLE_CONTINENTAL_RULES } from './proQualification'
 
 const DAY = 86_400_000
 const addDays = (date: IsoDate, days: number): IsoDate => new Date(Date.parse(`${date}T00:00:00Z`) + days * DAY).toISOString().slice(0, 10)
@@ -229,6 +229,7 @@ export function beginContinentalSeason(world: ProWorldState, year: number): void
     const countries = PRO_LEAGUE_PLAN.filter(item => item.confederation === confederation)
     const ranks = countries.map(item => ({
       association: item.associationId,
+      interactive: item.associationId in PLAYABLE_CONTINENTAL_RULES,
       berths: domesticContinentalBerths(world, item.associationId, year),
     }))
     // Interleave domestic champions and league qualifiers by slot, so every
@@ -237,11 +238,12 @@ export function beginContinentalSeason(world: ProWorldState, year: number): void
     const roundRobin = (tier: 'champions' | 'secondary' | 'third'): string[] => {
       const result: string[] = []
       const depth = Math.max(0, ...ranks.map(item => item.berths[tier].length))
-      for (let position = 0; position < depth; position++)
-        for (const item of ranks) {
-          const candidate = item.berths[tier][position]
-          if (candidate && !result.includes(candidate)) result.push(candidate)
-        }
+      for (const interactive of [true, false])
+        for (let position = 0; position < depth; position++)
+          for (const item of ranks.filter(candidate => candidate.interactive === interactive)) {
+            const candidate = item.berths[tier][position]
+            if (candidate && !result.includes(candidate)) result.push(candidate)
+          }
       return result
     }
     const used = new Set<string>()

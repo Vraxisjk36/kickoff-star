@@ -1,4 +1,5 @@
 import { NATIONS } from './nations'
+import { seniorNation } from './seniorNations'
 import { CONTINENTAL_WINDOWS, continentalRound } from './proContinentalNations'
 import { INTERNATIONAL_WINDOWS, internationalTournamentFixture } from './proInternationalTournament'
 import { seniorNationRankings, type SeniorNationRanking } from './proNationalRankings'
@@ -16,8 +17,9 @@ function hash(input: string): number {
   return seed >>> 0
 }
 function goals(homeId: string, awayId: string, season: number, week: number): [number, number] {
-  const home = NATIONS.find(n => n.id === homeId)!
-  const away = NATIONS.find(n => n.id === awayId)!
+  const home = seniorNation(homeId)
+  const away = seniorNation(awayId)
+  if (!home || !away) throw new Error(`Unknown national match: ${homeId} vs ${awayId}`)
   const edge = (home.strength - away.strength) * .23
   return [
     Math.max(0, Math.floor(1.35 + edge + (hash(`nation-world:${season}:${week}:${homeId}:H`) % 280) / 100 - 1.1)),

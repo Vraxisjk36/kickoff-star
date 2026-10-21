@@ -43,7 +43,7 @@ export function proCompetitionName(id: string): string {
 /** The current top 23 eligible players are selected from their association's active pool. */
 export function nationalCallupFixture(world: ProWorldState, playerId: string, nationId: string, date: IsoDate): ProFixture | null {
   const player = world.players[playerId]
-  if (world.associations[nationId]?.domesticMode !== 'full' || !player || !player.nationalityIds.includes(nationId) || player.injuredUntil && player.injuredUntil >= date) return null
+  if (!world.associations[nationId] || !player || !player.nationalityIds.includes(nationId) || player.injuredUntil && player.injuredUntil >= date) return null
   const fixture = Object.values(world.fixtures).find(item => item.kickoffDate === date &&
     world.competitions[item.competitionId]?.kind === 'national-team' &&
     (item.homeId === nationId || item.awayId === nationId))

@@ -1,4 +1,4 @@
-import { NATIONS } from './nations'
+import { SENIOR_NATIONS as NATIONS } from './seniorNations'
 import { PRO_LEAGUE_PLAN, type ProConfederation } from './proLeagueRegistry'
 import { PRO_SATELLITE_ASSOCIATIONS } from './proSatelliteRegistry'
 import type { SeniorInternationalRecord } from './proInternational'

@@ -1,4 +1,4 @@
-import { NATIONS } from './nations'
+import { SENIOR_NATIONS as NATIONS } from './seniorNations'
 import type { SeniorInternationalRecord, SeniorInternationalFixture } from './proInternational'
 
 export type TournamentStage = 'qualifier' | 'finals-group' | 'semifinal' | 'final' | 'third-place' | 'continental' | 'friendly'

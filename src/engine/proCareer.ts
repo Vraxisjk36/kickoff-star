@@ -68,6 +68,7 @@ export interface ProCareerState {
   shirtNumber?: number
   residence?: { countryId: string; city: string; monthlyRent: number; hotelUntil: string }
   luxuryAssets?: import('./proLifestyle').LuxuryAsset[]
+  sponsorships?: import('./proSponsorship').SponsorState
   payStatements?: ProPayStatement[]
   pendingBonus?: number
   marketOffers?: ProMarketOffer[]

@@ -12,6 +12,7 @@ import { syncPlayableProLeague, offerProRenewal, releaseExpiredProContract, gene
 import { scheduleSeniorInternational, completeSeniorInternational, forfeitSeniorInternational } from '../src/engine/proInternational'
 import { INTERNATIONAL_GROUPS, INTERNATIONAL_WINDOWS, internationalCycle, internationalTournamentFixture, internationalProgress, visibleQualifyingTable } from '../src/engine/proInternationalTournament'
 import { NATIONS } from '../src/engine/nations'
+import { SENIOR_NATIONS } from '../src/engine/seniorNations'
 import { prepareProGraduate, proRatingTarget, seniorNationalTeamRating, calibrateSeniorTeam } from '../src/engine/proRatings'
 import { proWeekSchedule, proMatchDay, proTrainingAvailable, mondayFrom } from '../src/engine/proWeeklySchedule'
 import { teamOverall } from '../src/engine/teams'
@@ -294,9 +295,9 @@ assert.equal(missed.international?.fixtures.length,1)
 assert.ok(!scheduleSeniorInternational({...withBoard,week:13},nationalPlayer).international?.pending)
 console.log('Phase 2: national-team call-ups, save safety, caps and missed duty passed')
 
-assert.equal(INTERNATIONAL_GROUPS.length, 6)
-assert.deepEqual(INTERNATIONAL_GROUPS.map(group => group.length), [4,4,4,4,4,4])
-assert.equal(new Set(INTERNATIONAL_GROUPS.flat()).size,NATIONS.length)
+assert.equal(INTERNATIONAL_GROUPS.length, Math.ceil(SENIOR_NATIONS.length / 4))
+assert.ok(INTERNATIONAL_GROUPS.every(group => group.length >= 2 && group.length <= 4))
+assert.equal(new Set(INTERNATIONAL_GROUPS.flat()).size,SENIOR_NATIONS.length)
 for(let cycle=1;cycle<=17;cycle+=4) {
   assert.equal(internationalCycle(cycle+3),cycle)
   const appearances=new Map(NATIONS.map(n=>[n.id,new Set<string>()]))

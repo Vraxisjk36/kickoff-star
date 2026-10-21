@@ -266,16 +266,16 @@ export function beginSouthAfricanTopEight(world: ProWorldState, year: number): v
 }
 export function beginContinentalSeason(world: ProWorldState, year: number): void {
   for (const confederation of confederations) {
-    const slots = { uefa: 36, caf: 16, conmebol: 32, concacaf: 16, afc: 24, ofc: 8 }[confederation]
+    // These provisional preliminary field sizes preserve domestic champions
+    // from all simulated associations, rather than privileging human-career
+    // countries. Country-by-country edition access lists remain release work.
+    const mainSlots = { uefa: 36, caf: 16, conmebol: 32, concacaf: 16, afc: 24, ofc: 8 }[confederation]
+    const qualifyingSlots = { uefa: 52, caf: 61, conmebol: 44, concacaf: 27, afc: 36, ofc: 10 }[confederation]
     const countries = PRO_LEAGUE_PLAN.filter(item => item.confederation === confederation)
     const ranks = countries.map(item => ({
       association: item.associationId,
       berths: domesticContinentalBerths(world, item.associationId, year),
     }))
-    // Every country uses the same results-based route. Human career
-    // availability does not affect continental qualification precedence.
-    // These are provisional allocations until per-edition access lists and
-    // qualifying rounds are implemented.
     const roundRobin = (tier: 'champions' | 'secondary' | 'third'): string[] => {
       const result: string[] = []
       const depth = Math.max(0, ...ranks.map(item => item.berths[tier].length))
@@ -294,16 +294,27 @@ export function beginContinentalSeason(world: ProWorldState, year: number): void
         if (used.has(id) || !world.clubs[id]) continue
         picked.push(id); used.add(id)
       }
-      return picked
+      // Higher-reputation entrants are seeded for preliminary-round byes.
+      return picked.sort((a,b)=>(world.clubs[b]?.reputation??0)-(world.clubs[a]?.reputation??0)||
+        a.localeCompare(b))
     }
-    const top = select([...roundRobin('champions'), ...tierEntrants(world, confederation, 0, slots * 4)], slots)
-    const lower = select([...roundRobin('secondary'), ...tierEntrants(world, confederation, 1, slots * 4)], slots)
+    const top = select([...roundRobin('champions'),
+      ...tierEntrants(world, confederation, 0, qualifyingSlots * 4)], qualifyingSlots)
+    const secondCount = confederation === 'uefa' ? 46 : Math.max(mainSlots,Math.min(32,qualifyingSlots))
+    const lower = select([...roundRobin('secondary'),
+      ...tierEntrants(world, confederation, 1, qualifyingSlots * 4)], secondCount)
     const third = confederation === 'uefa' ?
-      select([...roundRobin('third'), ...tierEntrants(world, confederation, 3, 120)], 36) : []
-    for (const [id, entrants] of [...[[`continental-${confederation}`, top], [`union-${confederation}`, lower]],
-      ...(confederation === 'uefa' ? [['conference-uefa', third]] : [])] as [string, string[]][])
-      createCompetition(world, id, 'continental-club', year, entrants,
-        confederation === 'uefa' ? 'league-phase' : 'groups', `${year}-09-10`)
+      select([...roundRobin('third'), ...tierEntrants(world, confederation, 3, 120)], 44) : []
+    for (const [id, entrants, target] of [
+      [`continental-${confederation}`,top,mainSlots],
+      [`union-${confederation}`,lower,confederation==='uefa'?36:mainSlots],
+      ...(confederation==='uefa'?[['conference-uefa',third,36]]:[]),
+    ] as [string,string[],number][]) {
+      const mainStage = confederation==='uefa' ? 'league-phase' as const :
+        confederation==='concacaf' && id.startsWith('continental-')
+          ? 'knockout' as const : 'groups' as const
+      createContinentalQualifyingCompetition(world,id,year,entrants,mainStage,target,`${year}-09-10`)
+    }
   }
 }
 export function beginNationsLeague(world: ProWorldState, year: number): void {

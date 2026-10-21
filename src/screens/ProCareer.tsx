@@ -13,7 +13,7 @@ import { generateTeam, teamOverall } from '../engine/teams'
 import { proCompetitionName } from '../engine/proTournaments'
 import { getNation } from '../engine/nations'
 import { calibrateSeniorTeam, seniorNationalTeamRating } from '../engine/proRatings'
-import { proMatchDay, proTrainingAvailable, PRO_WEEKDAYS } from '../engine/proWeeklySchedule'
+import { proMatchDay, proTrainingAvailable, PRO_WEEKDAYS, proCalendarLabel } from '../engine/proWeeklySchedule'
 import TrainingScreen from './TrainingScreen'
 import AllocationScreen from '../components/AllocationScreen'
 import type { TrainingOutcome } from '../engine/training'
@@ -125,11 +125,11 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
   return <div className="relative">
     <WeeklyHub tab={tab} onTabChange={setTab} onOpenOffers={() => setTab('club')} onExitToMenu={onExitToMenu} league={world} academyLeague={null} playerTeam={team} playerDivision={division} proCalendar={calendar} onProTrain={beginTraining} proMatchKind={kind} proMatchOpponent={opponent?.name} proMatchDate={matchDate} />
     <div className="career-continue fixed left-0 right-0 px-3 max-w-md mx-auto z-20" style={{ bottom: 'calc(var(--safe-bottom) + 4.5rem)' }}>
-      <button className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-3.5 text-sm shadow-[0_0_25px_rgba(212,175,55,0.3)]" onClick={() => matchReady && day === matchDay ? (!player.injury && !(player.suspensionMatches ?? 0) && player.fitness.stamina >= 30 ? setMode('matchday') : sitOut()) : advance()}>
+      <button className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-3.5 text-sm shadow-[0_0_25px_rgba(212,175,55,0.3)]" onClick={() => matchReady && day === matchDay ? (!player.injury && !(player.suspensionMatches ?? 0) && player.fitness.stamina >= 30 ? setMode('matchday') : sitOut()) : canTrain ? setMode('training') : advance()}>
         {matchReady && day===matchDay
           ? national ? `INTERNATIONAL · ${getNation(national.opponentId).name} →`
             : player.injury || (player.suspensionMatches??0)>0 || player.fitness.stamina<30 ? 'UNAVAILABLE · SIMULATE MATCH →' : `MATCHDAY · ${opponent?.name??'OPPONENT'} →`
-          : `CONTINUE · ${PRO_WEEKDAYS[day]} → ${day<6?PRO_WEEKDAYS[day+1]:'NEXT WEEK'}`}
+          : canTrain ? `TRAIN · ${proCalendarLabel(pro)} →` : `CONTINUE · ${proCalendarLabel(pro)} → ${day<6?proCalendarLabel(pro,day+1):'NEXT WEEK'}`}
 
       </button>
     </div>

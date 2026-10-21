@@ -86,7 +86,6 @@ export const PRO_CAREER_DESTINATIONS = [
   { id: 'ita', name: 'Italy', cities: ['Rome', 'Milan', 'Turin', 'Naples'] },
   { id: 'ned', name: 'Netherlands', cities: ['Amsterdam', 'Rotterdam', 'Eindhoven', 'Utrecht'] },
   { id: 'por', name: 'Portugal', cities: ['Lisbon', 'Porto', 'Braga', 'Coimbra'] },
-  { id: 'bra', name: 'Brazil', cities: ['São Paulo', 'Rio de Janeiro', 'Salvador', 'Belo Horizonte'] },
   { id: 'rsa', name: 'South Africa', cities: ['Johannesburg', 'Pretoria', 'Cape Town', 'Durban'] },
   { id: 'sco', name: 'Scotland', cities: ['Glasgow', 'Edinburgh', 'Aberdeen', 'Dundee'] },
 ] as const

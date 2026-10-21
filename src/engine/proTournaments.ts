@@ -1,7 +1,7 @@
 import { LOWER_DIVISIONS, PRO_FIFTH_LEAGUE_PLAN, PRO_GROUPED_FOURTH_LEAGUE_PLAN, PRO_GROUPED_FIFTH_LEAGUE_PLAN, PRO_DEEP_LEAGUE_PLAN, PRO_GROUPED_LEAGUE_PLAN, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN, type ProConfederation } from './proLeagueRegistry'
 import { proRoll } from './proWorldFactory'
 import type { IsoDate, ProCompetition, ProFixture, ProStandingRow, ProWorldState } from './proWorld'
-import { englandBerths, southAfricaBerths } from './proQualification'
+import { domesticContinentalBerths } from './proQualification'
 
 const DAY = 86_400_000
 const addDays = (date: IsoDate, days: number): IsoDate => new Date(Date.parse(`${date}T00:00:00Z`) + days * DAY).toISOString().slice(0, 10)
@@ -226,15 +226,42 @@ export function beginSouthAfricanTopEight(world: ProWorldState, year: number): v
 export function beginContinentalSeason(world: ProWorldState, year: number): void {
   for (const confederation of confederations) {
     const slots = { uefa: 36, caf: 16, conmebol: 32, concacaf: 16, afc: 24, ofc: 8 }[confederation]
-    const priority = confederation === 'uefa' ? englandBerths(world) : confederation === 'caf' ? southAfricaBerths(world) : null
-    const fill = (seed: string[], candidates: string[], excluded: string[], count: number) =>
-      [...new Set([...seed, ...candidates])].filter(id => !excluded.includes(id)).slice(0, count)
-    const top = fill(priority?.champions ?? [], tierEntrants(world, confederation, 0, slots * 3), [], slots)
-    const lower = fill(priority?.secondary ?? [], tierEntrants(world, confederation, 1, slots * 4), top, slots)
-    const third = confederation === 'uefa' ? fill(priority?.third ?? [], tierEntrants(world, confederation, 3, 100), [...top, ...lower], 36) : []
+    const countries = PRO_LEAGUE_PLAN.filter(item => item.confederation === confederation)
+    const ranks = countries.map(item => ({
+      association: item.associationId,
+      berths: domesticContinentalBerths(world, item.associationId, year),
+    }))
+    // Interleave domestic champions and league qualifiers by slot, so every
+    // eligible association can send teams before extra high-ranked entrants.
+    // The same resolved club cannot qualify twice, even through a domestic cup.
+    const roundRobin = (tier: 'champions' | 'secondary' | 'third'): string[] => {
+      const result: string[] = []
+      const depth = Math.max(0, ...ranks.map(item => item.berths[tier].length))
+      for (let position = 0; position < depth; position++)
+        for (const item of ranks) {
+          const candidate = item.berths[tier][position]
+          if (candidate && !result.includes(candidate)) result.push(candidate)
+        }
+      return result
+    }
+    const used = new Set<string>()
+    const select = (candidates: string[], count: number): string[] => {
+      const picked: string[] = []
+      for (const id of candidates) {
+        if (picked.length >= count) break
+        if (used.has(id) || !world.clubs[id]) continue
+        picked.push(id); used.add(id)
+      }
+      return picked
+    }
+    const top = select([...roundRobin('champions'), ...tierEntrants(world, confederation, 0, slots * 4)], slots)
+    const lower = select([...roundRobin('secondary'), ...tierEntrants(world, confederation, 1, slots * 4)], slots)
+    const third = confederation === 'uefa' ?
+      select([...roundRobin('third'), ...tierEntrants(world, confederation, 3, 120)], 36) : []
     for (const [id, entrants] of [...[[`continental-${confederation}`, top], [`union-${confederation}`, lower]],
       ...(confederation === 'uefa' ? [['conference-uefa', third]] : [])] as [string, string[]][])
-      createCompetition(world, id, 'continental-club', year, entrants, confederation === 'uefa' ? 'league-phase' : 'groups', `${year}-09-10`)
+      createCompetition(world, id, 'continental-club', year, entrants,
+        confederation === 'uefa' ? 'league-phase' : 'groups', `${year}-09-10`)
   }
 }
 export function beginNationsLeague(world: ProWorldState, year: number): void {

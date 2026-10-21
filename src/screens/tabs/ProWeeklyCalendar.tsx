@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { ProCareerState } from '../../engine/proCareer'
-import { proWeekSchedule, PRO_WEEKDAYS, mondayFrom } from '../../engine/proWeeklySchedule'
+import { proWeekSchedule, PRO_WEEKDAYS, mondayFrom, proCalendarLabel, proCalendarDate } from '../../engine/proWeeklySchedule'
 import { professionalSeasonWeeks, proRound } from '../../engine/proCareer'
 interface Props {
   pro: ProCareerState
@@ -59,7 +59,7 @@ export default function ProWeeklyCalendar({pro,opponent,matchKind='league',onTra
   return <div className="rounded-xl border border-ks-gold/30 overflow-hidden bg-[#101510]">
     <div className="px-4 py-3 flex items-center justify-between gap-2 bg-gradient-to-r from-[#1d210f] to-[#101510]">
       <div><div className="font-display text-xs tracking-widest text-ks-gold">YOUR FOOTBALL CALENDAR</div>
-        <div className="text-xs text-ks-muted mt-1">Season {pro.season} · Week {pro.week} · {PRO_WEEKDAYS[current]}</div></div>
+        <div className="text-xs text-ks-muted mt-1">Season {pro.season} · Week {pro.week} · {proCalendarLabel(pro)}</div></div>
       <div className="text-ks-gold font-display text-lg">{current+1}/7</div>
     </div>
     <nav className="flex gap-1 px-3 py-2 border-b border-ks-border" aria-label="Football calendar range">
@@ -69,7 +69,7 @@ export default function ProWeeklyCalendar({pro,opponent,matchKind='league',onTra
     {view==='week' ? <>
       <div className="grid grid-cols-7 gap-1 p-2.5">
         {days.map(day=><div key={day.day} className={`rounded-lg border min-w-0 text-center py-2 ${day.day===current?'border-ks-gold bg-ks-gold/15':'border-ks-border/50'}`}>
-          <div className="text-[9px] text-ks-muted">{day.label}</div>
+          <div className="text-[9px] text-ks-muted">{day.label}</div><div className="text-[9px] text-ks-ink">{Number(proCalendarDate(pro,day.day).slice(-2))}</div>
           <div className={`text-sm mt-1 ${day.kind==='match'?'text-ks-gold':day.kind==='training'?'text-green-400':'text-ks-muted'}`}>{day.kind==='match'?'⚽':day.kind==='training'?'◆':'○'}</div>
           {day.completed&&<span className="text-green-400 text-[9px]">✓</span>}
         </div>)}
@@ -83,7 +83,7 @@ export default function ProWeeklyCalendar({pro,opponent,matchKind='league',onTra
     </> : <div className="max-h-60 overflow-y-auto p-3 grid grid-cols-2 gap-2">
       {weeksOnView.map(week=><div key={week} className={`rounded-lg border p-2 ${week===pro.week?'border-ks-gold bg-ks-gold/10':'border-ks-border/60'}`}>
         <span className="text-xs text-ks-ink">{formatWeek(week)}</span>
-        <div className="text-[10px] text-ks-muted mt-1">{new Date(baseDate+(week-1)*7*86400000).toLocaleDateString('en-GB',{month:'short',timeZone:'UTC'})}</div>
+        <div className="text-[10px] text-ks-muted mt-1">{new Date(baseDate+(week-1)*7*86400000).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'})}</div>
         {week===1&&<div className="text-[10px] text-green-400 mt-1">PRESEASON · TRAINING CAMP</div>}
         {(week===2||week===3)&&<div className="text-[10px] text-green-400 mt-1">SAT · PRESEASON FRIENDLY</div>}
         {week===4&&<div className="text-[10px] text-ks-gold mt-1">LEAGUE OPENING CEREMONY</div>}

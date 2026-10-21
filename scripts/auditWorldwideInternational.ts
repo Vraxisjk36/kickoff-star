@@ -20,7 +20,7 @@ assert.deepEqual(PRO_CAREER_DESTINATIONS.map(destination => destination.id).sort
   [...PRO_INTERACTIVE_COUNTRIES].sort(), 'Career picker must match exactly nine launch destinations')
 for (const score of [0,3,6,9]) for (const overall of [35,55,65,80]) {
   const offers = seniorTrialOffers(score,overall)
-  assert.ok(offers.every(offer => PRO_INTERACTIVE_COUNTRIES.includes(offer.countryId)),
+  assert.ok(offers.every(offer => PRO_INTERACTIVE_COUNTRIES.includes(offer.associationId)),
     'A career trial must never offer an unplayable country')
 }
 assert.ok(PRO_LEAGUE_PLAN.some(l=>l.associationId==='bra'),'Brazil stays simulated')

@@ -13,6 +13,11 @@ on:
       - 'scripts/auditLeagueRules.ts'
       - 'scripts/auditWorldwideInternational.ts'
       - 'scripts/auditProLifestyle.ts'
+      - 'scripts/auditProSponsorship.ts'
+      - 'scripts/auditProCareerPhase2.ts'
+      - 'src/screens/ProCareer.tsx'
+      - 'src/screens/tabs/Pro*.tsx'
+      - 'src/store/careerStore.ts'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/pro-pyramid-integrity.yml'
@@ -32,4 +37,5 @@ jobs:
       - run: npm run audit:pro-pyramids
       - run: node --import tsx scripts/auditWorldwideInternational.ts
       - run: node --import tsx scripts/auditProLifestyle.ts
+      - run: npm run audit:pro-career
       - run: npm run build

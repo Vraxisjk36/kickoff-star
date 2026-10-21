@@ -136,7 +136,7 @@ function createCompetition(world: ProWorldState, id: string, kind: ProCompetitio
 }
 /** One saved continental edition: qualifiers and main stage share IDs and history. */
 function createContinentalQualifyingCompetition(world:ProWorldState,id:string,year:number,
-  entrants:string[],mainStage:'groups'|'league-phase',target:number,start:IsoDate):void {
+  entrants:string[],mainStage:'groups'|'league-phase'|'knockout',target:number,start:IsoDate):void {
   if(entrants.length<=target) {
     createCompetition(world,id,'continental-club',year,entrants,mainStage,start)
     return

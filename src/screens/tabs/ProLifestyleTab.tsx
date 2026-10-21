@@ -1,7 +1,8 @@
 import { useState } from 'react'
+import LuxuryAssetArt from './LuxuryAssetArt'
 import type { Player } from '../../types/player'
 import { useCareerStore } from '../../store/careerStore'
-import { weeklyLuxuryListings, luxuryNetWorth, luxuryWeeklyUpkeep, type LuxuryKind } from '../../engine/proLifestyle'
+import { weeklyLuxuryListings, luxuryNetWorth, luxuryWeeklyUpkeep, type LuxuryKind, type LuxuryListing } from '../../engine/proLifestyle'
 
 const KINDS: {id:LuxuryKind;label:string;icon:string}[] = [
   {id:'house',label:'Homes',icon:'⌂'},{id:'car',label:'Cars',icon:'◈'},
@@ -14,6 +15,7 @@ export default function ProLifestyleTab({player}:{player:Player}){
   const [category,setCategory]=useState<LuxuryKind>('house')
   const [view,setView]=useState<'market'|'assets'>('market')
   const [message,setMessage]=useState('')
+  const [selected,setSelected]=useState<LuxuryListing|null>(null)
   const assets=pro.luxuryAssets??[]
   const listings=weeklyLuxuryListings(category,pro.season,pro.week,player.id,assets)
   const owned=assets.filter(item=>item.kind===category)
@@ -38,10 +40,12 @@ export default function ProLifestyleTab({player}:{player:Player}){
     {view==='market'?<div className="space-y-2">
       <p className="text-[10px] text-ks-muted">{listings.length} available this week. The market refreshes on the next game week.</p>
       {listings.map(item=><div key={item.id} className="rounded-lg border border-ks-border p-3">
+        <button className="block w-full text-left mb-2" onClick={()=>setSelected(item)} aria-label={`View details for ${item.name}`}><LuxuryAssetArt kind={item.kind} id={item.id}/></button>
         <p className="font-display text-ks-ink text-xs">{item.name}</p>
         <p className="text-[10px] text-ks-muted mt-1">{item.location} · Est. upkeep {cash(item.upkeepWeekly)}/week</p>
         <div className="flex justify-between items-center mt-2 gap-2">
           <strong className="text-ks-gold text-sm">{cash(item.price)}</strong>
+          <button onClick={()=>setSelected(item)} className="border border-ks-border rounded-md px-3 py-2 text-[10px] text-ks-ink">DETAILS</button>
           <button disabled={(player.money??0)<item.price} onClick={()=>{const r=buy(item.id);setMessage(r.ok?`Purchased ${item.name} — added to My assets`:(r.reason??'Purchase unavailable'))}}
             className="bg-ks-gold text-ks-black rounded-md px-3 py-2 text-[10px] font-display disabled:opacity-40">BUY</button>
         </div>
@@ -49,11 +53,28 @@ export default function ProLifestyleTab({player}:{player:Player}){
       {!listings.length&&<p className="text-xs text-ks-muted">You own every listing in this category.</p>}
     </div>:<div className="space-y-2">
       {owned.map(item=><div key={item.id} className="rounded-lg border border-ks-border p-3">
+        <LuxuryAssetArt kind={item.kind} id={item.id}/>
         <p className="text-xs text-ks-ink">{item.name}</p>
         <p className="text-[10px] text-ks-muted mt-1">{item.location} · Purchased season {item.purchasedSeason}, week {item.purchasedWeek}</p>
         <p className="text-ks-gold text-xs mt-1">{cash(item.price)}</p>
       </div>)}
       {!owned.length&&<p className="text-xs text-ks-muted">No {category==='house'?'properties':category==='plane'?'aircraft':category==='boat'?'boats':'cars'} owned yet.</p>}
+    </div>}
+    {selected&&<div className="fixed inset-0 z-[90] bg-black/85 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={selected.name} onClick={()=>setSelected(null)}>
+      <div className="w-full max-w-md max-h-[85vh] overflow-y-auto rounded-2xl border border-ks-gold/50 bg-[#111310] p-4 shadow-2xl" onClick={e=>e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-3"><span className="text-[10px] tracking-widest text-ks-gold">PRIVATE SHOWROOM</span><button aria-label="Close details" onClick={()=>setSelected(null)} className="text-ks-ink text-lg px-2">×</button></div>
+        <LuxuryAssetArt kind={selected.kind} id={selected.id} large/>
+        <h3 className="font-display text-ks-ink text-lg mt-3">{selected.name}</h3>
+        <p className="text-xs text-ks-muted mt-1">{selected.location} · {selected.kind.toUpperCase()}</p>
+        <p className="font-display text-ks-gold text-xl mt-3">{cash(selected.price)}</p>
+        <div className="flex justify-between text-xs text-ks-muted border-t border-ks-border py-3 mt-3"><span>Estimated weekly upkeep</span><span>{cash(selected.upkeepWeekly)}</span></div>
+        <div className="flex justify-between text-xs text-ks-muted border-t border-ks-border py-3"><span>Your available funds</span><span>{cash(player.money??0)}</span></div>
+        <button disabled={(player.money??0)<selected.price || assets.some(asset=>asset.id===selected.id)}
+          onClick={()=>{const r=buy(selected.id);setMessage(r.ok?`Purchased ${selected.name} — added to My assets`:(r.reason??'Purchase unavailable'));if(r.ok)setSelected(null)}}
+          className="w-full rounded-lg bg-ks-gold text-ks-black font-display py-3 mt-3 disabled:opacity-40">
+          {assets.some(asset=>asset.id===selected.id)?'ALREADY OWNED':(player.money??0)<selected.price?'INSUFFICIENT FUNDS':'PURCHASE ASSET'}
+        </button>
+      </div>
     </div>}
     <p className="text-[10px] text-ks-muted mt-3">Maintenance is an estimated ownership cost. Your purchase price is deducted immediately.</p>
   </section>

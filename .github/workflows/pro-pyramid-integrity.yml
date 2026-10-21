@@ -5,10 +5,13 @@ on:
     branches: [codex/v32-v4-unified]
     paths:
       - 'src/engine/pro*.ts'
+      - 'src/engine/seniorNations.ts'
+      - 'src/engine/nations.ts'
       - 'scripts/audit*Pyramid*.ts'
       - 'scripts/auditAllProLeagues.ts'
       - 'scripts/auditPromotionPlayoffs.ts'
       - 'scripts/auditLeagueRules.ts'
+      - 'scripts/auditWorldwideInternational.ts'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/pro-pyramid-integrity.yml'
@@ -26,4 +29,5 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run audit:pro-pyramids
+      - run: node --import tsx scripts/auditWorldwideInternational.ts
       - run: npm run build

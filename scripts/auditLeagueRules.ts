@@ -87,8 +87,14 @@ for (const [id, profile] of Object.entries(LOWER_DIVISIONS)) {
 }
 assert.equal(next.competitions['mtn8-rsa'].entrantIds.length, 8)
 assert.equal(next.competitions['league-cup-rsa'].entrantIds.length, 16)
-assert.equal(next.competitions['continental-uefa'].entrantIds.length, 36)
-assert.equal(next.competitions['continental-caf'].entrantIds.length, 16)
-assert.equal(new Set(next.competitions['continental-uefa'].entrantIds).size, 36)
-assert.equal(new Set(next.competitions['union-caf'].entrantIds).size, 16)
+// Preliminary entrants can exceed main-stage sizes; only their winners progress.
+const european=next.competitions['continental-uefa']
+const african=next.competitions['continental-caf']
+assert.ok(european.entrantIds.length >= 36)
+assert.ok(african.entrantIds.length >= 16)
+assert.equal(new Set(european.entrantIds).size, european.entrantIds.length)
+assert.equal(new Set(next.competitions['union-caf'].entrantIds).size,
+  next.competitions['union-caf'].entrantIds.length)
+assert.equal(european.tournament?.qualifyingTarget, 36)
+assert.equal(african.tournament?.qualifyingTarget, 16)
 console.log('2026/27 England and South Africa formats, cups and domestic qualification routing passed')

@@ -645,7 +645,7 @@ for(const points of [0,2,4,6,7,9])for(const ovr of [55,60,65,70]){
 }
 console.log('Phase 2: four global earned offers, 0-9 performance/55-70 OVR and safe tier matching passed')
 
-assert.equal(allPlayableRecordCatalog().length,20)
+assert.equal(allPlayableRecordCatalog().length,PRO_INTERACTIVE_COUNTRIES.length*2)
 for(const country of PRO_INTERACTIVE_COUNTRIES){
   const low=seniorTrialOffers(3,60)
   for(const offer of low.filter(o=>o.associationId===country)){

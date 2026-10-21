@@ -1,3 +1,5 @@
+import { PRO_LEAGUE_PLAN } from './proLeagueRegistry'
+import { PRO_SATELLITE_ASSOCIATIONS } from './proSatelliteRegistry'
 // Phase 27 — nationality. Picked during onboarding, drives the youth
 // international layer (your nation IS the team you get called up for) and
 // flavour throughout the UI. Ratings are a loose youth-football strength
@@ -37,6 +39,25 @@ export const NATIONS: Nation[] = [
   { id: 'tur', name: 'Türkiye', short: 'TUR', flag: '🇹🇷', strength: 6 },
 ]
 
+// The 24 established nations retain their authored strengths and flags. Every
+// other professional-world association also has a playable national identity.
+const existing = new Set(NATIONS.map(nation => nation.id))
+const allAssociations = [
+  ...PRO_LEAGUE_PLAN.map(item => ({ id: item.associationId, name: item.associationName })),
+  ...PRO_SATELLITE_ASSOCIATIONS.map(item => ({ id: item.id, name: item.name })),
+]
+for (const association of allAssociations) {
+  if (existing.has(association.id)) continue
+  existing.add(association.id)
+  // Stable fallback strength; never rerolls after a save is loaded.
+  const hash = [...association.id].reduce((value, letter) =>
+    Math.imul(value ^ letter.charCodeAt(0), 16777619) >>> 0, 2166136261)
+  NATIONS.push({ id: association.id, name: association.name,
+    short: association.id.toUpperCase(), flag: '🌐', strength: 4 + hash % 4 })
+}
 export function getNation(id: string | null | undefined): Nation {
-  return NATIONS.find((n) => n.id === id) ?? NATIONS[0]
+  return NATIONS.find(nation => nation.id === id) ?? NATIONS[0]
+}
+export function isSupportedNation(id: string | null | undefined): boolean {
+  return !!id && NATIONS.some(nation => nation.id === id)
 }

@@ -1,3 +1,4 @@
+import { sponsorWeek, acceptSponsor } from '../engine/proSponsorship'
 import { purchaseLuxuryAsset } from '../engine/proLifestyle'
 import { create } from 'zustand'
 import type { Player } from '../types/player'
@@ -148,6 +149,17 @@ interface CareerStore {
   signAgent: (agentId: string) => void
   beginNegotiation: (offerId: string) => void
   makeNegotiationChoice: (choiceId: string) => void
+  signSponsor: (offerId: string) => {ok:boolean;reason?:string}
+  signSponsor: (offerId: string) => {
+    const player=getState().player
+    if(!player?.proCareer)return {ok:false,reason:'Professional career required'}
+    const pro=player.proCareer
+    const signed=acceptSponsor(pro.sponsorships,offerId,pro.season,pro.week)
+    if(signed.error)return {ok:false,reason:signed.error}
+    setState({player:{...player,money:(player.money??0)+signed.bonus,careerEarnings:(player.careerEarnings??0)+signed.bonus,proCareer:{...pro,sponsorships:signed.state}}})
+    void getState().saveCurrent()
+    return {ok:true}
+  },
   buyLuxuryAsset: (listingId: string) => { ok: boolean; reason?: string }
   ensureProCareer: () => void
   acknowledgeProSigning: () => void
@@ -553,7 +565,10 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     }
     const result = advanceProWeek(player.proCareer, player)
     const living = advanceLivingWorld(player.proCareer, result.state, result.player)
-    setState({ player: { ...living.player, proCareer: living.state } })
+    const sponsors=sponsorWeek(player.proCareer.sponsorships,living.player,player.proCareer.season,player.proCareer.week)
+    setState({ player: { ...living.player,money:(living.player.money??0)+sponsors.pay,
+      careerEarnings:(living.player.careerEarnings??0)+sponsors.pay,
+      proCareer: {...living.state,sponsorships:sponsors.state} } })
     void getState().saveCurrent()
   },
   completeProPreseasonFriendly: (rating,energy,goals,assists) => {

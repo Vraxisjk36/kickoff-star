@@ -1,6 +1,6 @@
 import type { ProWorldState } from './proWorld'
 import type { Player } from '../types/player'
-import { getNation } from './nations'
+import { seniorNation } from './seniorNations'
 
 export interface NationalSquadMember {
   id: string
@@ -47,7 +47,8 @@ function eligibleWorldPlayers(world: ProWorldState | undefined, nationId: string
     .sort((a,b)=>b.overall-a.overall || a.id.localeCompare(b.id))
 }
 function synthetic(nationId: string, position: string, slot: number): NationalSquadMember {
-  const n=getNation(nationId)
+  const n=seniorNation(nationId)
+  if (!n) throw new Error(`Unknown senior national team ${nationId}`)
   const seed=hash(`${nationId}:national-player:${position}:${slot}`)
   return {id:`national-${nationId}-${position}-${slot}`,
     name:`${FIRST[seed%FIRST.length]} ${LAST[(seed>>>8)%LAST.length]}`,

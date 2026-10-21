@@ -1,5 +1,6 @@
 import { NATIONS } from './nations'
 import { PRO_LEAGUE_PLAN, type ProConfederation } from './proLeagueRegistry'
+import { PRO_SATELLITE_ASSOCIATIONS } from './proSatelliteRegistry'
 import type { SeniorInternationalRecord } from './proInternational'
 
 export const CONTINENTAL_WINDOWS = [8,20,32] as const
@@ -22,7 +23,8 @@ const REGION_LABELS: Record<ProConfederation,string> = {
   afc:'Asian Nations Series',ofc:'Oceania Nations Series',
 }
 export function confederationForNation(nationId:string):ProConfederation | null {
-  return PRO_LEAGUE_PLAN.find(item=>item.associationId===nationId)?.confederation ?? null
+  return PRO_LEAGUE_PLAN.find(item=>item.associationId===nationId)?.confederation ??
+    PRO_SATELLITE_ASSOCIATIONS.find(item=>item.id===nationId)?.confederation ?? null
 }
 export function continentalNations(nationId:string):string[] {
   const confederation=confederationForNation(nationId)

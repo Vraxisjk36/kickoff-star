@@ -111,6 +111,25 @@ export const SHOP_ITEMS: ShopItem[] = [
   },
 ]
 
+/** Recovery costs and optional rewarded cash scale with professional income.
+ * Youth players keep affordable grassroots prices; growth is deliberately
+ * sublinear so recovery never becomes an unreasonable salary tax. */
+export function careerEconomyScale(player:Player):number {
+  if (!player.turnedPro || !player.proCareer) return 1
+  const wage=Math.max(0,player.contract?.terms.weeklyWage??0)
+  return Math.min(100,Math.max(3,Math.sqrt(Math.max(350,wage)/350)*3))
+}
+export function recoveryPrice(player:Player,basePrice:number):number {
+  return Math.ceil(basePrice*careerEconomyScale(player)/5)*5
+}
+export function rewardedCashAmount(player:Player):number {
+  if (!player.turnedPro || !player.proCareer) return 10
+  const wage=Math.max(350,player.contract?.terms.weeklyWage??350)
+  return Math.min(10000,Math.max(75,Math.round(Math.sqrt(wage/350)*75/25)*25))
+}
+export function playerShopPrice(player:Player,item:ShopItem):number {
+  return item.kind==='consumable'?recoveryPrice(player,item.price):item.price
+}
 export function shopFor(player: Player): ShopItem[] {
   const isGK = player.position === 'GK'
   const age = player.careerClock.ageYears

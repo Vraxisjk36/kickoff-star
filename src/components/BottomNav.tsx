@@ -7,16 +7,18 @@
 import { NAV_ITEMS, type HubTab } from './navItems'
 import { useTranslate } from '../i18n'
 
-export default function BottomNav({ active, onSelect, badges }: {
+export default function BottomNav({ active, onSelect, badges, isPro=false }: {
   active: HubTab
   onSelect: (tab: HubTab) => void
   badges?: Partial<Record<HubTab, number>>
+  isPro?: boolean
 }) {
   const t = useTranslate()
   // 'scouts' and 'table' are routable destinations that live inside another
   // tab's screen — light up the tab that actually renders them.
   const activeTab: HubTab = active === 'scouts' ? 'player' : active === 'table' ? 'fixtures' : active
 
+  const items=isPro?NAV_ITEMS:NAV_ITEMS.filter(item=>item.tab!=='lifestyle')
   return (
     <nav aria-label={t('Career navigation')}
       className="fixed bottom-0 left-0 right-0 max-w-md mx-auto w-full z-30 bg-[#0c0c0a]"
@@ -25,8 +27,8 @@ export default function BottomNav({ active, onSelect, badges }: {
       {/* fade so content scrolls out under the bar rather than hitting a hard edge */}
       <div className="h-4 bg-gradient-to-t from-[#0a0a09] to-transparent pointer-events-none" />
       <div className="border-t border-ks-border/80 bg-[#0c0c0a]/95 backdrop-blur-sm px-1.5 pt-1.5 pb-1.5">
-        <div className="grid grid-cols-6 gap-0.5">
-          {NAV_ITEMS.map((item) => {
+        <div className={`grid ${isPro?'grid-cols-7':'grid-cols-6'} gap-0.5`}>
+          {items.map((item) => {
             const isActive = item.tab === activeTab
             const badge = badges?.[item.tab] ?? 0
             return (
@@ -46,7 +48,7 @@ export default function BottomNav({ active, onSelect, badges }: {
                 >
                   {item.icon}
                 </span>
-                <span className={`text-[8px] tracking-wide ${isActive ? 'font-display' : ''}`}>{t(item.label)}</span>
+                <span className={`text-[8px] tracking-tight ${isActive ? 'font-display' : ''}`}>{t(item.label)}</span>
 
                 {/* active indicator */}
                 <span

@@ -484,7 +484,7 @@ export function advanceTournamentsTo(world: ProWorldState, target: IsoDate): voi
       if (comp.tournament.stage === 'league-phase') next = [...world.standings[comp.id]].sort(tableOrder).slice(0, 16).map(item => item.clubId)
       else if (comp.tournament.stage === 'groups') {
         const groups = comp.tournament.groupByEntrant!
-        const size = comp.kind === 'national-team' ? comp.id === 'world-national' ? 32 : comp.entrantIds.length >= 32 ? 16 : 8 : Math.min(16, comp.entrantIds.length / 2)
+        const size = comp.kind === 'national-team' ? comp.id === 'world-national' ? 32 : comp.entrantIds.length >= 32 ? 16 : 8 : Math.min(16, Object.keys(groups).length / 2)
         const tables = new Map<number, ProStandingRow[]>()
         for (const record of world.standings[comp.id]) tables.set(groups[record.clubId], [...(tables.get(groups[record.clubId]) ?? []), record])
         const rankedGroups = [...tables.values()].map(rows => rows.sort(tableOrder))

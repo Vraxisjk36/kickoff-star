@@ -10,6 +10,7 @@ import PlayerTab from './PlayerTab'
 import PeopleTab from './PeopleTab'
 import ClubTab from './ClubTab'
 import ShopTab from './ShopTab'
+import ProLifestyleTab from './ProLifestyleTab'
 import StandingsTable from '../../components/StandingsTable'
 import ProWeeklyCalendar from './ProWeeklyCalendar'
 import { proMatchDay, proTrainingAvailable } from '../../engine/proWeeklySchedule'
@@ -264,6 +265,7 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
       </Section>}
       {proLeagueView==='world' && pro.backgroundWorld && <ProWorldPanel world={pro.backgroundWorld}/>}
     </> : <>
+      <ProLifestyleTab player={player}/>
       <ShopTab player={player}/>
       <Section title="PROFESSIONAL PAY & RESIDENCE">
       {cards('PROFESSIONAL FINANCES', <>{stat('Balance', `£${(player.money ?? 0).toLocaleString()}`)}{stat('Career gross earnings', `£${(player.careerEarnings ?? 0).toLocaleString()}`)}{stat('Weekly wage', `£${(player.contract?.terms.weeklyWage ?? 1200).toLocaleString()}`)}{stat('Pending match bonuses', `£${(pro.pendingBonus ?? 0).toLocaleString()}`)}<p className="text-ks-muted text-xs mt-3">Monthly pay includes estimated deductions, your agent and accommodation. Figures are part of the game economy.</p></>)}

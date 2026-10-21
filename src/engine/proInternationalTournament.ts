@@ -25,25 +25,29 @@ export interface TournamentProgress {
   championId?: string
 }
 export const INTERNATIONAL_WINDOWS = [12, 25, 37] as const
-export const INTERNATIONAL_GROUPS = Array.from({ length: 6 }, (_, group) =>
-  NATIONS.filter((_, index) => index % 6 === group).map(nation => nation.id))
+// Groups cover every association; the last group may contain 2-3 teams.
+export const INTERNATIONAL_GROUPS: string[][] = Array.from(
+  { length: Math.ceil(NATIONS.length / 4) },
+  (_, group) => NATIONS.slice(group * 4, group * 4 + 4).map(nation => nation.id))
 
 export function internationalCycle(season: number): number {
   return Math.floor((Math.max(1, season) - 1) / 4) * 4 + 1
 }
-function roundRobin(four: readonly string[], round: number): Pairing[] {
-  if (four.length !== 4) throw new Error('International draw requires four nations')
-  // Fixed, balanced draw: each nation meets each other nation once per leg.
-  const base: Array<Array<[number, number]>> = [
-    [[0, 3], [1, 2]],
-    [[0, 2], [3, 1]],
-    [[0, 1], [2, 3]],
-  ]
-  const reverse = round >= 3
-  return base[round % 3].map(([a, b]) => ({
-    homeId: four[reverse ? b : a],
-    awayId: four[reverse ? a : b],
-  }))
+function roundRobin(group: readonly string[], round: number): Pairing[] {
+  if (group.length < 2 || group.length > 4) throw new Error('International draw requires 2-4 nations')
+  // Byes for odd-sized groups, with home/away rotation in the second leg.
+  const entries = group.length % 2 ? [...group, 'BYE'] : [...group]
+  const size = entries.length
+  const index = round % (size - 1)
+  const rotation = [entries[0], ...entries.slice(1 + index), ...entries.slice(1, 1 + index)]
+  const reverse = Math.floor(round / (size - 1)) % 2 === 1
+  const result: Pairing[] = []
+  for (let i = 0; i < size / 2; i++) {
+    const a = rotation[i], b = rotation[size - 1 - i]
+    if (a === 'BYE' || b === 'BYE') continue
+    result.push({ homeId: reverse ? b : a, awayId: reverse ? a : b })
+  }
+  return result
 }
 function hash(value: string): number {
   let h = 2166136261
@@ -99,12 +103,14 @@ function qualifierTables(cycle: number, records: readonly SeniorInternationalRec
       .map(pair => ({ pair, goals: score(pair, cycle, 'qualifier', round, records) }))).flat()))
 }
 function finalists(cycle: number, records: readonly SeniorInternationalRecord[]): string[] {
+  // Every nation can win its group. Rank the group winners into an eight-team
+  // legacy final field; this is not the 48-team professional World Cup.
   const groups = qualifierTables(cycle, records)
-  const direct = groups.map(rows => rows[0].nationId)
-  const runnerUps = groups.map(rows => rows[1]).sort((a, b) =>
-    b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst) ||
-    b.goalsFor - a.goalsFor || a.nationId.localeCompare(b.nationId))
-  return [...direct, runnerUps[0].nationId, runnerUps[1].nationId]
+  return groups.map(rows => rows[0]).sort((a, b) =>
+    b.points / Math.max(1, b.played) - a.points / Math.max(1, a.played) ||
+    (b.goalsFor - b.goalsAgainst) / Math.max(1, b.played) -
+      (a.goalsFor - a.goalsAgainst) / Math.max(1, a.played) ||
+    a.nationId.localeCompare(b.nationId)).slice(0, 8).map(row => row.nationId)
 }
 function finalGroups(cycle: number, records: readonly SeniorInternationalRecord[]): TournamentStanding[][] {
   const entries = finalists(cycle, records)

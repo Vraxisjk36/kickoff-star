@@ -21,7 +21,7 @@ import { archetypeConfidenceSwingMultiplier, archetypeTrustGainMultiplier } from
 import { initialCast, driftRelationships, adjustBond, addPerson, relationshipEffects, resolveInteraction, interactedThisWeek, pruneCast, INTERACTIONS } from '../engine/relationships'
 import { createSeasonObjectives, completedSeasonObjectives, seasonObjectivesBrief } from '../engine/seasonObjectives'
 import type { ArcVerdict } from '../engine/storylines'
-import { itemById, ageEquipment, monthlyAllowance, allowanceDue, rewardForStreak, shopFor, availableJobs, canWorkThisWeek, weeklyLivingCost, energyGainFromPct, type OwnedEquipment } from '../engine/economy'
+import { itemById, ageEquipment, monthlyAllowance, allowanceDue, rewardForStreak, shopFor, availableJobs, canWorkThisWeek, weeklyLivingCost, energyGainFromPct, playerShopPrice, type OwnedEquipment } from '../engine/economy'
 import { netWage, commissionOn } from '../engine/agents'
 import { hasSundayContract, openSundayContractWindow } from '../engine/sundayContracts'
 import { generateTeam, teamOverall } from '../engine/teams'
@@ -1014,9 +1014,10 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const item = itemById(itemId)
     if (!player || !item) return { ok: false, reason: 'not available' }
     if (!shopFor(player).some((i) => i.id === itemId)) return { ok: false, reason: 'not available yet' }
-    if ((player.money ?? 0) < item.price) return { ok: false, reason: 'not enough money' }
+    const price=playerShopPrice(player,item)
+    if ((player.money ?? 0) < price) return { ok: false, reason: 'not enough money' }
 
-    let next: Player = applyFinancialDelta(player, -item.price, item.kind === 'equipment' ? 'equipment' : 'recovery', `Bought ${item.name}`)
+    let next: Player = applyFinancialDelta(player, -price, item.kind === 'equipment' ? 'equipment' : 'recovery', `Bought ${item.name}`)
     if (item.kind === 'consumable') {
       next = { ...next, consumables: { ...(next.consumables ?? {}), [itemId]: ((next.consumables ?? {})[itemId] ?? 0) + 1 } }
     } else {

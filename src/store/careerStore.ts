@@ -557,6 +557,14 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     // Senior player progresses day-by-day, like the original school career.
     // The league simulation and salary settle only after Sunday's duties.
     const day = player.proCareer.day ?? 0
+    const pro=player.proCareer
+    const cup=pendingProCup(pro)
+    const league=proFixture(pro)
+    const kickoff=cup?.kickoffDate??(league?pro.backgroundWorld?.fixtures[league.id]?.kickoffDate:undefined)
+    const kind=cup?(/champions|europa|continental|conference/i.test(cup.competitionId)?'europe':'domestic-cup'):'league'
+    const matchDay=proMatchDay(pro,kind,kickoff)
+    if(pro.freeAgentSinceWeek===undefined && proTrainingAvailable(day,matchDay) &&
+      !(pro.trainedDays??[]).includes(day) && !player.injury?.weeksRemaining && player.fitness.stamina>=12)return
     if (day < 6) {
       setState({ player: { ...player, proCareer: { ...player.proCareer, day: day + 1 },
         fitness: { stamina: Math.min(100, player.fitness.stamina + (day === 5 ? 5 : 3)) } } })

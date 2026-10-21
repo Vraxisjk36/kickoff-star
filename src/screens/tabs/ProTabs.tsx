@@ -45,7 +45,7 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
   const acceptLoan = useCareerStore(s => s.acceptProLoan)
   const [newsOpen, setNewsOpen] = useState(false)
   const [homeView,setHomeView]=useState<'overview'|'schedule'|'updates'>('overview')
-  const [shopView,setShopView]=useState<'sponsors'|'lifestyle'|'essentials'|'finances'>('sponsors')
+  const [shopView,setShopView]=useState<'sponsors'|'essentials'|'finances'>('sponsors')
   const [proLeagueView, setProLeagueView] = useState<'fixtures' | 'table' | 'international' | 'world'>('fixtures')
   const windowOpen = pro.freeAgentSinceWeek !== undefined || (pro.date ? registrationOpen(pro.associationId ?? 'eng', pro.date) : false)
   const championshipCycle = internationalCycle(pro.season)
@@ -241,12 +241,11 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
       </div>
       </Section>}
       {proLeagueView==='world' && pro.backgroundWorld && <ProWorldPanel world={pro.backgroundWorld}/>}
-    </> : <>
-      <nav aria-label="Professional shop sections" className="grid grid-cols-4 gap-1 p-1 rounded-xl border border-ks-border bg-[#10120e]">
-        {(['sponsors','lifestyle','essentials','finances'] as const).map(view=><button key={view} onClick={()=>setShopView(view)} className={`rounded-lg py-2.5 text-[9px] font-display uppercase ${shopView===view?'bg-ks-gold text-ks-black':'text-ks-muted'}`}>{view}</button>)}
+    </> : tab === 'lifestyle' ? <ProLifestyleTab player={player}/> : <>
+      <nav aria-label="Professional shop sections" className="grid grid-cols-3 gap-1 p-1 rounded-xl border border-ks-border bg-[#10120e]">
+        {(['sponsors','essentials','finances'] as const).map(view=><button key={view} onClick={()=>setShopView(view)} className={`rounded-lg py-2.5 text-[9px] font-display uppercase ${shopView===view?'bg-ks-gold text-ks-black':'text-ks-muted'}`}>{view}</button>)}
       </nav>
       {shopView==='sponsors'&&<ProSponsorshipTab player={player}/>}
-      {shopView==='lifestyle'&&<ProLifestyleTab player={player}/>}
       {shopView==='essentials'&&<ShopTab player={player}/>}
       {shopView==='finances'&&<Section title="PROFESSIONAL PAY & RESIDENCE">
         {cards('FINANCIAL OVERVIEW',<>{stat('Balance',`£${(player.money??0).toLocaleString()}`)}{stat('Career earnings',`£${(player.careerEarnings??0).toLocaleString()}`)}{stat('Weekly wage',`£${(player.contract?.terms.weeklyWage??0).toLocaleString()}`)}{stat('Pending bonuses',`£${(pro.pendingBonus??0).toLocaleString()}`)}</>)}

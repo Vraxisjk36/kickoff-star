@@ -523,8 +523,8 @@ const worldClock=Date.now()
 const twentyWorld=buildNationalWorldResults(20,44)
 const fullWorldRankings=seniorWorldNationRankings(20,44)
 assert.equal(fullWorldRankings.length,NATIONS.length)
-assert.ok(twentyWorld.length>800 && twentyWorld.length<4000,
-  'Long-career international events must stay reasonably bounded')
+assert.ok(twentyWorld.length>800 && twentyWorld.length<25000,
+  'Twenty-year national fixture feed must stay bounded after expanding regional opponents to 218 associations')
 assert.ok(fullWorldRankings.every(r=>Number.isFinite(r.points)))
 assert.ok(Date.now()-worldClock<30000,
   'Twenty-season national ranking reconstruction is too slow on CI')

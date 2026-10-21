@@ -131,7 +131,24 @@ function createCompetition(world: ProWorldState, id: string, kind: ProCompetitio
   world.competitions[id] = comp
   world.standings[id] = entrants.map(row)
   if (stage === 'knockout') scheduleKnockout(world, comp, entrants, start)
+  else if (stage === 'qualifying') throw new Error('Use createContinentalQualifyingCompetition for preliminary stages')
   else scheduleGroups(world, comp, entrants, start)
+}
+/** One saved continental edition: qualifiers and main stage share IDs and history. */
+function createContinentalQualifyingCompetition(world:ProWorldState,id:string,year:number,
+  entrants:string[],mainStage:'groups'|'league-phase',target:number,start:IsoDate):void {
+  if(entrants.length<=target) {
+    createCompetition(world,id,'continental-club',year,entrants,mainStage,start)
+    return
+  }
+  if(world.competitions[id]&&!world.competitions[id].tournament?.completed)
+    throw new Error(`Active tournament ${id}`)
+  const comp:ProCompetition={id,associationId:null,kind:'continental-club',
+    seasonId:String(year),entrantIds:entrants,format:{legs:2,scheduledRounds:0},
+    tournament:{stage:'qualifying',round:0,qualifyingTarget:target,afterQualifying:mainStage,qualifyingRound:0}}
+  world.competitions[id]=comp
+  world.standings[id]=entrants.map(row)
+  scheduleQualifyingRound(world,comp,entrants,target,start)
 }
 function scheduleGroups(world: ProWorldState, comp: ProCompetition, entrants: string[], start: IsoDate): void {
   const count = comp.tournament!.stage === 'league-phase' ? comp.id === 'conference-uefa' ? 6 : 8 : comp.kind === 'national-team' || comp.id === 'world-club' ? 3 : 6
@@ -175,6 +192,30 @@ function scheduleKnockout(world: ProWorldState, comp: ProCompetition, entrants: 
   comp.tournament!.round += 1
   // Bye recipients remain in entrantIds and are included in the next draw.
   return schedule(world, comp, pairs, date, comp.tournament!.round)
+}
+/** Schedule a seeded home/away preliminary round. Highest-seeded clubs receive
+ * byes when entrants exceed the main-stage target by fewer than half.
+ * Further rounds are generated from actual aggregate winners.
+ */
+function scheduleQualifyingRound(world: ProWorldState, comp: ProCompetition,
+  entrants: string[], target: number, date: IsoDate): ProFixture[] {
+  const nextSize = entrants.length > target * 2
+    ? Math.max(target, 2 ** Math.floor(Math.log2(entrants.length)))
+    : target
+  const pairCount = entrants.length - nextSize
+  if (pairCount < 1 || pairCount * 2 > entrants.length)
+    throw new Error(`Invalid preliminary field ${comp.id}: ${entrants.length} -> ${nextSize}`)
+  const eligible = entrants.slice(entrants.length - 2 * pairCount)
+  const pairs: [string,string][] = Array.from({length:pairCount}, (_,i) =>
+    [eligible[i],eligible[eligible.length-1-i]])
+  comp.tournament!.remainingIds = entrants
+  comp.tournament!.qualifyingRound = (comp.tournament!.qualifyingRound ?? 0) + 1
+  const round = comp.tournament!.qualifyingRound!
+  const opening = schedule(world,comp,pairs,date,round*2)
+  const returnLegs = schedule(world,comp,pairs.map(([home,away])=>[away,home]),
+    addDays(date,7),round*2+1)
+  comp.format.scheduledRounds += 2
+  return [...opening,...returnLegs]
 }
 function tierEntrants(world: ProWorldState, confederation: ProConfederation, tier: number, slots: number): string[] {
   const leagues = PRO_LEAGUE_PLAN.filter(item => item.confederation === confederation)
@@ -361,7 +402,7 @@ export function recordTournamentResult(world: ProWorldState, fixtureId: string, 
     else awayGoals++
   }
   fixture.result = { homeGoals, awayGoals }
-  if (comp.tournament?.stage !== 'knockout') {
+  if (comp.tournament?.stage !== 'knockout' && comp.tournament?.stage !== 'qualifying') {
     const rows = world.standings[comp.id]
     const a = rows.find(item => item.clubId === fixture.homeId)!
     const b = rows.find(item => item.clubId === fixture.awayId)!
@@ -392,6 +433,42 @@ export function advanceTournamentsTo(world: ProWorldState, target: IsoDate): voi
         settleFixture(world, fixture, comp.tournament.stage === 'knockout')
       if (fixtures.some(fixture => !fixture.result)) break
       const lastDate = fixtures.reduce((latest, fixture) => fixture.kickoffDate > latest ? fixture.kickoffDate : latest, fixtures[0].kickoffDate)
+      if(comp.tournament.stage==='qualifying') {
+        const remaining=comp.tournament.remainingIds??comp.entrantIds
+        const target=comp.tournament.qualifyingTarget!
+        const pairs=new Map<string,ProFixture[]>()
+        for(const fixture of fixtures) {
+          const key=[fixture.homeId,fixture.awayId].sort().join('|')
+          const pair=pairs.get(key)??[]
+          pair.push(fixture);pairs.set(key,pair)
+        }
+        const winners:string[]=[]
+        const involved=new Set<string>()
+        for(const [key,legs] of pairs) {
+          if(legs.length!==2)throw new Error(`Preliminary tie must have two legs: ${key}`)
+          const [first,second]=key.split('|')
+          const goals=(club:string)=>legs.reduce((sum,game)=>sum+
+            (game.homeId===club?game.result!.homeGoals:game.result!.awayGoals),0)
+          const a=goals(first),b=goals(second)
+          winners.push(a===b?(proRoll(world.seed,`${comp.id}:${comp.seasonId}:${key}:penalties`)<.5?first:second):a>b?first:second)
+          involved.add(first);involved.add(second)
+        }
+        const next=[...remaining.filter(id=>!involved.has(id)),...winners]
+        for(const fixture of fixtures)delete world.fixtures[fixture.id]
+        if(next.length===target) {
+          comp.tournament.stage=comp.tournament.afterQualifying!
+          comp.tournament.remainingIds=undefined
+          comp.tournament.groupByEntrant=undefined
+          world.standings[comp.id]=next.map(row)
+          fixtures=comp.tournament.stage==='knockout'
+            ? scheduleKnockout(world,comp,next,addDays(lastDate,14))
+            : (scheduleGroups(world,comp,next,addDays(lastDate,14)),
+              Object.values(world.fixtures).filter(f=>f.competitionId===comp.id))
+        } else {
+          fixtures=scheduleQualifyingRound(world,comp,next,target,addDays(lastDate,14))
+        }
+        continue
+      }
       let next: string[]
       if (comp.tournament.stage === 'league-phase') next = [...world.standings[comp.id]].sort(tableOrder).slice(0, 16).map(item => item.clubId)
       else if (comp.tournament.stage === 'groups') {

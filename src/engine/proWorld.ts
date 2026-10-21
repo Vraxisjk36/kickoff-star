@@ -102,11 +102,16 @@ export interface ProCompetition {
   splitScheduled?: boolean
   /** Frozen fictional rules edition; the real association rules remain research pending. */
   tournament?: {
-    stage: 'league-phase' | 'groups' | 'knockout'
+    stage: 'league-phase' | 'groups' | 'knockout' | 'qualifying'
     round: number
     groupByEntrant?: Record<string, number>
     remainingIds?: string[]
     completed?: boolean
+    /** Continental preliminary rounds feed the proper main competition. */
+    qualifyingTarget?: number
+    afterQualifying?: 'league-phase' | 'groups' | 'knockout'
+    /** Seeded clubs that bypass the earliest qualification rounds. */
+    qualifyingRound?: number
   }
 }
 

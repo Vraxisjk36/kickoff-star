@@ -1,10 +1,42 @@
 import assert from 'node:assert/strict'
 import { createProWorld } from '../src/engine/proWorldFactory'
 import { beginContinentalSeason, advanceTournamentsTo, recordTournamentResult } from '../src/engine/proTournaments'
+import { PLAYABLE_CONTINENTAL_RULES, domesticContinentalBerths } from '../src/engine/proQualification'
 
 const confeds=['uefa','caf','conmebol','concacaf','afc','ofc'] as const
 const world=createProWorld(714,'2026-08-01')
+// Freeze a deterministic completed 2025 domestic table for each playable league.
+const frozen: Record<string, string[]> = {}
+for (const country of Object.keys(PLAYABLE_CONTINENTAL_RULES)) {
+  const id = `top-${country}`
+  const table = [...world.standings[id]].map((row, index) => ({
+    ...row, played: 38, won: 25-index, drawn: 4, lost: 9+index,
+    points: 79-index*2, goalsFor: 75-index, goalsAgainst: 25+index,
+  }))
+  frozen[country] = table.map(row => row.clubId)
+  world.seasonHistory.push({competitionId:id,seasonId:'2025',
+    championId:frozen[country][0],table})
+  // A domestic cup winner already in the Champions tier passes the berth down.
+  world.championHistory.push({competitionId:`cup-${country}`,seasonId:'2025',
+    championId:frozen[country][0]})
+}
 beginContinentalSeason(world,2026)
+for (const [country, rule] of Object.entries(PLAYABLE_CONTINENTAL_RULES)) {
+  const confederation = world.associations[country].confederation
+  const domestic = domesticContinentalBerths(world,country,2026)
+  const champions = world.competitions[`continental-${confederation}`].entrantIds
+  const secondary = world.competitions[`union-${confederation}`].entrantIds
+  const third = world.competitions['conference-uefa']?.entrantIds ?? []
+  assert.deepEqual(domestic.champions,frozen[country].slice(0,rule.champions),
+    `${country} domestic champions route should use completed rankings`)
+  for(const club of domestic.champions) assert.ok(champions.includes(club),
+    `${country} Champions berth must exist in the continental draw`)
+  for(const club of domestic.secondary) assert.ok(secondary.includes(club),
+    `${country} cup or league secondary berth must reach continental draw`)
+  for(const club of domestic.third) assert.ok(third.includes(club),
+    `${country} third-tier berth must reach continental draw`)
+}
+
 const allCompIds=new Set<string>()
 for(const confederation of confeds){
   const ids=[`continental-${confederation}`,`union-${confederation}`,

@@ -150,16 +150,6 @@ interface CareerStore {
   beginNegotiation: (offerId: string) => void
   makeNegotiationChoice: (choiceId: string) => void
   signSponsor: (offerId: string) => {ok:boolean;reason?:string}
-  signSponsor: (offerId: string) => {
-    const player=getState().player
-    if(!player?.proCareer)return {ok:false,reason:'Professional career required'}
-    const pro=player.proCareer
-    const signed=acceptSponsor(pro.sponsorships,offerId,pro.season,pro.week)
-    if(signed.error)return {ok:false,reason:signed.error}
-    setState({player:{...player,money:(player.money??0)+signed.bonus,careerEarnings:(player.careerEarnings??0)+signed.bonus,proCareer:{...pro,sponsorships:signed.state}}})
-    void getState().saveCurrent()
-    return {ok:true}
-  },
   buyLuxuryAsset: (listingId: string) => { ok: boolean; reason?: string }
   ensureProCareer: () => void
   acknowledgeProSigning: () => void
@@ -529,6 +519,16 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     await queueSave({ schemaVersion: SAVE_SCHEMA_VERSION, slotId: activeSlot, savedAt: new Date().toISOString(), player, calendar, league, academyLeague, cups, international, pendingTraining: pendingTraining ?? null })
   },
 
+  signSponsor: (offerId: string) => {
+    const player=getState().player
+    if(!player?.proCareer)return {ok:false,reason:'Professional career required'}
+    const pro=player.proCareer
+    const signed=acceptSponsor(pro.sponsorships,offerId,pro.season,pro.week)
+    if(signed.error)return {ok:false,reason:signed.error}
+    setState({player:{...player,money:(player.money??0)+signed.bonus,careerEarnings:(player.careerEarnings??0)+signed.bonus,proCareer:{...pro,sponsorships:signed.state}}})
+    void getState().saveCurrent()
+    return {ok:true}
+  },
   buyLuxuryAsset: (listingId: string) => {
     const player = getState().player
     if (!player?.proCareer) return {ok:false,reason:'Professional career required'}

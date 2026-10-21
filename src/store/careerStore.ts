@@ -1,3 +1,4 @@
+import { purchaseLuxuryAsset } from '../engine/proLifestyle'
 import { create } from 'zustand'
 import type { Player } from '../types/player'
 import type { MatchLine, MatchRecord } from '../engine/matchLedger'
@@ -147,6 +148,7 @@ interface CareerStore {
   signAgent: (agentId: string) => void
   beginNegotiation: (offerId: string) => void
   makeNegotiationChoice: (choiceId: string) => void
+  buyLuxuryAsset: (listingId: string) => { ok: boolean; reason?: string }
   ensureProCareer: () => void
   acknowledgeProSigning: () => void
   advanceProCareer: () => void
@@ -515,6 +517,16 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     await queueSave({ schemaVersion: SAVE_SCHEMA_VERSION, slotId: activeSlot, savedAt: new Date().toISOString(), player, calendar, league, academyLeague, cups, international, pendingTraining: pendingTraining ?? null })
   },
 
+  buyLuxuryAsset: (listingId: string) => {
+    const player = getState().player
+    if (!player?.proCareer) return {ok:false,reason:'Professional career required'}
+    const pro = player.proCareer
+    const result = purchaseLuxuryAsset(player.money ?? 0,pro.luxuryAssets ?? [],listingId,pro.season,pro.week,player.id)
+    if (result.error) return {ok:false,reason:result.error}
+    setState({player:{...player,money:result.money,proCareer:{...pro,luxuryAssets:result.assets}}})
+    void getState().saveCurrent()
+    return {ok:true}
+  },
   ensureProCareer: () => {
     const { player } = getState()
     if (!player?.turnedPro || player.proCareer) return

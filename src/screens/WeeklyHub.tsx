@@ -156,7 +156,7 @@ export default function WeeklyHub({
         </>}
       </div>
 
-      <BottomNav active={tab} onSelect={onTabChange} badges={{ scouts: offerCount }} />
+      <BottomNav active={tab} onSelect={onTabChange} badges={{ scouts: offerCount }} isPro={!!player.turnedPro&&!!player.proCareer} />
 
       {energyOpen && <EnergySheet player={player} onClose={() => setEnergyOpen(false)} />}
       {lowEnergyOpen && player.fitness.stamina < 40 && <LowEnergyOffer player={player} onClose={() => setLowEnergyOpen(false)} />}

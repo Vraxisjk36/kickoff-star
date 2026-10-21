@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Player } from '../types/player'
 import { useCareerStore } from '../store/careerStore'
-import { itemById } from '../engine/economy'
+import { itemById, playerShopPrice } from '../engine/economy'
 import { remainingToday, watchRewardedAd } from '../engine/ads'
 
 export default function LowEnergyOffer({ player, onClose }: { player: Player; onClose: () => void }) {
@@ -12,7 +12,8 @@ export default function LowEnergyOffer({ player, onClose }: { player: Player; on
   const restoreEnergyFromAd = useCareerStore(s => s.restoreEnergyFromAd)
   const drink = itemById('energy-drink')!
   const owned = (player.consumables?.[drink.id] ?? 0) > 0
-  const affordable = (player.money ?? 0) >= drink.price
+  const price=playerShopPrice(player,drink)
+  const affordable = (player.money ?? 0) >= price
 
   async function watch() {
     if (busy) return
@@ -40,7 +41,7 @@ export default function LowEnergyOffer({ player, onClose }: { player: Player; on
       <p className="text-sm text-ks-muted mt-2">Top up before your next match, or keep playing and recover on a rest day.</p>
       <div className="grid gap-2 mt-5">
         {remainingToday('energy') > 0 && <button type="button" disabled={busy} onClick={watch} className="min-h-14 rounded-xl bg-ks-gold text-ks-black font-display text-sm tracking-wide disabled:opacity-50">{busy ? 'Loading ad…' : 'WATCH AD · +20 ENERGY'}</button>}
-        {(owned || affordable) && <button type="button" disabled={busy} onClick={recoverWithDrink} className="min-h-12 rounded-xl border border-ks-gold/50 text-ks-gold font-display text-xs disabled:opacity-50">{owned ? 'USE ENERGY DRINK · +20' : `BUY & USE ENERGY DRINK · £${drink.price}`}</button>}
+        {(owned || affordable) && <button type="button" disabled={busy} onClick={recoverWithDrink} className="min-h-12 rounded-xl border border-ks-gold/50 text-ks-gold font-display text-xs disabled:opacity-50">{owned ? 'USE ENERGY DRINK · +20' : `BUY & USE ENERGY DRINK · £${price.toLocaleString()}`}</button>}
         <button type="button" disabled={busy} onClick={onClose} className="min-h-11 text-ks-muted text-sm disabled:opacity-50">Keep playing</button>
       </div>
       {error && <p role="status" className="text-xs text-orange-300 mt-2">{error}</p>}

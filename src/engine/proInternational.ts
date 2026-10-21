@@ -1,4 +1,4 @@
-import { getNation } from './nations'
+import { seniorNation } from './seniorNations'
 import { selectSeniorNationalSquad, type NationalSquadSelection } from './proNationalSquad'
 import { CONTINENTAL_WINDOWS, continentalRound } from './proContinentalNations'
 import { INTERNATIONAL_WINDOWS, internationalTournamentFixture, internationalCycle, internationalProgress, type TournamentStage } from './proInternationalTournament'
@@ -60,8 +60,8 @@ export function scheduleSeniorInternational(state: ProCareerState, player: Playe
     internationalProgress(player.nationality, cycle, state.international?.fixtures ?? []).qualified
   if (!internationalCallupEligible(player) && !qualifiedFinalist) return state
   const nationId = player.nationality!
-  const nation = getNation(nationId)
-  if (nation.id !== nationId) return state
+  const nation = seniorNation(nationId)
+  if (!nation) return state
   const international = state.international ?? { nationId, caps: 0, goals: 0, assists: 0, starts: 0, fixtures: [] }
   if (international.pending || international.fixtures.some(f => f.season === state.season && f.week === state.week))
     return state

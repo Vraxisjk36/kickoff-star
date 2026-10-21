@@ -41,7 +41,7 @@ export function sponsorWeek(state:SponsorState|undefined,player:Player,season:nu
  const candidates=SPONSOR_BRANDS.filter(b=>popularity>=b.minPopularity&&!contracts.some(c=>c.brandId===b.id)&&!offers.some(o=>o.brandId===b.id)&&
    (b.category!=='boots'||(matches>=200&&popularity>=70)) &&
    !contracts.some(c=>c.shoeDeal&&b.category==='boots') &&
-   !contracts.some(c=>c.category===undefined&&SPONSOR_BRANDS.find(bd=>bd.id===c.brandId)?.category===b.category))
+   !contracts.some(c=>SPONSOR_BRANDS.find(bd=>bd.id===c.brandId)?.category===b.category))
  const ranked=candidates.map(b=>({b,roll:hash(`${player.id}:${cycle}:${b.id}`)})).sort((a,b)=>a.roll-b.roll)
  const chance=hash(`${player.id}:${cycle}:chance`)%100
  const count=chance<Math.min(85,15+popularity)?(popularity>=70?2:1):0

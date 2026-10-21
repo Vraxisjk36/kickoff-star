@@ -39,3 +39,13 @@ export function proWeekSchedule(state:ProCareerState,opponent?:string,kind:'leag
       completed}
   })
 }
+
+export function proCalendarDate(state:ProCareerState,day=state.day??0):string {
+  const base=state.date&&Number.isFinite(Date.parse(state.date+'T00:00:00Z'))
+    ?Date.parse(mondayFrom(state.date)+'T00:00:00Z')
+    :Date.UTC(2026,6,13)+(state.week-1)*7*86400000
+  return new Date(base+day*86400000).toISOString().slice(0,10)
+}
+export function proCalendarLabel(state:ProCareerState,day=state.day??0):string {
+  return new Date(proCalendarDate(state,day)+'T00:00:00Z').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short',year:'numeric',timeZone:'UTC'})
+}

@@ -22,6 +22,11 @@ export default function ClubTab({ player, playerTeam, division, isAcademy, isPro
   const sorted = sortStandings(division.standings)
   const pos = sorted.findIndex((s) => s.teamId === playerTeam.id) + 1
   const standing = sorted.find((s) => s.teamId === playerTeam.id)
+  const roster = isPro && player.proCareer?.backgroundWorld
+    ? Object.values(player.proCareer.backgroundWorld.players).filter(mate => mate.clubId === player.proCareer?.clubWorldIds?.[playerTeam.id] && mate.id !== `career-${player.id}`).map(mate => ({...mate, quality: mate.overall, squadRole: 'starter' as const, seasonGoals: 0, seasonAssists: 0}))
+    : player.squad ?? []
+  const nameCounts = new Map<string,number>()
+  for (const mate of roster) nameCounts.set(mate.name,(nameCounts.get(mate.name)??0)+1)
   const rivals = division.teams.filter((t) => t.id !== playerTeam.id)
   const divName = isPro ? (player.proCareer?.activeCompetitionId ?
     player.proCareer.activeCompetitionId.replace(/-/g,' ').toUpperCase() : 'Professional League') : isAcademy
@@ -72,10 +77,10 @@ export default function ClubTab({ player, playerTeam, division, isAcademy, isPro
             <span className="text-[9px] text-ks-muted">{player.position}</span>
             <span className="text-[9px] text-ks-gold uppercase">{player.squadRole ?? 'trial'}</span>
           </div>
-          {[...(isPro && player.proCareer?.backgroundWorld ? Object.values(player.proCareer.backgroundWorld.players).filter(mate => mate.clubId === player.proCareer?.clubWorldIds?.[playerTeam.id] && mate.id !== `career-${player.id}`).map(mate => ({...mate, quality: mate.overall, squadRole: 'starter' as const, seasonGoals: 0, seasonAssists: 0})) : player.squad ?? [])].sort((a, b) => (a.squadRole === b.squadRole ? b.quality - a.quality : a.squadRole === 'starter' ? -1 : 1)).map((mate) => (
+          {[...roster].sort((a, b) => (a.squadRole === b.squadRole ? b.quality - a.quality : a.squadRole === 'starter' ? -1 : 1)).map((mate) => (
             <div key={mate.id} className="flex items-center gap-2 px-2 py-1.5 border-b border-ks-border/35 last:border-0">
               <span className={`text-[8px] uppercase w-10 ${mate.squadRole === 'starter' ? 'text-green-500' : 'text-ks-muted'}`}>{mate.squadRole === 'starter' ? 'XI' : 'bench'}</span>
-              <span className="text-[11px] text-ks-ink flex-1 truncate">{mate.name}</span>
+              <span className="text-[11px] text-ks-ink flex-1 truncate">{mate.name}{(nameCounts.get(mate.name)??0)>1 && <span className="text-ks-muted text-[9px]"> · #{'shirtNumber' in mate ? mate.shirtNumber : mate.id.slice(-3)}</span>}</span>
               <span className="text-[9px] text-ks-muted w-7">{mate.position}</span>
               <span className="font-display text-[10px] text-ks-gold w-5 text-right">{mate.quality}</span>
               <span className="text-[8px] text-ks-muted w-12 text-right">{mate.seasonGoals}G {mate.seasonAssists}A</span>

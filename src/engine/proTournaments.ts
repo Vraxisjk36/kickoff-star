@@ -266,20 +266,18 @@ export function beginPreseasonInvitational(world: ProWorldState, year: number): 
     const id = league.associationId
     const clubs = Object.values(world.clubs).filter(club => club.associationId === id)
       .sort((a, b) => a.id.localeCompare(b.id)).map(club => club.id)
-    for (let index = 0; index < clubs.length; index += 4) {
-      const entrants = clubs.slice(index, index + 4)
-      if (entrants.length < 2) {
-        // The last club joins the preceding group instead of being left out.
-        const previous = `preseason-${id}-${Math.floor(index / 4)}`
-        const prior = world.competitions[previous]
-        if (prior && prior.seasonId === String(year)) {
-          prior.entrantIds.push(...entrants)
-        }
-        continue
-      }
-      const key = `preseason-${id}-${Math.floor(index / 4) + 1}`
-      if (world.competitions[key]?.seasonId === String(year)) continue
-      createCompetition(world, key, 'domestic-cup', year, entrants, 'knockout', `${year}-07-12`)
+    let index = 0
+    let group = 1
+    while (index < clubs.length) {
+      const remaining = clubs.length - index
+      const size = remaining === 5 ? 5 : Math.min(4, remaining)
+      if (size < 2) break
+      const entrants = clubs.slice(index, index + size)
+      const key = `preseason-${id}-${group}`
+      if (world.competitions[key]?.seasonId !== String(year))
+        createCompetition(world, key, 'domestic-cup', year, entrants, 'knockout', `${year}-07-12`)
+      index += size
+      group++
     }
   }
 }

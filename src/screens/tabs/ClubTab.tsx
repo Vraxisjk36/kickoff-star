@@ -87,7 +87,7 @@ export default function ClubTab({ player, playerTeam, division, isAcademy, isPro
             </div>
           ))}
         </div>
-      </Panel>
+      </Panel>}
 
       {(!isPro||clubView==='division') && <> 
       <div className="home-section-label"><span>THE DIVISION</span><i/></div>

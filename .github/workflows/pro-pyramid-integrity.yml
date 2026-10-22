@@ -15,6 +15,7 @@ on:
       - 'scripts/auditProLifestyle.ts'
       - 'scripts/auditProSponsorship.ts'
       - 'scripts/auditProCareerPhase2.ts'
+      - 'scripts/auditProWorld.ts'
       - 'src/screens/ProCareer.tsx'
       - 'src/screens/tabs/Pro*.tsx'
       - 'src/store/careerStore.ts'
@@ -38,4 +39,5 @@ jobs:
       - run: node --import tsx scripts/auditWorldwideInternational.ts
       - run: node --import tsx scripts/auditProLifestyle.ts
       - run: npm run audit:pro-career
+      - run: node --import tsx scripts/auditProWorld.ts
       - run: npm run build

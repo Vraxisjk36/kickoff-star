@@ -1,5 +1,6 @@
 import type { ProCareerState } from './proCareer'
 import { proFixture } from './proCareer'
+import { clubSeasonPhase } from './proCalendar'
 export const PRO_WEEKDAYS=['MON','TUE','WED','THU','FRI','SAT','SUN'] as const
 export function mondayFrom(date:string):string {
   const stamp=Date.parse(`${date}T00:00:00Z`)
@@ -28,14 +29,17 @@ export interface ProDaySchedule {day:number;label:string;kind:'training'|'match'
 export function proWeekSchedule(state:ProCareerState,opponent?:string,kind:'league'|'domestic-cup'|'europe'|'international'|'final'='league',kickoffDate?:string):ProDaySchedule[]{
   const matchDay=proMatchDay(state,kind,kickoffDate)
   const hasMatch=!!opponent || !!proFixture(state)
+  const phase=clubSeasonPhase(proCalendarDate(state))
   return PRO_WEEKDAYS.map((label,day)=>{
     const match=hasMatch&&day===matchDay
-    const training=proTrainingAvailable(day,hasMatch?matchDay:6)
+    const training=phase==='pre-season' ? day<=4 && !match && (!hasMatch || Math.abs(day-matchDay)>1)
+      : phase==='off-season' ? false : proTrainingAvailable(day,hasMatch?matchDay:6)
     const completed=day<(state.day??0)||(training&&(state.trainedDays??[]).includes(day))||
       (match&&state.resolvedWeek===state.week)
     return {day,label,kind:match?'match':training?'training':day===6?'rest':'recovery',
       title:match ? opponent? `Matchday · ${opponent}`:'League matchday'
-        :training?'First-team training':day===6?'Rest and preparation':'Recovery and team duties',
+        :training?phase==='pre-season'?'Pre-season fitness and tactical training':'First-team training'
+        :phase==='off-season'?'Summer break and recovery':day===6?'Rest and preparation':'Recovery and team duties',
       completed}
   })
 }

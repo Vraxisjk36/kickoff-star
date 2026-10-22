@@ -246,9 +246,9 @@ export function beginDomesticSeason(world: ProWorldState, year: number): void {
     // FA Cup includes National League; EFL Cup remains restricted to the four league levels.
     const cupEntrants = [...new Set([...entrants, ...lower, ...deep, ...grouped, ...fifth, ...regionalFourth])]
     const leagueCupEntrants = [...new Set([...entrants, ...lower, ...deep, ...grouped])]
-    createCompetition(world, `cup-${id}`, 'domestic-cup', year, cupEntrants, 'knockout', `${year}-${id === 'eng' ? '01-05' : id === 'rsa' ? '01-27' : '02-04'}`)
+    createCompetition(world, `cup-${id}`, 'domestic-cup', year, cupEntrants, 'knockout', `${id === 'rsa' ? year + 1 : year}-${id === 'rsa' ? '01-27' : id === 'eng' ? '11-01' : id === 'esp' ? '10-28' : id === 'ger' || id === 'ita' ? '08-15' : id === 'ned' ? '10-01' : id === 'por' || id === 'sco' ? '09-15' : '09-01'}`)
     if (leagueCups.has(id) && id !== 'rsa') createCompetition(world, `league-cup-${id}`, 'domestic-cup', year,
-      PRO_LOWER_LEAGUE_PLAN.some(item => item.associationId === id) ? leagueCupEntrants : entrants, 'knockout', `${year}-04-09`)
+      PRO_LOWER_LEAGUE_PLAN.some(item => item.associationId === id) ? leagueCupEntrants : entrants, 'knockout', `${year}-08-20`)
     if (superCups.has(id)) {
       const leagueWinner = world.championHistory.filter(item => item.competitionId === `top-${id}`).at(-1)?.championId
       const cupWinner = world.championHistory.filter(item => item.competitionId === `cup-${id}`).at(-1)?.championId

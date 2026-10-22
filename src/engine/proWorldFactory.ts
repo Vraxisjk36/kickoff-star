@@ -5,7 +5,7 @@ import { isInPeriod, type SeasonCalendarProfile } from './proCalendar'
 import { PRO_SATELLITE_ASSOCIATIONS } from './proSatelliteRegistry'
 import { VERIFIED_PRO_RULES } from './proRulebook'
 import { proClubIdentity } from './proClubIdentities'
-import { proRatingTarget } from './proRatings'
+import { proRatingTarget, proClubReputationTarget } from './proRatings'
 
 const DAY = 86_400_000
 const utc = (date: IsoDate) => Date.parse(`${date}T00:00:00Z`)
@@ -96,7 +96,7 @@ export function proWorldClubIdentity(associationId: string, tier: 1 | 2, rank: n
   return clubName(league,index,tier,rank)
 }
 
-function createSquad(club: ProClub, seed: number, year: number): ProPlayer[] {
+function createSquad(club: ProClub, seed: number, year: number, squadStrength = club.reputation): ProPlayer[] {
   const wageBudget = Math.floor(club.finances.annualSquadCostLimit * .66)
   const rosterPositions = club.tier === 3 && (club.associationId in GROUPED_THIRD || ['fra', 'bra'].includes(club.associationId))
     ? positions.slice(0, 20) : positions
@@ -116,7 +116,7 @@ function createSquad(club: ProClub, seed: number, year: number): ProPlayer[] {
     }
     usedNames.add(`${first} ${surname}`)
     const age = 18 + Math.floor(proRoll(seed, `${club.id}:age:${i}`) * 16)
-    const overall = Math.min(90, Math.max(40, Math.round(club.reputation + (proRoll(seed, `${club.id}:ovr:${i}`) - .5) * 17)))
+    const overall = Math.min(90, Math.max(40, Math.round(squadStrength + (proRoll(seed, `${club.id}:ovr:${i}`) - .5) * 17)))
     return { id: `player-${club.id}-${i}`, name: `${first} ${surname}`, birthDate: `${year - age}-06-15`,
       nationalityIds: [club.associationId], position, overall, potential: Math.min(94, overall + 4 + Math.floor(proRoll(seed, `${club.id}:potential:${i}`) * 12)),
       clubId: club.id, annualWage: Math.floor(wageBudget * weights[i] / totalWeight), shirtNumber: i + 1 }
@@ -230,10 +230,11 @@ export function createProWorld(seed: number, currentDate: IsoDate): ProWorldStat
       const tier = i < topCount ? 1 : i < topCount + secondCount ? 2 : i < topCount + secondCount + thirdCount ? 3 : i < topCount + secondCount + thirdCount + fourthCount ? 4 : 5
       const offset = tier === 1 ? i : tier === 2 ? i - topCount : tier === 3 ? i - topCount - secondCount :
         tier === 4 ? i - topCount - secondCount - thirdCount : i - topCount - secondCount - thirdCount - fourthCount
-      const reputation = Math.max(35, Math.min(90,
-        proRatingTarget(league.associationId,tier,offset,
-          tier === 1 ? topCount : tier === 2 ? secondCount : tier === 3 ? thirdCount : tier === 4 ? fourthCount : fifthCount,
-          league.confederation) + Math.floor(proRoll(seed, `${id}:rep`) * 3) - 1))
+      const squadStrength = proRatingTarget(league.associationId,tier,offset,
+        tier === 1 ? topCount : tier === 2 ? secondCount : tier === 3 ? thirdCount : tier === 4 ? fourthCount : fifthCount,
+        league.confederation)
+      const reputation = proClubReputationTarget(league.associationId,tier,offset,
+        Math.max(35,Math.min(90,squadStrength + Math.floor(proRoll(seed, `${id}:rep`) * 3) - 1)))
       const revenue = Math.round((11_000_000 + reputation * 2_300_000) * (league.mode === 'playable' ? 1.1 : .8))
       const annualSquadCostLimit = Math.floor(revenue * .58)
       const finances: ProClub['finances'] = { clubId: id, currency, annualRevenue: revenue,
@@ -267,7 +268,7 @@ export function createProWorld(seed: number, currentDate: IsoDate): ProWorldStat
       world.managers[`manager-${id}`] = { id: `manager-${id}`, clubId: id,
         name: `${firstNames[(i + 3) % firstNames.length]} ${lastNames[(i + 8) % lastNames.length]}`,
         tacticalStyle: ['balanced','possession','counter','pressing'][i % 4], reputation: Math.round(reputation) }
-      const squad = createSquad(club, seed, currentYear)
+      const squad = createSquad(club, seed, currentYear, squadStrength)
       for (const player of squad) world.players[player.id] = player
       for (const prospect of createAcademyIntake(club, seed, currentYear)) world.academyProspects[prospect.id] = prospect
       finances.committedAnnualWages = squad.reduce((sum, player) => sum + player.annualWage, 0)

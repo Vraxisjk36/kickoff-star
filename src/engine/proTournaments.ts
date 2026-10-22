@@ -260,15 +260,23 @@ export function beginDomesticSeason(world: ProWorldState, year: number): void {
 }
 /** The top eight are drawn after the completed May league season. */
 
-/** July invitationals cover every senior club, including lower divisions.
- * Four-club groups ensure that no player is excluded from pre-season football. */
+/** Every senior club is offered July tournament football. */
 export function beginPreseasonInvitational(world: ProWorldState, year: number): void {
   for (const league of PRO_LEAGUE_PLAN) {
     const id = league.associationId
     const clubs = Object.values(world.clubs).filter(club => club.associationId === id)
       .sort((a, b) => a.id.localeCompare(b.id)).map(club => club.id)
-    for (let index = 0; index + 3 < clubs.length; index += 4) {
+    for (let index = 0; index < clubs.length; index += 4) {
       const entrants = clubs.slice(index, index + 4)
+      if (entrants.length < 2) {
+        // The last club joins the preceding group instead of being left out.
+        const previous = `preseason-${id}-${Math.floor(index / 4)}`
+        const prior = world.competitions[previous]
+        if (prior && prior.seasonId === String(year)) {
+          prior.entrantIds.push(...entrants)
+        }
+        continue
+      }
       const key = `preseason-${id}-${Math.floor(index / 4) + 1}`
       if (world.competitions[key]?.seasonId === String(year)) continue
       createCompetition(world, key, 'domestic-cup', year, entrants, 'knockout', `${year}-07-12`)

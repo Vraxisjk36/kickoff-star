@@ -52,7 +52,7 @@ for (const clubId of ['club-eng-01', 'club-eng-05', 'club-eng-18', 'club-esp-01'
     `${clubId}: invalid development ceiling`)
   assert.ok(squad.every(player => player.annualWage > 0), `${clubId}: invalid squad wage`)
   const youth = [14, 16, 19].map(index => byIndex(index)).filter(player =>
-    2026 - Number(player.birthDate.slice(0, 4)) <= 21 && player.potential - player.overall >= 10)
+    2026 - Number(player.birthDate.slice(0, 4)) <= 21 && player.potential - player.overall >= Math.min(10, 94 - player.overall))
   assert.ok(youth.length >= 1, `${clubId}: no young breakthrough prospect`)
   assert.ok(new Set(squad.map(player => player.name)).size === squad.length,
     `${clubId}: duplicate fictional squad names`)

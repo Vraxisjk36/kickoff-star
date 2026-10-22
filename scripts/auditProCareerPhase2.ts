@@ -38,6 +38,21 @@ assert.ok(manRedPlayers.length>=18,'Manchester Red senior squad missing')
 const meanStrength = manRedPlayers.reduce((sum,player)=>sum+player.overall,0)/manRedPlayers.length
 assert.ok(meanStrength>=76 && meanStrength<=88,
   `Club heritage inflated player ratings: ${meanStrength}`)
+// Phase 2: first-choice players should be stronger than positional reserves,
+// and better players should command larger wages without breaking the budget.
+for (const clubId of ['club-eng-01', 'club-eng-05', 'club-eng-18', 'club-esp-01']) {
+  const squad = Object.values(reputationWorld.players).filter(player => player.clubId === clubId)
+  const byIndex = (index: number) => squad.find(player => player.id === `player-${clubId}-${index}`)! 
+  assert.ok(squad.length >= 20, `${clubId}: missing senior depth`)
+  const starters = [0, 3, 4, 8, 9, 13].map(index => byIndex(index).overall)
+  const reserves = [1, 5, 19, 20, 14, 23].map(index => byIndex(index).overall)
+  const average = (ratings: number[]) => ratings.reduce((sum, value) => sum + value, 0) / ratings.length
+  assert.ok(average(starters) > average(reserves), `${clubId}: positional depth not reflected in OVR`)
+  assert.ok(squad.every(player => player.potential >= player.overall && player.potential <= 94),
+    `${clubId}: invalid development ceiling`)
+  assert.ok(squad.every(player => player.annualWage > 0), `${clubId}: invalid squad wage`)
+}
+
 
 assert.equal(PRO_INTERACTIVE_COUNTRIES.length, 9, 'Initial Phase 2 release must permit nine professional destinations')
 assert.equal(new Set(PRO_INTERACTIVE_COUNTRIES).size, 9)

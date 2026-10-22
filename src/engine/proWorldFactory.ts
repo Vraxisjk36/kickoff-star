@@ -154,8 +154,6 @@ export function proWorldClubIdentity(associationId: string, tier: 1 | 2, rank: n
 function createSquad(club: ProClub, seed: number, year: number, squadStrength = club.reputation,
   philosophy = 'balanced'): ProPlayer[] {
   const wageBudget = Math.floor(club.finances.annualSquadCostLimit * .66)
-  const clubRank = Number(club.id.match(/-(\\d+)$/)?.[1] ?? 1) - 1
-  const philosophy = proClubTacticalIdentity(club.associationId, club.tier ?? 1, clubRank)
   const rosterPositions = club.tier === 3 && (club.associationId in GROUPED_THIRD || ['fra', 'bra'].includes(club.associationId))
     ? positions.slice(0, 20) : positions
   // Depth is positional, not simply the order of the 24-man roster. Every club

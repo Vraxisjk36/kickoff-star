@@ -17,6 +17,7 @@ const competitionNames: Record<ProConfederation, [string, string, string]> = {
 export function proCompetitionName(id: string): string {
   if (id === 'world-national') return 'World Nations Championship'
   if (id === 'world-club') return 'World Club Championship'
+  if (id.startsWith('preseason-')) return `${PRO_LEAGUE_PLAN.find(item => item.associationId === id.slice(10))?.associationName ?? 'Club'} Summer Invitational`
   if (id.startsWith('top-')) return `${PRO_LEAGUE_PLAN.find(item => item.associationId === id.slice(4))?.associationName ?? 'Domestic'} Elite League`
   if (id.startsWith('second-')) return `${PRO_LEAGUE_PLAN.find(item => item.associationId === id.slice(7))?.associationName ?? 'Domestic'} Second Division`
   if (id.startsWith('third-')) {
@@ -258,6 +259,19 @@ export function beginDomesticSeason(world: ProWorldState, year: number): void {
   }
 }
 /** The top eight are drawn after the completed May league season. */
+
+/** Fictional July four-club invitational; separate from official honours. */
+export function beginPreseasonInvitational(world: ProWorldState, year: number): void {
+  for (const league of PRO_LEAGUE_PLAN) {
+    const id = league.associationId
+    const clubs = leagueOrder(world, id).slice(0, 4)
+    if (clubs.length < 4) continue
+    const key = `preseason-${id}`
+    if (world.competitions[key]?.seasonId === String(year)) continue
+    createCompetition(world, key, 'domestic-cup', year, clubs, 'knockout', `${year}-07-12`)
+  }
+}
+
 export function beginSouthAfricanTopEight(world: ProWorldState, year: number): void {
   createCompetition(world, 'mtn8-rsa', 'domestic-cup', year,
     leagueOrder(world, 'rsa').slice(0, 8), 'knockout', `${year}-08-08`)

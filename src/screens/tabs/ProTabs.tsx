@@ -1,6 +1,6 @@
 import type { Player } from '../../types/player'
 import type { HubTab } from '../../components/navItems'
-import { proFixture, proRound } from '../../engine/proCareer'
+import { proFixture } from '../../engine/proCareer'
 import { sortStandings } from '../../engine/league'
 import { toOvr, computeCurrentAbility } from '../../engine/rating'
 import { getAgent } from '../../engine/agents'

@@ -62,6 +62,29 @@ for (const id of Object.keys(LOWER_DIVISIONS)) {
 }
 assert.equal(next.seasonHistory.filter(record => record.competitionId === 'top-sco').at(-1)?.table[0].played, 38,
   'Scottish top flight has 33 games before the split and five after')
+// Diagnose missing cup entrants against the current league membership, not old tables.
+for (const [id, expected] of [['eng', 116], ['rsa', 149]] as const) {
+  const cup = next.competitions[`cup-${id}`]
+  const entrants = new Set(cup.entrantIds)
+  const memberCompetitions = Object.values(next.competitions).filter(comp =>
+    comp.associationId === id && /^(top|second|third|fourth|fifth)-/.test(comp.id))
+  const members = new Map<string, string[]>()
+  for (const comp of memberCompetitions) for (const clubId of comp.entrantIds) {
+    members.set(clubId, [...(members.get(clubId) ?? []), comp.id])
+  }
+  const missing = [...members.entries()].filter(([clubId]) => !entrants.has(clubId))
+    .map(([clubId, divisions]) => ({ clubId, divisions,
+      tier: next.clubs[clubId]?.tier, clubName: next.clubs[clubId]?.name }))
+  const duplicateMembership = [...members.entries()].filter(([, divisions]) => divisions.length > 1)
+    .map(([clubId, divisions]) => ({ clubId, divisions }))
+  console.log('Cup entrant diagnostic:', JSON.stringify({
+    association: id, expected, actual: cup.entrantIds.length,
+    uniqueEntrants: entrants.size, currentLeagueClubs: members.size,
+    missingCount: missing.length, missing, duplicateMembership,
+    cupEntrantsOutsideLeagues: cup.entrantIds.filter(clubId => !members.has(clubId)),
+    competitionSizes: memberCompetitions.map(comp => ({ id: comp.id, clubs: comp.entrantIds.length })),
+  }, null, 2))
+}
 assert.equal(next.competitions['cup-eng'].entrantIds.length, 116)
 assert.equal(next.competitions['cup-rsa'].entrantIds.length, 149)
 const legacy = createProWorld(31, '2026-08-01')

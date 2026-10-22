@@ -138,13 +138,22 @@ function createSquad(club: ProClub, seed: number, year: number, squadStrength = 
   // Depth is positional, not simply the order of the 24-man roster. Every club
   // has recognizable first-choice players, rotation options and weaker reserves.
   const seenPositions = new Map<string, number>()
+  // A different first-team leader at each club, chosen from attacking,
+  // midfield and defensive roles. No licensed footballers or static rosters.
+  const leaderCandidates = [3, 8, 10, 11, 12, 13]
+  const leaderIndex = leaderCandidates[Math.floor(proRoll(seed, `${club.id}:leader`) * leaderCandidates.length)]
+  // A young second-string player has a higher development ceiling without
+  // already being as strong as the senior star.
+  const prospectCandidates = [14, 16, 19]
+  const prospectIndex = prospectCandidates[Math.floor(proRoll(seed, `${club.id}:breakthrough`) * prospectCandidates.length)]
   const squadRatings = rosterPositions.map((position, i) => {
     const depth = seenPositions.get(position) ?? 0
     seenPositions.set(position, depth + 1)
     const starterCount = position === 'CB' || position === 'CM' ? 2 : 1
     const depthBonus = depth < starterCount ? 4 : depth === starterCount ? -2 : -6
     const variation = Math.round((proRoll(seed, `${club.id}:ovr:${i}`) - .5) * 8)
-    return Math.min(90, Math.max(40, squadStrength + depthBonus + variation))
+    const leaderBonus = i === leaderIndex ? (club.tier === 1 ? 4 : 3) : 0
+    return Math.min(90, Math.max(40, squadStrength + depthBonus + variation + leaderBonus))
   })
   // Wages reflect a player's place in the hierarchy, while respecting the
   // existing club wage budget and preserving deterministic squad generation.
@@ -171,13 +180,16 @@ function createSquad(club: ProClub, seed: number, year: number, squadStrength = 
       surname = names.last[(i * 7 + probe + Math.floor(proRoll(seed, `${club.id}:surname:${i}`) * names.last.length)) % names.last.length]
     }
     usedNames.add(`${first} ${surname}`)
-    const age = 18 + Math.floor(proRoll(seed, `${club.id}:age:${i}`) * 16)
+    const age = i === prospectIndex ? 18 + Math.floor(proRoll(seed, `${club.id}:age:${i}`) * 4)
+      : i === leaderIndex ? 24 + Math.floor(proRoll(seed, `${club.id}:age:${i}`) * 7)
+      : 18 + Math.floor(proRoll(seed, `${club.id}:age:${i}`) * 16)
     const overall = squadRatings[i]
     const growth = age <= 23 ? 6 + Math.floor(proRoll(seed, `${club.id}:potential:${i}`) * 8)
       : age <= 28 ? 3 + Math.floor(proRoll(seed, `${club.id}:potential:${i}`) * 6)
       : Math.floor(proRoll(seed, `${club.id}:potential:${i}`) * 4)
+    const developmentCeiling = i === prospectIndex ? Math.max(growth, 11) : growth
     return { id: `player-${club.id}-${i}`, name: `${first} ${surname}`, birthDate: `${year - age}-06-15`,
-      nationalityIds: [nationality], position, overall, potential: Math.min(94, overall + growth),
+      nationalityIds: [nationality], position, overall, potential: Math.min(94, overall + developmentCeiling),
       clubId: club.id, annualWage: Math.floor(wageBudget * weights[i] / totalWeight), shirtNumber: i + 1 }
   })
 }

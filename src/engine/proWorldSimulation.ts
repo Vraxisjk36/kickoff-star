@@ -21,7 +21,15 @@ function ordered(rows: ProStandingRow[]): ProStandingRow[] {
 function score(world: ProWorldState, fixture: ProFixture, home: boolean): number {
   const side = world.clubs[home ? fixture.homeId : fixture.awayId]
   const opponent = world.clubs[home ? fixture.awayId : fixture.homeId]
-  const edge = (side.reputation - opponent.reputation) * .042 + (home ? .32 : 0)
+  const ourStyle = world.managers[`manager-${side.id}`]?.tacticalStyle ?? 'balanced'
+  const theirStyle = world.managers[`manager-${opponent.id}`]?.tacticalStyle ?? 'balanced'
+  // Rock-paper-scissors tactical matchups provide a modest edge, never enough
+  // to override the underlying gulf between professional divisions.
+  const matchup: Record<string, string> = { pressing: 'possession', counter: 'pressing', possession: 'counter' }
+  const tacticalEdge = matchup[ourStyle] === theirStyle ? .18
+    : matchup[theirStyle] === ourStyle ? -.18 : 0
+  const tempo = ourStyle === 'pressing' ? .14 : ourStyle === 'counter' ? -.08 : 0
+  const edge = (side.reputation - opponent.reputation) * .042 + (home ? .32 : 0) + tacticalEdge + tempo
   const chance = proRoll(world.seed, `${fixture.id}:${home ? 'home' : 'away'}`)
   return Math.max(0, Math.min(7, Math.floor(1.55 + edge + (chance - .5) * 3.6)))
 }

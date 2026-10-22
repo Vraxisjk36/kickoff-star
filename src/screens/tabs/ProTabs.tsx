@@ -46,6 +46,8 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
   const [newsOpen, setNewsOpen] = useState(false)
   const [homeView,setHomeView]=useState<'overview'|'schedule'|'updates'>('overview')
   const [shopView,setShopView]=useState<'sponsors'|'essentials'|'finances'>('sponsors')
+  const [fixtureFilter,setFixtureFilter]=useState<'upcoming'|'results'>('upcoming')
+  const [fixtureLimit,setFixtureLimit]=useState(8)
   const [proLeagueView, setProLeagueView] = useState<'fixtures' | 'table' | 'international' | 'world'>('fixtures')
   const windowOpen = pro.freeAgentSinceWeek !== undefined || (pro.date ? registrationOpen(pro.associationId ?? 'eng', pro.date) : false)
   const championshipCycle = internationalCycle(pro.season)
@@ -183,7 +185,8 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
       </>}
       {proLeagueView==='fixtures' && <div className="rounded-xl border border-ks-border overflow-hidden bg-[#10110e]">
         <div className="px-4 py-3 border-b border-ks-gold/20 font-display text-xs tracking-widest text-ks-gold">YOUR MATCH CALENDAR</div>
-        {division.fixtures.filter(f=>f.homeTeamId===club.id||f.awayTeamId===club.id).map(f=>{
+        <div className="grid grid-cols-2 gap-1 p-2">{(['upcoming','results'] as const).map(filter=><button key={filter} onClick={()=>{setFixtureFilter(filter);setFixtureLimit(8)}} className={`rounded-lg py-2.5 text-[11px] font-display uppercase ${fixtureFilter===filter?'bg-ks-gold text-ks-black':'bg-white/5 text-ks-muted'}`}>{filter}</button>)}</div>
+        {division.fixtures.filter(f=>(f.homeTeamId===club.id||f.awayTeamId===club.id)&&(fixtureFilter==='results'?f.played:!f.played)).sort((a,b)=>fixtureFilter==='results'?b.week-a.week:a.week-b.week).slice(0,fixtureLimit).map(f=>{
           const isHome=f.homeTeamId===club.id
           const other=division.teams.find(t=>t.id===(isHome?f.awayTeamId:f.homeTeamId))
           const score=f.played && f.homeGoals!==null&&f.awayGoals!==null
@@ -195,6 +198,7 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
             <span className={`text-xs font-display ${f.played?'text-ks-ink':'text-ks-gold'}`}>{score}</span>
           </div>
         })}
+        {division.fixtures.filter(f=>(f.homeTeamId===club.id||f.awayTeamId===club.id)&&(fixtureFilter==='results'?f.played:!f.played)).length>fixtureLimit&&<button onClick={()=>setFixtureLimit(n=>n+8)} className="w-full py-3 text-xs font-display text-ks-gold border-t border-ks-border/40">SHOW 8 MORE MATCHES ↓</button>}
       </div>}
       {proLeagueView==='international' && <Section title="SENIOR NATIONAL TEAM · COMPETITIONS" defaultOpen>
       <div>

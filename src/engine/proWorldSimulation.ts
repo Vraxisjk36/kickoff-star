@@ -714,22 +714,23 @@ export function advanceProWorldTo(source: ProWorldState, targetDate: IsoDate): P
   hydrateFifthDivisions(world, template)
   hydrateGroupedFourthDivisions(world, template)
   hydrateGroupedFifthDivisions(world, template)
-  const milestones: { date: IsoDate; kind: 'national' | 'continental' | 'summer-cups' }[] = []
+  const milestones: { date: IsoDate; kind: 'national' | 'continental' | 'summer-cups' | 'domestic' }[] = []
   for (let year = Number(source.currentDate.slice(0, 4)); year <= Number(targetDate.slice(0, 4)); year++) {
-    milestones.push({ date: `${year}-01-01`, kind: 'national' }, { date: `${year}-07-01`, kind: 'summer-cups' }, { date: `${year}-09-01`, kind: 'continental' })
+    milestones.push({ date: `${year}-01-01`, kind: 'national' }, { date: `${year}-07-01`, kind: 'summer-cups' }, { date: `${year}-08-01`, kind: 'domestic' }, { date: `${year}-09-01`, kind: 'continental' })
   }
   for (const milestone of milestones.filter(item => item.date >= source.currentDate && item.date <= targetDate)
     .sort((a, b) => a.date.localeCompare(b.date))) {
     advanceLeaguesTo(world, milestone.date)
     advanceTournamentsTo(world, milestone.date)
     world.currentDate = milestone.date
-    if (milestone.kind === 'national' && world.competitions['cup-eng']?.seasonId !== milestone.date.slice(0, 4)) {
-      beginDomesticSeason(world, Number(milestone.date.slice(0, 4)))
+    if (milestone.kind === 'national') {
       beginNationalSeason(world, Number(milestone.date.slice(0, 4)))
       beginWorldQualifiers(world, Number(milestone.date.slice(0, 4)))
       beginWorldSeason(world, Number(milestone.date.slice(0, 4)))
       beginClubWorldSeason(world, Number(milestone.date.slice(0, 4)))
     }
+    if (milestone.kind === 'domestic' && world.competitions['cup-eng']?.seasonId !== milestone.date.slice(0, 4))
+      beginDomesticSeason(world, Number(milestone.date.slice(0, 4)))
     if (milestone.kind === 'summer-cups') {
       if (world.competitions['mtn8-rsa']?.seasonId !== milestone.date.slice(0, 4))
         beginSouthAfricanTopEight(world, Number(milestone.date.slice(0, 4)))

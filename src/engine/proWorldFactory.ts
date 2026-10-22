@@ -73,6 +73,22 @@ const identities = ['Athletic','United','City','Sporting','Rovers','Union','Albi
   'Olympic','Dynamo','Harbour','Racing','North','South','Eagles','Stars','Central','Lions','Valley','Academia']
 const firstNames = ['Amir','Daniel','Leo','Jamal','Hiro','Thabo','Mateo','Samuel','Yusuf','Kai','André','Rafael','Kofi','Milan','Santiago','Noah']
 const lastNames = ['Silva','Kamara','Morales','Okafor','Diallo','Costa','Kim','Mokoena','Garcia','Sato','Mensah','Bennett','Ahmed','Santos','Novak','Reyes']
+// Regional recruitment pools give squads a plausible mix without using licensed player data.
+const recruitmentPools: Record<string, string[]> = {
+  eng: ['sco','irl','wal','fra','esp','por','nga','gha','bra','arg'],
+  esp: ['por','fra','arg','bra','ury','col','mar'],
+  ger: ['aut','ned','bel','fra','pol','tur','sui'],
+  fra: ['bel','mar','sen','civ','dza','cmr','cod','por'],
+  ita: ['fra','esp','arg','bra','alb','sui','tun'],
+  por: ['bra','ago','moz','civ','esp','fra'],
+  rsa: ['zwe','zmb','moz','nam','nga','gha','cod'],
+  usa: ['can','mex','col','arg','bra','jam'],
+  bra: ['arg','ury','col','pry','per','bol'],
+  jpn: ['kor','aus','bra','chn'],
+  nga: ['gha','cmr','ben','civ','sen'],
+  egy: ['mar','tun','dza','gha','nga','sud'],
+}
+
 const positions = ['GK','GK','RB','CB','CB','CB','LB','DM','CM','CM','AM','RW','LW','ST','ST','GK','CB','RB','LB','CM','CM','RW','LW','ST']
 
 function clubName(league:ProLeaguePlan,index:number,tier=1,offset=index):{name:string;city:string}{
@@ -118,7 +134,16 @@ function createSquad(club: ProClub, seed: number, year: number, squadStrength = 
     const age = 18 + Math.floor(proRoll(seed, `${club.id}:age:${i}`) * 16)
     const overall = Math.min(90, Math.max(40, Math.round(squadStrength + (proRoll(seed, `${club.id}:ovr:${i}`) - .5) * 17)))
     return { id: `player-${club.id}-${i}`, name: `${first} ${surname}`, birthDate: `${year - age}-06-15`,
-      nationalityIds: [club.associationId], position, overall, potential: Math.min(94, overall + 4 + Math.floor(proRoll(seed, `${club.id}:potential:${i}`) * 12)),
+      nationalityIds: [(() => {
+        const pool = recruitmentPools[club.associationId] ??
+          PRO_LEAGUE_PLAN.filter(item => item.confederation ===
+            PRO_LEAGUE_PLAN.find(league => league.associationId === club.associationId)?.confederation &&
+            item.associationId !== club.associationId).slice(0, 12).map(item => item.associationId)
+        const foreignShare = club.tier === 1 ? .28 : club.tier === 2 ? .16 : .08
+        return pool.length && proRoll(seed, `${club.id}:foreign:${i}`) < foreignShare
+          ? pool[Math.floor(proRoll(seed, `${club.id}:origin:${i}`) * pool.length)]
+          : club.associationId
+      })()], position, overall, potential: Math.min(94, overall + 4 + Math.floor(proRoll(seed, `${club.id}:potential:${i}`) * 12)),
       clubId: club.id, annualWage: Math.floor(wageBudget * weights[i] / totalWeight), shirtNumber: i + 1 }
   })
 }

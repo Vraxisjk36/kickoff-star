@@ -18,7 +18,8 @@ function ordered(rows: ProStandingRow[]): ProStandingRow[] {
     b.goalsFor - a.goalsFor || a.clubId.localeCompare(b.clubId))
 }
 
-function score(world: ProWorldState, fixture: ProFixture, home: boolean): number {
+function score(world: ProWorldState, fixture: ProFixture, home: boolean,
+  strengths: ReadonlyMap<string, number>): number {
   const side = world.clubs[home ? fixture.homeId : fixture.awayId]
   const opponent = world.clubs[home ? fixture.awayId : fixture.homeId]
   const ourStyle = world.managers[`manager-${side.id}`]?.tacticalStyle ?? 'balanced'
@@ -29,15 +30,21 @@ function score(world: ProWorldState, fixture: ProFixture, home: boolean): number
   const tacticalEdge = matchup[ourStyle] === theirStyle ? .18
     : matchup[theirStyle] === ourStyle ? -.18 : 0
   const tempo = ourStyle === 'pressing' ? .14 : ourStyle === 'counter' ? -.08 : 0
-  const edge = (side.reputation - opponent.reputation) * .042 + (home ? .32 : 0) + tacticalEdge + tempo
+  // Current playing strength, not a club's historical prestige, drives results.
+  // Keep a small reputation factor for institutional experience and stability.
+  const strengthGap = (strengths.get(side.id) ?? side.reputation) -
+    (strengths.get(opponent.id) ?? opponent.reputation)
+  const edge = strengthGap * .038 + (side.reputation - opponent.reputation) * .004 +
+    (home ? .32 : 0) + tacticalEdge + tempo
   const chance = proRoll(world.seed, `${fixture.id}:${home ? 'home' : 'away'}`)
   return Math.max(0, Math.min(7, Math.floor(1.55 + edge + (chance - .5) * 3.6)))
 }
 
-function play(world: ProWorldState, fixture: ProFixture): void {
+function play(world: ProWorldState, fixture: ProFixture,
+  strengths: ReadonlyMap<string, number>): void {
   if (fixture.result) return
-  const homeGoals = score(world, fixture, true)
-  const awayGoals = score(world, fixture, false)
+  const homeGoals = score(world, fixture, true, strengths)
+  const awayGoals = score(world, fixture, false, strengths)
   fixture.result = { homeGoals, awayGoals }
   const rows = world.standings[fixture.competitionId]
   const home = rows.find(row => row.clubId === fixture.homeId)!
@@ -567,6 +574,14 @@ function advanceLeaguesTo(world: ProWorldState, targetDate: IsoDate): void {
     group.push(player)
     rosters.set(player.clubId, group)
   }
+  // One cached squad-strength lookup per advance rather than scanning every
+  // player for every match. Starting-quality players count more than reserves.
+  const strengths = new Map<string, number>()
+  for (const [clubId, players] of rosters) {
+    const best = [...players].sort((a, b) => b.overall - a.overall).slice(0, 11)
+    if (best.length) strengths.set(clubId,
+      best.reduce((sum, player) => sum + player.overall, 0) / best.length)
+  }
   const fixtureIndex = new Map<string, ProFixture[]>()
   for (const fixture of Object.values(world.fixtures)) {
     const group = fixtureIndex.get(fixture.competitionId) ?? []
@@ -586,7 +601,7 @@ function advanceLeaguesTo(world: ProWorldState, targetDate: IsoDate): void {
         .sort((a, b) => a.kickoffDate.localeCompare(b.kickoffDate) || a.id.localeCompare(b.id)))
       if (batches.some(fixtures => !fixtures.length)) throw new Error(`Missing fixtures for ${league.associationId}`)
       for (const fixtures of batches) for (const fixture of fixtures)
-        if (!fixture.result && fixture.kickoffDate < targetDate) play(world, fixture)
+        if (!fixture.result && fixture.kickoffDate < targetDate) play(world, fixture, strengths)
       if (league.associationId === 'sco' && batches[0].every(fixture => fixture.result)) {
         const extended = scheduleScottishSplit(world, batches[0])
         if (extended !== batches[0]) { fixtureIndex.set('top-sco', extended); continue }

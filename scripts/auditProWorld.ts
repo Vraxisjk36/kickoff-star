@@ -37,9 +37,9 @@ for (const competition of Object.values(world.competitions)) {
   const fixtures = Object.values(world.fixtures).filter(fixture => fixture.competitionId === competition.id)
   const n = competition.entrantIds.length
   assert.equal(fixtures.length, competition.id === 'top-sco' ? 198 : n * (n - 1) *
-    (competition.associationId === 'sco' ? 2 : competition.id === 'third-bra' ? .5 : 1), `${competition.id} fixture count`)
+    (competition.format.legs / 2), `${competition.id} fixture count`)
   const pairs = new Set(fixtures.map(fixture => `${fixture.homeId}:${fixture.awayId}`))
-  assert.equal(pairs.size, competition.id === 'top-sco' ? 132 : competition.associationId === 'sco' ? fixtures.length / 2 : fixtures.length,
+  assert.equal(pairs.size, competition.id === 'top-sco' ? 132 : competition.format.legs === 4 ? fixtures.length / 2 : fixtures.length,
     `${competition.id} repeated home/away tie`)
   const clubDates = new Set<string>()
   for (const fixture of fixtures) for (const id of [fixture.homeId, fixture.awayId]) {

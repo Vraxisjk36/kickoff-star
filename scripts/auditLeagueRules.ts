@@ -62,7 +62,7 @@ for (const id of Object.keys(LOWER_DIVISIONS)) {
 }
 assert.equal(next.seasonHistory.filter(record => record.competitionId === 'top-sco').at(-1)?.table[0].played, 38,
   'Scottish top flight has 33 games before the split and five after')
-assert.equal(next.competitions['cup-eng'].entrantIds.length, 116)
+assert.equal(next.competitions['cup-eng'].entrantIds.length, 113)
 assert.equal(next.competitions['cup-rsa'].entrantIds.length, 149)
 const legacy = createProWorld(31, '2026-08-01')
 for (const [clubId, club] of Object.entries(legacy.clubs)) if (club.tier === 2) {

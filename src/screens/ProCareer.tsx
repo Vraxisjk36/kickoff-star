@@ -48,10 +48,10 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
   const world = pro.world
   const division = world.divisions[1]
   const team = division.teams.find(t => t.id === world.playerTeamId)!
-  const preseason = (pro.week===2 || pro.week===3) && !(pro.preseasonPlayedWeeks??[]).includes(pro.week)
-  const warmupOpponent=preseason ? division.teams.filter(club=>club.id!==team.id)[(pro.week-2)%Math.max(1,division.teams.length-1)] : undefined
   const national = pro.international?.pending
   const cup = national ? null : pro.freeAgentSinceWeek === undefined ? pendingProCup(pro) : null
+  const preseason = !national && !cup && (pro.week===2 || pro.week===3) && !(pro.preseasonPlayedWeeks??[]).includes(pro.week)
+  const warmupOpponent=preseason ? division.teams.filter(club=>club.id!==team.id)[(pro.week-2)%Math.max(1,division.teams.length-1)] : undefined
   const fixture = national ? undefined : proFixture(pro)
   const home = national ? national.home : cup ? cup.homeId === pro.clubWorldIds?.[world.playerTeamId] : preseason ? pro.week===2 : fixture?.homeTeamId === world.playerTeamId
   const cupOpponentId = cup ? home ? cup.awayId : cup.homeId : null

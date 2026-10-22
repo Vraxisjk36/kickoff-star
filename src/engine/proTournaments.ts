@@ -237,16 +237,16 @@ export function beginDomesticSeason(world: ProWorldState, year: number): void {
       .flatMap(item => world.competitions[item.id]?.entrantIds ?? [])
     const grouped = PRO_GROUPED_LEAGUE_PLAN.filter(item => item.associationId === id)
       .flatMap(item => world.competitions[item.id]?.entrantIds ?? [])
-    // Each regional division receives one cup berth. If its champion has already
-    // qualified through a higher division after promotion, pass the berth down.
-    const alreadyQualified = new Set([...entrants, ...lower, ...deep, ...grouped])
+    const fifth = [...PRO_FIFTH_LEAGUE_PLAN, ...PRO_GROUPED_FIFTH_LEAGUE_PLAN]
+      .filter(item => item.associationId === id)
+      .flatMap(item => world.competitions[item.id]?.entrantIds ?? [])
+    // Regional champions promoted into an automatic berth pass their regional
+    // qualification to the next eligible club, preserving each region's slot.
+    const alreadyQualified = new Set([...entrants, ...lower, ...deep, ...grouped, ...fifth])
     const regionalFourth = PRO_GROUPED_FOURTH_LEAGUE_PLAN.filter(item => item.associationId === id)
       .map(item => [...(world.standings[item.id] ?? [])].sort(tableOrder)
         .map(row => row.clubId).find(clubId => !alreadyQualified.has(clubId)))
       .filter((entrant): entrant is string => !!entrant)
-    const fifth = [...PRO_FIFTH_LEAGUE_PLAN, ...PRO_GROUPED_FIFTH_LEAGUE_PLAN]
-      .filter(item => item.associationId === id)
-      .flatMap(item => world.competitions[item.id]?.entrantIds ?? [])
     // FA Cup includes National League; EFL Cup remains restricted to the four league levels.
     const cupEntrants = [...new Set([...entrants, ...lower, ...deep, ...grouped, ...fifth, ...regionalFourth])]
     const leagueCupEntrants = [...new Set([...entrants, ...lower, ...deep, ...grouped])]

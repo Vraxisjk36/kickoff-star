@@ -160,6 +160,8 @@ export function pendingProCup(state: ProCareerState): ProFixture | null {
   const clubId = state.clubWorldIds[state.world.playerTeamId]
   const weekStart=mondayFrom(state.date)
   const until = addDays(weekStart, 7)
+  // National-team duty supersedes club cup and summer invitational selection.
+  if (state.international?.pending) return null
   return Object.values(state.backgroundWorld.fixtures)
     .filter(fixture => !fixture.result && fixture.kickoffDate >= weekStart && fixture.kickoffDate < until &&
       (fixture.homeId === clubId || fixture.awayId === clubId) && !!state.backgroundWorld!.competitions[fixture.competitionId]?.tournament)

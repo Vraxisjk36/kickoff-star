@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { clubSeasonPhase } from '../../engine/proCalendar'
 import type { ProCareerState } from '../../engine/proCareer'
 import { proWeekSchedule, PRO_WEEKDAYS, mondayFrom, proCalendarLabel, proCalendarDate } from '../../engine/proWeeklySchedule'
 import { professionalSeasonWeeks, proRound } from '../../engine/proCareer'
@@ -16,6 +17,7 @@ export default function ProWeeklyCalendar({pro,opponent,matchKind='league',onTra
   const [view,setView]=useState<'week'|'month'|'season'>('week')
   const days=proWeekSchedule(pro,opponent,matchKind,matchDate)
   const current=pro.day??0
+  const seasonPhase=clubSeasonPhase(proCalendarDate(pro))
   const selected=days[current]
   const formatWeek=(week:number)=>`Week ${week}`
   const weeks=professionalSeasonWeeks(pro)
@@ -59,7 +61,7 @@ export default function ProWeeklyCalendar({pro,opponent,matchKind='league',onTra
   return <div className="rounded-xl border border-ks-gold/30 overflow-hidden bg-[#101510]">
     <div className="px-4 py-3 flex items-center justify-between gap-2 bg-gradient-to-r from-[#1d210f] to-[#101510]">
       <div><div className="font-display text-xs tracking-widest text-ks-gold">YOUR FOOTBALL CALENDAR</div>
-        <div className="text-xs text-ks-muted mt-1">Season {pro.season} · Week {pro.week} · {proCalendarLabel(pro)}</div></div>
+        <div className="text-xs text-ks-muted mt-1">Season {pro.season} · Week {pro.week} · {proCalendarLabel(pro)} · {seasonPhase.replace(/-/g,' ').toUpperCase()}</div></div>
       <div className="text-ks-gold font-display text-lg">{current+1}/7</div>
     </div>
     <nav className="flex gap-1 px-3 py-2 border-b border-ks-border" aria-label="Football calendar range">

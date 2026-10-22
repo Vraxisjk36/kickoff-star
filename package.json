@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "oxlint",
+    "lint": "oxlint --format github",
     "audit:v4": "node --import tsx scripts/auditV4Integration.ts && node --import tsx scripts/auditProgression.ts && node --import tsx scripts/auditOctoberLeague.ts && node --import tsx scripts/auditSeasonObjectives.ts && node --import tsx scripts/auditPlayerFeedback.ts && node --import tsx scripts/auditSchoolPath.ts && node --import tsx scripts/auditSeasonLedger.ts && npm run audit:academy-rhythm",
     "audit:season": "node --import tsx scripts/careerSim.ts 2 42 && node --import tsx scripts/careerSim.ts 4 17",
     "audit:sunday": "node --import tsx scripts/auditSundayFootball.ts",

@@ -153,6 +153,8 @@ export function proWorldClubIdentity(associationId: string, tier: 1 | 2, rank: n
 
 function createSquad(club: ProClub, seed: number, year: number, squadStrength = club.reputation): ProPlayer[] {
   const wageBudget = Math.floor(club.finances.annualSquadCostLimit * .66)
+  const clubRank = Number(club.id.match(/-(\\d+)$/)?.[1] ?? 1) - 1
+  const philosophy = proClubTacticalIdentity(club.associationId, club.tier ?? 1, clubRank)
   const rosterPositions = club.tier === 3 && (club.associationId in GROUPED_THIRD || ['fra', 'bra'].includes(club.associationId))
     ? positions.slice(0, 20) : positions
   // Depth is positional, not simply the order of the 24-man roster. Every club
@@ -186,7 +188,9 @@ function createSquad(club: ProClub, seed: number, year: number, squadStrength = 
       PRO_LEAGUE_PLAN.filter(item => item.confederation ===
         PRO_LEAGUE_PLAN.find(league => league.associationId === club.associationId)?.confederation &&
         item.associationId !== club.associationId).slice(0, 12).map(item => item.associationId)
-    const foreignShare = club.tier === 1 ? .28 : club.tier === 2 ? .16 : .08
+    const baseForeignShare = club.tier === 1 ? .28 : club.tier === 2 ? .16 : .08
+    const foreignShare = Math.max(.03, Math.min(.42, baseForeignShare +
+      (philosophy === 'possession' ? .05 : philosophy === 'counter' ? -.03 : 0)))
     const nationality = pool.length && proRoll(seed, `${club.id}:foreign:${i}`) < foreignShare
       ? pool[Math.floor(proRoll(seed, `${club.id}:origin:${i}`) * pool.length)]
       : club.associationId
@@ -207,7 +211,8 @@ function createSquad(club: ProClub, seed: number, year: number, squadStrength = 
     const growth = age <= 23 ? 6 + Math.floor(proRoll(seed, `${club.id}:potential:${i}`) * 8)
       : age <= 28 ? 3 + Math.floor(proRoll(seed, `${club.id}:potential:${i}`) * 6)
       : Math.floor(proRoll(seed, `${club.id}:potential:${i}`) * 4)
-    const developmentCeiling = i === prospectIndex ? Math.max(growth, 11) : growth
+    const developmentCeiling = i === prospectIndex ? Math.max(growth,
+      philosophy === 'pressing' ? 13 : 11) : growth
     return { id: `player-${club.id}-${i}`, name: `${first} ${surname}`, birthDate: `${year - age}-06-15`,
       nationalityIds: [nationality], position, overall, potential: Math.min(94, overall + developmentCeiling),
       clubId: club.id, annualWage: Math.floor(wageBudget * weights[i] / totalWeight), shirtNumber: i + 1 }

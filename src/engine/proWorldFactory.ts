@@ -102,9 +102,19 @@ function createSquad(club: ProClub, seed: number, year: number): ProPlayer[] {
     ? positions.slice(0, 20) : positions
   const weights = rosterPositions.map((_, i) => 1 + proRoll(seed, `${club.id}:wage:${i}`) * 2)
   const totalWeight = weights.reduce((a, b) => a + b, 0)
+  const usedNames = new Set<string>()
   return rosterPositions.map((position, i) => {
-    const surname = lastNames[Math.floor(proRoll(seed, `${club.id}:surname:${i}`) * lastNames.length)]
-    const first = firstNames[Math.floor(proRoll(seed, `${club.id}:first:${i}`) * firstNames.length)]
+    let surname = lastNames[Math.floor(proRoll(seed, `${club.id}:surname:${i}`) * lastNames.length)]
+    let first = firstNames[Math.floor(proRoll(seed, `${club.id}:first:${i}`) * firstNames.length)]
+    // Never create several players with the same full name in one squad.
+    // Keep the seed stable, but probe alternative combinations on collisions.
+    let probe = 0
+    while (usedNames.has(`${first} ${surname}`) && probe < firstNames.length * lastNames.length) {
+      probe++
+      first = firstNames[(i + probe + Math.floor(proRoll(seed, `${club.id}:first:${i}`) * firstNames.length)) % firstNames.length]
+      surname = lastNames[(i * 7 + probe + Math.floor(proRoll(seed, `${club.id}:surname:${i}`) * lastNames.length)) % lastNames.length]
+    }
+    usedNames.add(`${first} ${surname}`)
     const age = 18 + Math.floor(proRoll(seed, `${club.id}:age:${i}`) * 16)
     const overall = Math.min(90, Math.max(40, Math.round(club.reputation + (proRoll(seed, `${club.id}:ovr:${i}`) - .5) * 17)))
     return { id: `player-${club.id}-${i}`, name: `${first} ${surname}`, birthDate: `${year - age}-06-15`,

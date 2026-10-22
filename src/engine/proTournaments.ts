@@ -244,8 +244,13 @@ export function beginDomesticSeason(world: ProWorldState, year: number): void {
     // qualification to the next eligible club, preserving each region's slot.
     const alreadyQualified = new Set([...entrants, ...lower, ...deep, ...grouped, ...fifth])
     const regionalFourth = PRO_GROUPED_FOURTH_LEAGUE_PLAN.filter(item => item.associationId === id)
-      .map(item => [...(world.standings[item.id] ?? [])].sort(tableOrder)
-        .map(row => row.clubId).find(clubId => !alreadyQualified.has(clubId)))
+      .map(item => {
+        const currentMembers = world.competitions[item.id]?.entrantIds ?? []
+        const eligible = new Set(currentMembers)
+        return [...(world.standings[item.id] ?? [])].sort(tableOrder)
+          .map(row => row.clubId).find(clubId => eligible.has(clubId) && !alreadyQualified.has(clubId))
+          ?? currentMembers.find(clubId => !alreadyQualified.has(clubId))
+      })
       .filter((entrant): entrant is string => !!entrant)
     // FA Cup includes National League; EFL Cup remains restricted to the four league levels.
     const cupEntrants = [...new Set([...entrants, ...lower, ...deep, ...grouped, ...fifth, ...regionalFourth])]

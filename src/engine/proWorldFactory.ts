@@ -151,7 +151,8 @@ export function proWorldClubIdentity(associationId: string, tier: 1 | 2, rank: n
   return clubName(league,index,tier,rank)
 }
 
-function createSquad(club: ProClub, seed: number, year: number, squadStrength = club.reputation): ProPlayer[] {
+function createSquad(club: ProClub, seed: number, year: number, squadStrength = club.reputation,
+  philosophy = 'balanced'): ProPlayer[] {
   const wageBudget = Math.floor(club.finances.annualSquadCostLimit * .66)
   const clubRank = Number(club.id.match(/-(\\d+)$/)?.[1] ?? 1) - 1
   const philosophy = proClubTacticalIdentity(club.associationId, club.tier ?? 1, clubRank)
@@ -364,7 +365,8 @@ export function createProWorld(seed: number, currentDate: IsoDate): ProWorldStat
       world.managers[`manager-${id}`] = { id: `manager-${id}`, clubId: id,
         name: `${firstNames[(i + 3) % firstNames.length]} ${lastNames[(i + 8) % lastNames.length]}`,
         tacticalStyle: proClubTacticalIdentity(league.associationId, tier, offset), reputation: Math.round(reputation) }
-      const squad = createSquad(club, seed, currentYear, squadStrength)
+      const squad = createSquad(club, seed, currentYear, squadStrength,
+        world.managers[`manager-${id}`].tacticalStyle)
       for (const player of squad) world.players[player.id] = player
       for (const prospect of createAcademyIntake(club, seed, currentYear)) world.academyProspects[prospect.id] = prospect
       finances.committedAnnualWages = squad.reduce((sum, player) => sum + player.annualWage, 0)

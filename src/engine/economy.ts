@@ -117,15 +117,16 @@ export const SHOP_ITEMS: ShopItem[] = [
 export function careerEconomyScale(player:Player):number {
   if (!player.turnedPro || !player.proCareer) return 1
   const wage=Math.max(0,player.contract?.terms.weeklyWage??0)
-  return Math.min(100,Math.max(3,Math.sqrt(Math.max(350,wage)/350)*3))
+  return Math.max(1,Math.max(350,wage)*0.4/18)
 }
 export function recoveryPrice(player:Player,basePrice:number):number {
+  if (!player.turnedPro || !player.proCareer) return basePrice
   return Math.ceil(basePrice*careerEconomyScale(player)/5)*5
 }
 export function rewardedCashAmount(player:Player):number {
   if (!player.turnedPro || !player.proCareer) return 10
   const wage=Math.max(350,player.contract?.terms.weeklyWage??350)
-  return Math.max(100,Math.round(wage*.4/25)*25)
+  return Math.max(225,Math.round(wage*.65/25)*25)
 }
 export function playerShopPrice(player:Player,item:ShopItem):number {
   return item.kind==='consumable'?recoveryPrice(player,item.price):item.price

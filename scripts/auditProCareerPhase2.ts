@@ -31,7 +31,7 @@ assert.equal(proRatingTarget('eng',1,4,20),82,'Manchester Red squad target')
 assert.equal(proClubReputationTarget('eng',1,4,82),94,'Manchester Red heritage')
 assert.equal(proRatingTarget('eng',1,0,20),88,'Manchester Sky squad target')
 const reputationWorld = createProWorld(1907,'2026-08-01')
-const manRed = reputationWorld.clubs['club-eng-005']
+const manRed = reputationWorld.clubs['club-eng-05']
 assert.equal(manRed.reputation,94)
 const manRedPlayers = Object.values(reputationWorld.players).filter(player=>player.clubId===manRed.id)
 assert.ok(manRedPlayers.length>=18,'Manchester Red senior squad missing')

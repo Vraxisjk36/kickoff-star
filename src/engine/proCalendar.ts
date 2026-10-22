@@ -55,3 +55,13 @@ export function scheduleProActivity(existing: ProActivity[], activity: ProActivi
     item.slots.some(slot => activity.slots.includes(slot))).map(item => item.id)
   return conflictingIds.length ? { accepted: false, conflictingIds } : { accepted: true, activities: [...existing, activity] }
 }
+
+export type ClubSeasonPhase = 'off-season' | 'pre-season' | 'regular-season' | 'international-duty'
+export function clubSeasonPhase(date: IsoDate, calledUp = false): ClubSeasonPhase {
+  const month = Number(date.slice(5, 7))
+  const day = Number(date.slice(8, 10))
+  if (calledUp && (month === 6 || month === 7)) return 'international-duty'
+  if (month === 7) return 'pre-season'
+  if (month === 6 || (month === 5 && day >= 25)) return 'off-season'
+  return 'regular-season'
+}

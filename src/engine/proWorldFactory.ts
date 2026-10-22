@@ -89,6 +89,25 @@ const recruitmentPools: Record<string, string[]> = {
   egy: ['mar','tun','dza','gha','nga','sud'],
 }
 
+// Fictional name banks are selected from nationality rather than club location.
+const regionalNames: Record<string, { first: string[]; last: string[] }> = {
+  eng: { first: ['Oliver','Ethan','Jack','Harry','Callum','George','Lewis','Ryan'], last: ['Walker','Hughes','Taylor','Wilson','Clarke','Foster','Barker','Cooper'] },
+  esp: { first: ['Diego','Pablo','Álvaro','Javier','Iker','Sergio','Nico','Hugo'], last: ['Ruiz','Navarro','Ortega','Vega','Castillo','Molina','Serrano','Iglesias'] },
+  ger: { first: ['Lukas','Felix','Jonas','Emil','Florian','Max','Tim','Leon'], last: ['Weber','Becker','Keller','Schulz','Vogel','Hoffmann','Richter','Brandt'] },
+  fra: { first: ['Mathis','Hugo','Lucas','Noé','Yanis','Antoine','Louis','Enzo'], last: ['Laurent','Moreau','Petit','Lefèvre','Girard','Roux','Fontaine','Chevalier'] },
+  ita: { first: ['Luca','Marco','Andrea','Matteo','Nicolo','Davide','Pietro','Alessio'], last: ['Romano','Ricci','Conti','Marino','Greco','Gallo','Ferrari','Rinaldi'] },
+  por: { first: ['Tiago','João','Diogo','Rui','Gonçalo','Nuno','Pedro','Miguel'], last: ['Ferreira','Pereira','Almeida','Teixeira','Carvalho','Ribeiro','Sousa','Coelho'] },
+  bra: { first: ['Rafael','Caio','Bruno','Gabriel','Vinícius','João','Lucas','Thiago'], last: ['Oliveira','Souza','Lima','Pereira','Costa','Barbosa','Ribeiro','Mendes'] },
+  rsa: { first: ['Thabo','Siyabonga','Sipho','Lethabo','Kabelo','Bongani','Sibusiso','Tshepo'], last: ['Mokoena','Dlamini','Ndlovu','Khumalo','Maseko','Mthembu','Nkosi','Mahlangu'] },
+  nga: { first: ['Chinedu','Tunde','Emeka','Ifeanyi','Samuel','Ayo','Obinna','Kelechi'], last: ['Okafor','Adeyemi','Balogun','Nwosu','Eze','Adebayo','Uche','Ojo'] },
+  jpn: { first: ['Haruto','Yuto','Ren','Kaito','Sota','Daiki','Takumi','Riku'], last: ['Tanaka','Sato','Suzuki','Yamamoto','Kobayashi','Nakamura','Ito','Watanabe'] },
+  kor: { first: ['Min-jun','Ji-ho','Seo-jun','Do-yun','Hyun-woo','Jun-seo','Tae-min','Jae-hyun'], last: ['Kim','Lee','Park','Choi','Jung','Kang','Cho','Yoon'] },
+  usa: { first: ['Mason','Logan','Aiden','Noah','Carter','Dylan','Wyatt','Jordan'], last: ['Johnson','Miller','Davis','Brown','Anderson','Brooks','Reed','Morgan'] },
+  arg: { first: ['Facundo','Tomás','Lautaro','Julián','Franco','Nicolás','Agustín','Matías'], last: ['Fernández','Álvarez','Acosta','Benítez','Pereyra','Medina','Cabrera','Rojas'] },
+  mar: { first: ['Youssef','Amine','Achraf','Hamza','Bilal','Anas','Omar','Ayoub'], last: ['El Idrissi','Bennani','Alaoui','Amrani','Berrada','Ziani','Tazi','Fassi'] },
+  egy: { first: ['Omar','Ahmed','Youssef','Mostafa','Karim','Mahmoud','Hassan','Tarek'], last: ['Hassan','Ibrahim','Fathy','Mansour','Farouk','Nasser','Khalil','Salem'] },
+}
+
 const positions = ['GK','GK','RB','CB','CB','CB','LB','DM','CM','CM','AM','RW','LW','ST','ST','GK','CB','RB','LB','CM','CM','RW','LW','ST']
 
 function clubName(league:ProLeaguePlan,index:number,tier=1,offset=index):{name:string;city:string}{
@@ -120,30 +139,28 @@ function createSquad(club: ProClub, seed: number, year: number, squadStrength = 
   const totalWeight = weights.reduce((a, b) => a + b, 0)
   const usedNames = new Set<string>()
   return rosterPositions.map((position, i) => {
-    let surname = lastNames[Math.floor(proRoll(seed, `${club.id}:surname:${i}`) * lastNames.length)]
-    let first = firstNames[Math.floor(proRoll(seed, `${club.id}:first:${i}`) * firstNames.length)]
-    // Never create several players with the same full name in one squad.
-    // Keep the seed stable, but probe alternative combinations on collisions.
+    const pool = recruitmentPools[club.associationId] ??
+      PRO_LEAGUE_PLAN.filter(item => item.confederation ===
+        PRO_LEAGUE_PLAN.find(league => league.associationId === club.associationId)?.confederation &&
+        item.associationId !== club.associationId).slice(0, 12).map(item => item.associationId)
+    const foreignShare = club.tier === 1 ? .28 : club.tier === 2 ? .16 : .08
+    const nationality = pool.length && proRoll(seed, `${club.id}:foreign:${i}`) < foreignShare
+      ? pool[Math.floor(proRoll(seed, `${club.id}:origin:${i}`) * pool.length)]
+      : club.associationId
+    const names = regionalNames[nationality] ?? { first: firstNames, last: lastNames }
+    let surname = names.last[Math.floor(proRoll(seed, `${club.id}:surname:${i}`) * names.last.length)]
+    let first = names.first[Math.floor(proRoll(seed, `${club.id}:first:${i}`) * names.first.length)]
     let probe = 0
-    while (usedNames.has(`${first} ${surname}`) && probe < firstNames.length * lastNames.length) {
+    while (usedNames.has(`${first} ${surname}`) && probe < names.first.length * names.last.length) {
       probe++
-      first = firstNames[(i + probe + Math.floor(proRoll(seed, `${club.id}:first:${i}`) * firstNames.length)) % firstNames.length]
-      surname = lastNames[(i * 7 + probe + Math.floor(proRoll(seed, `${club.id}:surname:${i}`) * lastNames.length)) % lastNames.length]
+      first = names.first[(i + probe + Math.floor(proRoll(seed, `${club.id}:first:${i}`) * names.first.length)) % names.first.length]
+      surname = names.last[(i * 7 + probe + Math.floor(proRoll(seed, `${club.id}:surname:${i}`) * names.last.length)) % names.last.length]
     }
     usedNames.add(`${first} ${surname}`)
     const age = 18 + Math.floor(proRoll(seed, `${club.id}:age:${i}`) * 16)
     const overall = Math.min(90, Math.max(40, Math.round(squadStrength + (proRoll(seed, `${club.id}:ovr:${i}`) - .5) * 17)))
     return { id: `player-${club.id}-${i}`, name: `${first} ${surname}`, birthDate: `${year - age}-06-15`,
-      nationalityIds: [(() => {
-        const pool = recruitmentPools[club.associationId] ??
-          PRO_LEAGUE_PLAN.filter(item => item.confederation ===
-            PRO_LEAGUE_PLAN.find(league => league.associationId === club.associationId)?.confederation &&
-            item.associationId !== club.associationId).slice(0, 12).map(item => item.associationId)
-        const foreignShare = club.tier === 1 ? .28 : club.tier === 2 ? .16 : .08
-        return pool.length && proRoll(seed, `${club.id}:foreign:${i}`) < foreignShare
-          ? pool[Math.floor(proRoll(seed, `${club.id}:origin:${i}`) * pool.length)]
-          : club.associationId
-      })()], position, overall, potential: Math.min(94, overall + 4 + Math.floor(proRoll(seed, `${club.id}:potential:${i}`) * 12)),
+      nationalityIds: [nationality], position, overall, potential: Math.min(94, overall + 4 + Math.floor(proRoll(seed, `${club.id}:potential:${i}`) * 12)),
       clubId: club.id, annualWage: Math.floor(wageBudget * weights[i] / totalWeight), shirtNumber: i + 1 }
   })
 }

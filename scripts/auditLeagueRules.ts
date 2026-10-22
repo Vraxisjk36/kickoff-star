@@ -85,6 +85,16 @@ for (const [id, expected] of [['eng', 116], ['rsa', 149]] as const) {
     competitionSizes: memberCompetitions.map(comp => ({ id: comp.id, clubs: comp.entrantIds.length })),
   }, null, 2))
 }
+// Every promoted top-flight side must be registered for its new domestic cup,
+// even when last season's standings still refer to relegated clubs.
+for (const id of Object.keys(LOWER_DIVISIONS)) {
+  const currentTop = next.competitions[`top-${id}`].entrantIds
+  const cup = new Set(next.competitions[`cup-${id}`].entrantIds)
+  assert.equal(cup.size, next.competitions[`cup-${id}`].entrantIds.length,
+    `${id} domestic cup contains duplicate entrants`)
+  for (const clubId of currentTop)
+    assert.ok(cup.has(clubId), `${id} top-flight club ${clubId} missing from domestic cup`)
+}
 assert.equal(next.competitions['cup-eng'].entrantIds.length, 116)
 assert.equal(next.competitions['cup-rsa'].entrantIds.length, 149)
 const legacy = createProWorld(31, '2026-08-01')

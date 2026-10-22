@@ -13,7 +13,7 @@ import { scheduleSeniorInternational, completeSeniorInternational, forfeitSenior
 import { INTERNATIONAL_GROUPS, INTERNATIONAL_WINDOWS, internationalCycle, internationalTournamentFixture, internationalProgress, visibleQualifyingTable } from '../src/engine/proInternationalTournament'
 import { NATIONS } from '../src/engine/nations'
 import { SENIOR_NATIONS } from '../src/engine/seniorNations'
-import { prepareProGraduate, proRatingTarget, seniorNationalTeamRating, calibrateSeniorTeam } from '../src/engine/proRatings'
+import { prepareProGraduate, proRatingTarget, proClubReputationTarget, seniorNationalTeamRating, calibrateSeniorTeam } from '../src/engine/proRatings'
 import { proWeekSchedule, proMatchDay, proTrainingAvailable, mondayFrom } from '../src/engine/proWeeklySchedule'
 import { teamOverall } from '../src/engine/teams'
 import { PRO_TOP_FLIGHT_IDENTITIES, proClubIdentity, renameLegacyProClubs } from '../src/engine/proClubIdentities'
@@ -25,6 +25,19 @@ import { seniorNationRankings } from '../src/engine/proNationalRankings'
 import { buildNationalWorldResults, seniorWorldNationRankings } from '../src/engine/proNationWorldRankings'
 import { CONTINENTAL_WINDOWS, continentalCycle, continentalNations, continentalRound, continentalNationsProgress, confederationForNation } from '../src/engine/proContinentalNations'
 import { PRO_INTERACTIVE_COUNTRIES, PRO_LEAGUE_PLAN, canStartInteractiveProCareer } from '../src/engine/proLeagueRegistry'
+
+// Regression: club heritage must not inflate generated player ability.
+assert.equal(proRatingTarget('eng',1,4,20),82,'Manchester Red squad target')
+assert.equal(proClubReputationTarget('eng',1,4,82),94,'Manchester Red heritage')
+assert.equal(proRatingTarget('eng',1,0,20),88,'Manchester Sky squad target')
+const reputationWorld = createProWorld(1907,'2026-08-01')
+const manRed = reputationWorld.clubs['club-eng-005']
+assert.equal(manRed.reputation,94)
+const manRedPlayers = Object.values(reputationWorld.players).filter(player=>player.clubId===manRed.id)
+assert.ok(manRedPlayers.length>=18,'Manchester Red senior squad missing')
+const meanStrength = manRedPlayers.reduce((sum,player)=>sum+player.overall,0)/manRedPlayers.length
+assert.ok(meanStrength>=76 && meanStrength<=88,
+  `Club heritage inflated player ratings: ${meanStrength}`)
 
 assert.equal(PRO_INTERACTIVE_COUNTRIES.length, 9, 'Initial Phase 2 release must permit nine professional destinations')
 assert.equal(new Set(PRO_INTERACTIVE_COUNTRIES).size, 9)

@@ -6,7 +6,7 @@ import { completeProTransfer } from '../src/engine/proTransfers'
 import { assessProDeal } from '../src/engine/proClubFinance'
 import { clubSeasonPhase, validateCalendarProfile } from '../src/engine/proCalendar'
 import { readSave, writeSave, SAVE_SCHEMA_VERSION, EMPTY_CUPS } from '../src/engine/save'
-import { PRO_DEEP_LEAGUE_PLAN, PRO_GROUPED_LEAGUE_PLAN, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN, validateProLeaguePlan } from '../src/engine/proLeagueRegistry'
+import { PRO_DEEP_LEAGUE_PLAN, PRO_GROUPED_LEAGUE_PLAN, PRO_GROUPED_FOURTH_LEAGUE_PLAN, PRO_FIFTH_LEAGUE_PLAN, PRO_GROUPED_FIFTH_LEAGUE_PLAN, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN, validateProLeaguePlan } from '../src/engine/proLeagueRegistry'
 import { PRO_SATELLITE_ASSOCIATIONS } from '../src/engine/proSatelliteRegistry'
 
 const world = createProWorld(2051, '2026-01-01')
@@ -28,7 +28,7 @@ assert.equal(PRO_SATELLITE_ASSOCIATIONS.length, 118)
 assert.equal(new Set([...PRO_LEAGUE_PLAN.map(item => item.associationId), ...PRO_SATELLITE_ASSOCIATIONS.map(item => item.id)]).size, 218)
 assert.ok(Object.keys(world.associations).length >= 200)
 assert.equal(Object.values(world.associations).filter(item => item.confederation === 'caf').length, 54)
-assert.equal(Object.keys(world.competitions).length, 100 + PRO_LOWER_LEAGUE_PLAN.length + PRO_DEEP_LEAGUE_PLAN.length + PRO_GROUPED_LEAGUE_PLAN.length)
+assert.equal(Object.keys(world.competitions).length, 100 + PRO_LOWER_LEAGUE_PLAN.length + PRO_DEEP_LEAGUE_PLAN.length + PRO_GROUPED_LEAGUE_PLAN.length + PRO_GROUPED_FOURTH_LEAGUE_PLAN.length + PRO_FIFTH_LEAGUE_PLAN.length + PRO_GROUPED_FIFTH_LEAGUE_PLAN.length)
 assert.ok(Object.keys(world.players).length > 25_000)
 const initial = JSON.stringify(world)
 assert.ok(initial.length < 32 * 1024 * 1024)

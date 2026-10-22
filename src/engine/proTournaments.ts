@@ -238,8 +238,7 @@ export function beginDomesticSeason(world: ProWorldState, year: number): void {
     const grouped = PRO_GROUPED_LEAGUE_PLAN.filter(item => item.associationId === id)
       .flatMap(item => world.competitions[item.id]?.entrantIds ?? [])
     const regionalFourth = PRO_GROUPED_FOURTH_LEAGUE_PLAN.filter(item => item.associationId === id)
-      .map(item => [...(world.standings[item.id] ?? [])].sort(tableOrder)[0]?.clubId)
-      .filter((entrant): entrant is string => !!entrant)
+      .flatMap(item => world.competitions[item.id]?.entrantIds ?? [])
     const fifth = [...PRO_FIFTH_LEAGUE_PLAN, ...PRO_GROUPED_FIFTH_LEAGUE_PLAN]
       .filter(item => item.associationId === id)
       .flatMap(item => world.competitions[item.id]?.entrantIds ?? [])

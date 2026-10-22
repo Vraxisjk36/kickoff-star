@@ -74,8 +74,14 @@ const tableOrder = (a: ProStandingRow, b: ProStandingRow) => b.points - a.points
 function leagueOrder(world: ProWorldState, associationId: string): string[] {
   const id = `top-${associationId}`
   const latest = world.seasonHistory.filter(record => record.competitionId === id).at(-1)
+  const currentMembers = world.competitions[id]?.entrantIds ?? []
+  const eligible = new Set(currentMembers)
   const rows = latest?.table ?? world.standings[id] ?? []
-  return [...rows].sort(tableOrder).map(record => record.clubId)
+  // Previous-season tables include relegated clubs and omit promoted clubs.
+  // Preserve their ordering only for teams still in this season's division.
+  const ordered = [...rows].sort(tableOrder).map(record => record.clubId)
+    .filter(clubId => eligible.has(clubId))
+  return [...new Set([...ordered, ...currentMembers])]
 }
 function isClubFixture(competition: ProCompetition): boolean { return competition.kind !== 'national-team' }
 function occupied(world: ProWorldState, entrantId: string, date: IsoDate): boolean {

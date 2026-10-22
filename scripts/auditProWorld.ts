@@ -4,12 +4,16 @@ import { createProWorld, proCalendarProfile } from '../src/engine/proWorldFactor
 import { advanceProWorldTo } from '../src/engine/proWorldSimulation'
 import { completeProTransfer } from '../src/engine/proTransfers'
 import { assessProDeal } from '../src/engine/proClubFinance'
-import { validateCalendarProfile } from '../src/engine/proCalendar'
+import { clubSeasonPhase, validateCalendarProfile } from '../src/engine/proCalendar'
 import { readSave, writeSave, SAVE_SCHEMA_VERSION, EMPTY_CUPS } from '../src/engine/save'
 import { PRO_DEEP_LEAGUE_PLAN, PRO_GROUPED_LEAGUE_PLAN, PRO_LEAGUE_PLAN, PRO_LOWER_LEAGUE_PLAN, validateProLeaguePlan } from '../src/engine/proLeagueRegistry'
 import { PRO_SATELLITE_ASSOCIATIONS } from '../src/engine/proSatelliteRegistry'
 
 const world = createProWorld(2051, '2026-01-01')
+assert.equal(clubSeasonPhase('2026-06-15'), 'off-season')
+assert.equal(clubSeasonPhase('2026-07-15'), 'pre-season')
+assert.equal(clubSeasonPhase('2026-07-15', true), 'international-duty')
+assert.equal(clubSeasonPhase('2026-08-15'), 'regular-season')
 assert.deepEqual(validateProLeaguePlan(), [])
 assert.equal(PRO_LEAGUE_PLAN.length, 100)
 assert.equal(PRO_SATELLITE_ASSOCIATIONS.length, 118)

@@ -121,6 +121,26 @@ function clubName(league:ProLeaguePlan,index:number,tier=1,offset=index):{name:s
   return {city,name:`${city} ${style} ${distinction}`}
 }
 
+/** Stable tactical DNA for fictional clubs. Heritage affects the preferred
+ * approach, not the current squad's ability or league eligibility. */
+const FEATURED_TACTICS: Readonly<Record<string, readonly string[]>> = {
+  eng: ['possession','pressing','pressing','possession','counter','pressing','counter','balanced',
+    'balanced','pressing','counter','balanced','counter','balanced','pressing','balanced',
+    'counter','pressing','pressing','balanced'],
+  esp: ['possession','possession','pressing','balanced','possession','counter','balanced','possession'],
+  ger: ['possession','pressing','pressing','pressing','balanced','counter'],
+  ita: ['balanced','counter','pressing','possession','counter','balanced'],
+  rsa: ['counter','pressing','possession','balanced'],
+}
+export function proClubTacticalIdentity(associationId: string, tier: number, rank: number): string {
+  const featured = tier === 1 ? FEATURED_TACTICS[associationId]?.[rank] : undefined
+  if (featured) return featured
+  const styles = ['balanced','possession','counter','pressing'] as const
+  // Tier and association both contribute: promoted clubs retain a consistent
+  // philosophy rather than inheriting the tactics of their league position.
+  return styles[Math.floor(proRoll(431, `${associationId}:${tier}:${rank}:tactics`) * styles.length)]
+}
+
 /** Expose the same generated club identities used by the actual living league.
  * Do not hand applicants a trial offer from an invented separate roster.
  */
@@ -338,7 +358,7 @@ export function createProWorld(seed: number, currentDate: IsoDate): ProWorldStat
         city: identity.city, capacity: 5_000 + Math.round(reputation * 300) }
       world.managers[`manager-${id}`] = { id: `manager-${id}`, clubId: id,
         name: `${firstNames[(i + 3) % firstNames.length]} ${lastNames[(i + 8) % lastNames.length]}`,
-        tacticalStyle: ['balanced','possession','counter','pressing'][i % 4], reputation: Math.round(reputation) }
+        tacticalStyle: proClubTacticalIdentity(league.associationId, tier, offset), reputation: Math.round(reputation) }
       const squad = createSquad(club, seed, currentYear, squadStrength)
       for (const player of squad) world.players[player.id] = player
       for (const prospect of createAcademyIntake(club, seed, currentYear)) world.academyProspects[prospect.id] = prospect

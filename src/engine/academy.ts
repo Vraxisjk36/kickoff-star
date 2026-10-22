@@ -1,25 +1,23 @@
 import { rand } from './rng'
 import { generateTeam, type Team } from './teams'
-import { sortStandings, attributeGoals, rescaleTeamToRange, type LeagueStanding, type Fixture, type Division, type DivisionTier } from './league'
+import { attributeGoals, fixtureRecord, resetTeamScorers, type LeagueStanding, type Fixture, type Division, type DivisionTier } from './league'
+import type { MatchLine, MatchRecord } from './matchLedger'
 import { generateRoundRobin } from './competitions'
+import { academyClub, academyProfileFor, academyProfiles, academyTeam, academyRatings } from './academyClubs'
+import type { Player } from '../types/player'
 
-// ============================================================================
-// ACADEMY PHASE (Phase 9) — locked scope: full England academy pyramid intent
-// (U18 Premier League + U18 PL Cup + FA Youth Cup + Professional Development
-// League). V1.0 SCOPE NOTE, matching the same narrowing already applied to
-// Grassroots (School Cup/Regional not built): only the two-tier LEAGUE structure
-// (U18 Premier League + Professional Development League below it, with
-// promotion) is implemented here. The two cup competitions (U18 PL Cup, FA Youth
-// Cup) are NOT built — same pattern as Grassroots' un-built School Cup/Regional.
-// This reuses the exact verified round-robin fixture algorithm from league.ts.
-// ============================================================================
+// Age squads of one academy. England and Spain have distinct calendars;
+// the remaining countries use a generic youth-development abstraction.
 
-export type AcademyTier = 1 | 2 // 1 = U18 Premier League, 2 = Professional Development League
+// These slots are age squads of the same club, not a promotion/relegation pyramid.
+export type AcademyTier = 1 | 2
 
 export interface AcademyWorld {
   divisions: Record<AcademyTier, Division>
   playerDivision: AcademyTier
   playerTeamId: string
+  countryId?: string
+  matchHistory?: MatchRecord[]
 }
 
 const TIER_PRESTIGE_RANGE: Record<AcademyTier, [number, number]> = {
@@ -45,23 +43,39 @@ function generateFixtures(teams: Team[], legs: 1 | 2 = 1): Fixture[] {
   }))
 }
 
-function initTier(tier: AcademyTier, playerTeam?: Team): Division {
+function initTier(tier: AcademyTier, playerTeam?: Team, countryId?: string): Division {
   const [lo, hi] = TIER_PRESTIGE_RANGE[tier]
   const teams: Team[] = []
   if (playerTeam) teams.push(playerTeam)
-  while (teams.length < 12) {
-    teams.push(generateTeam(lo + Math.floor(rand() * (hi - lo + 1))))
+  const target = countryId === 'esp' ? 16 : 12
+  if (countryId) {
+    for (const profile of academyProfiles(countryId)) {
+      if (teams.length >= target) break
+      if (!teams.some(team => team.name === profile.name)) teams.push(academyTeam(countryId, profile, tier === 1 ? 'older' : 'younger'))
+    }
+  }
+  while (teams.length < target) {
+    const prestige = lo + Math.floor(rand() * (hi - lo + 1))
+    teams.push(countryId ? academyClub(countryId, prestige, teams.map(team => team.name)) : generateTeam(prestige))
   }
   return { tier: tier as unknown as DivisionTier, teams, standings: teams.map(initStanding), fixtures: generateFixtures(teams, 2) }
 }
 
-// Player enters at tier 2 (Professional Development League) — a fresh academy signing
-// has to earn their way into the first team's U18 Premier League squad.
-export function initAcademyWorld(academyClubName: string, prestige: number): AcademyWorld {
-  const academyTeam: Team = { ...generateTeam(prestige), name: academyClubName, short: academyClubName.slice(0, 3).toUpperCase() }
-  const tier2 = initTier(2, academyTeam)
-  const tier1 = initTier(1)
-  return { divisions: { 1: tier1, 2: tier2 }, playerDivision: 2, playerTeamId: academyTeam.id }
+// Both age groups belong to the signed club. A player's promotion changes
+// squads; it never relegates an entire academy because of one season's table.
+export function initAcademyWorld(academyClubName: string, prestige: number, countryId?: string): AcademyWorld {
+  const profile = countryId ? academyProfileFor(countryId, academyClubName) : undefined
+  const academyTeam: Team = profile && countryId ? academyTeamFor(profile, countryId, 'younger')
+    : { ...generateTeam(prestige), name: academyClubName, short: academyClubName.slice(0, 3).toUpperCase(), countryId,
+      ratings: countryId ? academyRatings(countryId, prestige) : generateTeam(prestige).ratings, academyRatingVersion: countryId ? 2 : undefined }
+  const tier2 = initTier(2, academyTeam, countryId)
+  const olderSquad = { ...academyTeam, id: crypto.randomUUID(), ratings: countryId ? academyRatings(countryId, academyTeam.prestige, 'older') : academyTeam.ratings }
+  const tier1 = initTier(1, olderSquad, countryId)
+  return { divisions: { 1: tier1, 2: tier2 }, playerDivision: 2, playerTeamId: academyTeam.id, countryId }
+}
+
+function academyTeamFor(profile: NonNullable<ReturnType<typeof academyProfileFor>>, countryId: string, ageGroup: 'younger' | 'older') {
+  return academyTeam(countryId, profile, ageGroup)
 }
 
 function updateStandingsFromResult(standings: LeagueStanding[], homeId: string, awayId: string, hg: number, ag: number): LeagueStanding[] {
@@ -78,7 +92,7 @@ function updateStandingsFromResult(standings: LeagueStanding[], homeId: string, 
   })
 }
 
-export function recordAcademyMatchResult(world: AcademyWorld, opponentId: string, playerScored: number, opponentScored: number, playerWasHome: boolean): AcademyWorld {
+export function recordAcademyMatchResult(world: AcademyWorld, opponentId: string, playerScored: number, opponentScored: number, playerWasHome: boolean, personalGoals = 0, playerLine?: MatchLine, season = 1, calendarWeek = 0): AcademyWorld {
   const division = world.divisions[world.playerDivision]
   const homeId = playerWasHome ? world.playerTeamId : opponentId
   const awayId = playerWasHome ? opponentId : world.playerTeamId
@@ -88,7 +102,10 @@ export function recordAcademyMatchResult(world: AcademyWorld, opponentId: string
     !f.played && f.homeTeamId === homeId && f.awayTeamId === awayId ? { ...f, played: true, homeGoals: hg, awayGoals: ag } : f
   )
   const standings = updateStandingsFromResult(division.standings, homeId, awayId, hg, ag)
-  return { ...world, divisions: { ...world.divisions, [world.playerDivision]: { ...division, fixtures, standings } } }
+  const teams = division.teams.map(t => t.id === world.playerTeamId ? attributeGoals(t, Math.max(0, playerScored - personalGoals)) : t.id === opponentId ? attributeGoals(t, opponentScored) : t)
+  const fixture = division.fixtures.find(f => !f.played && f.homeTeamId === homeId && f.awayTeamId === awayId)
+  const matchRecords = fixture ? [...(division.matchRecords ?? []), fixtureRecord(fixture, division.teams, teams, hg, ag, 'academyLeague', season, calendarWeek, playerLine)] : division.matchRecords
+  return { ...world, divisions: { ...world.divisions, [world.playerDivision]: { ...division, fixtures, standings, teams, matchRecords } } }
 }
 
 function simpleScore(attack: number, defense: number): number {
@@ -105,9 +122,10 @@ function simpleScore(attack: number, defense: number): number {
 // includePlayerTeam: sim the player's own fixture too — used when the player
 // missed their matchday (injury), so the season never carries a permanently
 // unplayed fixture. Sims all rounds <= round (self-heals any backlog).
-export function batchSimAcademyRound(division: Division, round: number, playerTeamId: string, includePlayerTeam = false): Division {
+export function batchSimAcademyRound(division: Division, round: number, playerTeamId: string, includePlayerTeam = false, season = 1, week = 0): Division {
   const teamById = new Map(division.teams.map((t) => [t.id, t]))
   let standings = division.standings
+  const matchRecords = [...(division.matchRecords ?? [])]
   const fixtures = division.fixtures.map((f) => {
     if (f.played || f.week > round) return f
     if (!includePlayerTeam && (f.homeTeamId === playerTeamId || f.awayTeamId === playerTeamId)) return f
@@ -117,61 +135,56 @@ export function batchSimAcademyRound(division: Division, round: number, playerTe
     const hg = simpleScore(home.ratings.attack, away.ratings.defense)
     const ag = simpleScore(away.ratings.attack, home.ratings.defense)
     standings = updateStandingsFromResult(standings, f.homeTeamId, f.awayTeamId, hg, ag)
-    teamById.set(home.id, attributeGoals(home, hg))
-    teamById.set(away.id, attributeGoals(away, ag))
+    const creditedHome = attributeGoals(home, hg), creditedAway = attributeGoals(away, ag)
+    teamById.set(home.id, creditedHome)
+    teamById.set(away.id, creditedAway)
+    matchRecords.push(fixtureRecord(f, [home, away], [creditedHome, creditedAway], hg, ag, 'academyLeague', season, week || f.week))
     return { ...f, played: true, homeGoals: hg, awayGoals: ag }
   })
-  return { ...division, teams: division.teams.map((t) => teamById.get(t.id) ?? t), fixtures, standings }
+  return { ...division, teams: division.teams.map((t) => teamById.get(t.id) ?? t), fixtures, standings, matchRecords }
 }
 
-// Promotion to U18 Premier League (top 3 of PDL get promoted — smaller pool than Grassroots
-// since academy squads are more talent-concentrated).
 /** Builds an academy tier from an explicit team list — fresh standings/fixtures for a new season, real identities carried forward. */
 function buildTierFromTeams(tier: AcademyTier, teams: Team[]): Division {
-  return { tier: tier as unknown as DivisionTier, teams, standings: teams.map(initStanding), fixtures: generateFixtures(teams, 2) }
+  return { tier: tier as unknown as DivisionTier, teams: teams.map(resetTeamScorers), standings: teams.map(initStanding), fixtures: generateFixtures(teams, 2) }
 }
 
-// P68 — same real gap fixed in league.ts: every academy team other than the
-// player's own got wiped and regenerated from scratch each season. Real fix:
-// both tiers' actual teams persist and move by real result.
-// Team counts balance: Tier1 (12): 9 survive + 3 promoted = 12.
-// Tier2 (12): 9 survive (12 - 3 promoted out) + 3 relegated in = 12.
-// There was previously NO relegation rule at all (promotion-only, which only
-// ever worked because every other team was discarded anyway) — added a
-// symmetric bottom-3 relegation from tier 1, the natural counterpart to the
-// existing top-3 promotion, since real persistence needs both directions to
-// keep tier sizes from growing unbounded.
-export function applyAcademyPromotion(world: AcademyWorld): AcademyWorld {
-  const sorted1 = sortStandings(world.divisions[1].standings)
-  const sorted2 = sortStandings(world.divisions[2].standings)
-
-  const teamById = new Map<string, Team>()
-  for (const div of Object.values(world.divisions)) for (const t of div.teams) teamById.set(t.id, t)
-  const teamOf = (s: LeagueStanding) => teamById.get(s.teamId)!
-
-  const tier1Survivors = sorted1.slice(0, -3).map(teamOf)
-  const tier1Relegated = sorted1.slice(-3).map(teamOf)
-  const tier2Promoted = sorted2.slice(0, 3).map(teamOf)
-  const tier2Survivors = sorted2.slice(3).map(teamOf)
-
-  const promotedTo1 = tier2Promoted.map((t) => rescaleTeamToRange(t, TIER_PRESTIGE_RANGE[1]))
-  const relegatedTo2 = tier1Relegated.map((t) => rescaleTeamToRange(t, TIER_PRESTIGE_RANGE[2]))
-
-  const newTier1Teams = [...tier1Survivors, ...promotedTo1]
-  const newTier2Teams = [...tier2Survivors, ...relegatedTo2]
-
-  const newDivision: AcademyTier = newTier1Teams.some((t) => t.id === world.playerTeamId) ? 1 : 2
-
+export function applyAcademyPromotion(world: AcademyWorld, player?: Player): AcademyWorld {
+  const matchHistory = [...(world.matchHistory ?? []), ...Object.values(world.divisions).flatMap(division => division.matchRecords ?? [])]
+  const current = world.divisions[world.playerDivision].teams.find(t => t.id === world.playerTeamId)
+  const otherTier: AcademyTier = world.playerDivision === 1 ? 2 : 1
+  // A pre-migration save may not yet have the signed club in both age groups.
+  const existingCounterpart = world.divisions[otherTier].teams.find(t => t.name === current?.name)
+  const counterpart = existingCounterpart ?? (current ? { ...current, id: crypto.randomUUID() } : undefined)
+  const appearances = player?.seasonAppearances ?? 0
+  const ratings = player?.seasonRatings ?? []
+  const average = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0
+  const ageNextSeason = (player?.careerClock.ageYears ?? 16) + 1
+  const countryId = world.countryId ?? player?.academyCountryId ?? current?.countryId
+  const ageOut = ageNextSeason >= (countryId === 'esp' ? 17 : 18)
+  const earned = appearances >= 8 && average >= 6.4
+  const newDivision: AcademyTier = world.playerDivision === 1 || counterpart && (earned || ageOut) ? 1 : 2
+  const newSquad = (tier: AcademyTier): Team[] => {
+    const teams = otherTier === tier && counterpart && !existingCounterpart
+      ? [...world.divisions[tier].teams.slice(0, -1), counterpart] : [...world.divisions[tier].teams]
+    const target = countryId === 'esp' ? 16 : 12
+    while (teams.length < target) teams.push(academyClub(countryId ?? 'eng', TIER_PRESTIGE_RANGE[tier][0], teams.map(t => t.name)))
+    return teams
+  }
   return {
     divisions: {
-      1: buildTierFromTeams(1, newTier1Teams),
-      2: buildTierFromTeams(2, newTier2Teams),
+      1: buildTierFromTeams(1, newSquad(1)),
+      2: buildTierFromTeams(2, newSquad(2)),
     },
     playerDivision: newDivision,
-    playerTeamId: world.playerTeamId,
+    playerTeamId: newDivision !== world.playerDivision && counterpart ? counterpart.id : world.playerTeamId,
+    countryId,
+    matchHistory,
   }
 }
 
-export function academyDivisionLabel(tier: AcademyTier): string {
-  return tier === 1 ? 'U18 Premier League' : 'Professional Development League'
+export function academyDivisionLabel(tier: AcademyTier, countryId?: string): string {
+  if (countryId === 'esp') return tier === 1 ? 'División de Honor Juvenil · U19' : 'Academy U17 Development'
+  if (countryId === 'eng') return tier === 1 ? 'Premier League 2 · U21' : 'U18 Premier League'
+  return tier === 1 ? 'U21 Development League' : 'U18 Academy League'
 }

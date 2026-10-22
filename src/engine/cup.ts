@@ -14,8 +14,20 @@ import {
   type GroupAssignment,
 } from './competitions'
 import type { LeagueStanding } from './league'
+import { capturePlayedFixtures, type MatchRecord } from './matchLedger'
 
-export type CupStage = 'group' | 'knockout' | 'complete'
+export type CupStage = 'qualifying' | 'group' | 'knockout' | 'complete'
+
+export interface ContinentalQualifier {
+  route: 'senior' | 'domestic'
+  round: number // six midweek match slots
+  rounds: GenericFixture[][]
+  standings: LeagueStanding[]
+  seniorTeamIds: string[]
+  domesticTeamIds: string[]
+  /** Winners of each domestic two-leg tie. */
+  advancing: string[]
+}
 
 export interface CupWorld {
   competitionId: string
@@ -32,6 +44,45 @@ export interface CupWorld {
   playerEliminated: boolean
   playerWonCup: boolean
   teams: Team[]
+  /** How the club entered the 32-team continental bracket. */
+  continentalRoute?: 'senior' | 'domestic'
+  qualifier?: ContinentalQualifier
+  qualifiersPerGroup?: number
+  matchRecords?: MatchRecord[]
+}
+
+export function captureCupMatches(world: CupWorld, season: number, week: number, playerMatch?: MatchRecord): CupWorld {
+  const fixtures = [...Object.values(world.groupFixtures).flat(), ...world.knockoutRounds.flat()]
+  return { ...world, matchRecords: capturePlayedFixtures(world.matchRecords ?? [], fixtures, world.teams,
+    world.competitionId, season, week, playerMatch) }
+}
+
+/** Brackets grow one round at a time, so their current array length is not
+ * the tournament's total round count. Name a round from the ties in it. */
+export function knockoutRoundLabel(world: CupWorld, index = world.currentKnockoutRound - 1): string {
+  const ties = world.knockoutRounds[index]?.length ?? 0
+  if (ties === 1) return 'Final'
+  if (ties === 2) return 'Semi-final'
+  if (ties === 4) return 'Quarter-final'
+  if (ties > 4) return `Round of ${ties * 2}`
+  const entrants = world.groups.length ? world.groups.length * (world.qualifiersPerGroup ?? 1) : world.teams.length
+  const remaining = Math.max(2, entrants / 2 ** Math.max(0, index))
+  return remaining === 2 ? 'Final' : remaining === 4 ? 'Semi-final' : remaining === 8 ? 'Quarter-final' : `Round of ${remaining}`
+}
+
+/** Keep an in-progress cup's displayed identities aligned with its source
+ * league after a save migration. Results and brackets remain untouched. */
+export function syncCupTeamIdentities(world: CupWorld, sourceTeams: Team[]): CupWorld {
+  const byId = new Map(sourceTeams.map((team) => [team.id, team]))
+  const syncStanding = (standing: LeagueStanding): LeagueStanding => {
+    const team = byId.get(standing.teamId)
+    return team ? { ...standing, teamName: team.name, teamShort: team.short } : standing
+  }
+  return {
+    ...world,
+    teams: world.teams.map((team) => byId.get(team.id) ?? team),
+    groupStandings: Object.fromEntries(Object.entries(world.groupStandings).map(([group, standings]) => [group, standings.map(syncStanding)])),
+  }
 }
 
 function standingFor(team: Team): LeagueStanding {
@@ -76,6 +127,7 @@ export interface CupConfig {
   // generation only if the pool is missing or too small, so this never
   // breaks a cup that doesn't have a league world to draw from yet.
   realTeamPool?: Team[]
+  qualifiersPerGroup?: number
 }
 
 export function initCupWorld(config: CupConfig, playerTeam: Team): CupWorld {
@@ -122,6 +174,7 @@ export function initCupWorld(config: CupConfig, playerTeam: Team): CupWorld {
       playerEliminated: false,
       playerWonCup: false,
       teams,
+      qualifiersPerGroup: config.qualifiersPerGroup ?? 1,
     }
   }
 
@@ -140,6 +193,7 @@ export function initCupWorld(config: CupConfig, playerTeam: Team): CupWorld {
     playerEliminated: false,
     playerWonCup: false,
     teams,
+    qualifiersPerGroup: 1,
   }
 }
 
@@ -176,16 +230,13 @@ export function recordCupPlayerResult(world: CupWorld, opponentId: string, playe
   const drew = hg === ag
   const eliminated = drew ? !(shootoutWonByPlayer ?? false) : (playerWasHome ? hg < ag : ag < hg)
   const rounds = [...world.knockoutRounds]
-  // A drawn tie must produce a winner for knockoutWinners() (which advances
-  // whoever has >= goals at home). Nudge the recorded score by the shootout
-  // outcome so bracket math and the player's fate always agree — the previous
-  // version marked the player eliminated on ANY draw while the bracket
-  // advanced the home side, which could advance an "eliminated" player's team.
+  // Keep the actual draw intact. The shootout winner is a separate fact;
+  // penalty kicks must not appear as extra goals in statistics or the Gazette.
   rounds[world.currentKnockoutRound - 1] = updatedRound.map((f) => {
     if (f.homeTeamId !== homeId || f.awayTeamId !== awayId || !drew) return f
     const playerWinsShootout = shootoutWonByPlayer ?? false
     const homeWins = playerWasHome ? playerWinsShootout : !playerWinsShootout
-    return homeWins ? f : { ...f, awayGoals: (f.awayGoals ?? 0) + 1 }
+    return { ...f, winnerTeamId: homeWins ? homeId : awayId }
   })
   return { ...world, knockoutRounds: rounds, playerEliminated: world.playerEliminated || eliminated }
 }
@@ -238,14 +289,13 @@ export function batchSimCupStage(world: CupWorld, round: number, includePlayerTe
       if (!home || !away) return f
       let hg = simpleScore(home.ratings.attack, away.ratings.defense)
       let ag = simpleScore(away.ratings.attack, home.ratings.defense)
-      // Knockout ties can't end level: settle on "penalties" with a rating-
-      // weighted coin, expressed as a +1 so knockoutWinners() reads it.
+      // Resolve level ties on penalties while preserving the full-time score.
+      let winnerTeamId: string | undefined
       if (hg === ag) {
         const homeEdge = 0.5 + (home.ratings.midfield - away.ratings.midfield) / 200
-        if (rand() < homeEdge) hg += 1
-        else ag += 1
+        winnerTeamId = rand() < homeEdge ? home.id : away.id
       }
-      return { ...f, played: true, homeGoals: hg, awayGoals: ag }
+      return { ...f, played: true, homeGoals: hg, awayGoals: ag, winnerTeamId }
     })
     const rounds = [...world.knockoutRounds]
     rounds[world.currentKnockoutRound - 1] = updated
@@ -264,8 +314,12 @@ export function advanceCupStage(world: CupWorld): CupWorld {
   if (world.stage === 'group') {
     const done = world.groups.every((g) => world.groupFixtures[g.groupId].every((f) => f.played))
     if (!done) return world
-    const winners = world.groups.map((g) => sortGroup(world.groupStandings[g.groupId])[0].teamId)
+    const winners = world.groups.flatMap((g) => sortGroup(world.groupStandings[g.groupId]).slice(0, world.qualifiersPerGroup ?? 1).map((s) => s.teamId))
     const playerTopped = winners.includes(world.playerTeamId)
+    // A single six-school development group has one champion after its five
+    // rounds. There is no knockout opponent to draw.
+    if (winners.length <= 1) return { ...world, stage: 'complete', playerEliminated: !playerTopped,
+      playerWonCup: playerTopped && winners.length === 1 }
     const round1 = generateKnockoutRound(winners, 1)
     return {
       ...world,
@@ -293,6 +347,8 @@ export function advanceCupStage(world: CupWorld): CupWorld {
 // Find the player's fixture for the CURRENT stage, if it hasn't been played —
 // used to know who they're facing next / whether they have a cup match this week.
 export function playerCupFixture(world: CupWorld): GenericFixture | null {
+  if (world.playerEliminated) return null
+  if (world.stage === 'qualifying') return world.qualifier?.rounds[world.qualifier.round]?.find(f => !f.played && (f.homeTeamId === world.playerTeamId || f.awayTeamId === world.playerTeamId)) ?? null
   if (world.stage === 'group') {
     const gid = playerGroupId(world)
     if (!gid) return null
@@ -311,13 +367,16 @@ export function playerCupFixture(world: CupWorld): GenericFixture | null {
 // group cups = 3 group rounds (groups of 4) + semi + final (16 -> 4 winners);
 // pure knockouts = 16 -> 4 rounds.
 export const CUP_CONFIGS: Record<string, Omit<CupConfig, 'competitionId' | 'label'> & { label: string }> = {
-  schoolCup: { label: 'School Cup', groupSize: 4, fieldSize: 16, prestigeRange: [2, 5] },
+  schoolCup: { label: 'Regional Schools Cup', groupSize: 4, fieldSize: 16, prestigeRange: [2, 6], qualifiersPerGroup: 1 },
+  schoolDevelopment: { label: 'School Development Competition', groupSize: 6, fieldSize: 6, prestigeRange: [2, 5], qualifiersPerGroup: 1 },
+  nationalChampionship: { label: 'National Schools Championship', groupSize: 0, fieldSize: 16, prestigeRange: [5, 8] },
   sundayCup: { label: 'Sunday Cup', groupSize: 0, fieldSize: 16, prestigeRange: [2, 6] },
   academyLeagueCup: { label: 'U18 Premier Cup', groupSize: 4, fieldSize: 16, prestigeRange: [5, 8] },
   academyKnockoutCup: { label: 'Youth Cup', groupSize: 0, fieldSize: 16, prestigeRange: [5, 8] },
+  academyChampionsCup: { label: 'Academy Champions Cup', groupSize: 0, fieldSize: 32, prestigeRange: [7, 9] },
 }
 
 export function initCupById(competitionId: string, playerTeam: Team, realTeamPool?: Team[]): CupWorld {
   const cfg = CUP_CONFIGS[competitionId]
-  return initCupWorld({ competitionId, label: cfg.label, groupSize: cfg.groupSize, fieldSize: cfg.fieldSize, prestigeRange: cfg.prestigeRange, realTeamPool }, playerTeam)
+  return initCupWorld({ competitionId, label: cfg.label, groupSize: cfg.groupSize, fieldSize: cfg.fieldSize, prestigeRange: cfg.prestigeRange, qualifiersPerGroup: cfg.qualifiersPerGroup, realTeamPool }, playerTeam)
 }

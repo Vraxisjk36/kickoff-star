@@ -240,7 +240,7 @@ const boxScramble = scenario('box-scramble', 'defend', ['clear', 'good'], 'cross
   beat('scramble', 'The ball is loose in a crowded six-yard box. Total chaos.', [
     opt('throw yourself at it', 'block on the line — some card risk', 0.48, ['positioning', 'strength'], 3,
       { kind: 'save' }, 'You get something on it — cleared off the line!',
-      { kind: 'beaten' }, 'You can\'t reach it. It\'s bundled home from close range.', 0.15),
+      { kind: 'beaten' }, 'You can\'t reach it. It\'s bundled home from close range.', 0.27),
   ]),
 ])
 
@@ -407,7 +407,7 @@ const counterDefend = scenario('counter-defend', 'defend', ['clear'], 'outnumber
       { kind: 'continue', beatId: 'decision' }, 'He cuts inside before your cover can get there.'),
     opt('commit to the tackle', 'end it now — real card risk', 0.45, ['tackling'], 2,
       { kind: 'save' }, 'A perfectly timed tackle — danger over!',
-      { kind: 'continue', beatId: 'decision' }, 'Missed it completely. He\'s away with only the keeper to beat.', 0.28),
+      { kind: 'continue', beatId: 'decision' }, 'Missed it completely. He\'s away with only the keeper to beat.', 0.38),
   ]),
   beat('cover-arrives', 'A teammate arrives to help just as he tries to thread a pass.', [
     opt('intercept together', 'trust the partnership', 0.7, ['positioning', 'concentration'], 1,
@@ -561,7 +561,7 @@ const defendOneVsTwo = scenario('defend-outnumbered-wide', 'defend', ['good', 'c
       { kind: 'beaten' }, 'He goes the way you didn\'t want and it opens up badly.'),
     opt('commit to the ball carrier', 'end it now — some card risk', 0.45, ['tackling'], 2,
       { kind: 'save' }, 'A brave, well-timed tackle ends the danger completely.',
-      { kind: 'continue', beatId: 'pass-comes' }, 'Missed the tackle and now it\'s worse than before.', 0.22),
+      { kind: 'continue', beatId: 'pass-comes' }, 'Missed the tackle and now it\'s worse than before.', 0.34),
   ]),
   beat('pass-comes', 'The pass is threaded across to the second man.', [
     opt('scramble across and block', 'desperate recovery', 0.45, ['pace', 'positioning'], 2,

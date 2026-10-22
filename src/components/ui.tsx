@@ -23,7 +23,7 @@ export function Icon({ src, size = 12, className = '' }: { src: string; size?: n
 export function Section({ title, children, defaultOpen = false, action }: { title: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean; action?: React.ReactNode }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <div className="rounded-lg border border-ks-border bg-[#0f0f0d] overflow-hidden">
+    <div className="ks-section rounded-lg border border-ks-border bg-[#0f0f0d] overflow-hidden">
       <div className="w-full flex items-center justify-between px-3 py-3">
         <button onClick={() => setOpen((v) => !v)} className="flex items-center gap-2 flex-1 text-left">
           <span className="font-display tracking-widest text-[10px] text-ks-muted uppercase">{title}</span>
@@ -43,12 +43,12 @@ export function Panel({ title, action, children, className = '' }: {
   className?: string
 }) {
   return (
-    <div className={`rounded-lg border border-ks-border bg-[#0f0f0d] overflow-hidden ${className}`}>
-      <div className="px-3 py-2 border-b border-ks-border/60 flex items-center justify-between gap-2">
+    <div className={`ks-panel rounded-lg border border-ks-border bg-[#0f0f0d] overflow-hidden ${className}`}>
+      <div className="ks-panel__heading px-3 py-2 border-b border-ks-border/60 flex items-center justify-between gap-2">
         <span className="font-display tracking-widest text-[10px] text-ks-muted uppercase">{title}</span>
         {action}
       </div>
-      <div className="px-3 py-2.5">{children}</div>
+      <div className="ks-panel__body px-3 py-2.5">{children}</div>
     </div>
   )
 }

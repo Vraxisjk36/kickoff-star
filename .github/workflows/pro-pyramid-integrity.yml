@@ -1,0 +1,43 @@
+name: Pro Pyramid Integrity
+
+on:
+  push:
+    branches: [codex/v32-v4-unified]
+    paths:
+      - 'src/engine/pro*.ts'
+      - 'src/engine/seniorNations.ts'
+      - 'src/engine/nations.ts'
+      - 'scripts/audit*Pyramid*.ts'
+      - 'scripts/auditAllProLeagues.ts'
+      - 'scripts/auditPromotionPlayoffs.ts'
+      - 'scripts/auditLeagueRules.ts'
+      - 'scripts/auditWorldwideInternational.ts'
+      - 'scripts/auditProLifestyle.ts'
+      - 'scripts/auditProSponsorship.ts'
+      - 'scripts/auditProCareerPhase2.ts'
+      - 'scripts/auditProWorld.ts'
+      - 'src/screens/ProCareer.tsx'
+      - 'src/screens/tabs/Pro*.tsx'
+      - 'src/store/careerStore.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/pro-pyramid-integrity.yml'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run audit:pro-pyramids
+      - run: node --import tsx scripts/auditWorldwideInternational.ts
+      - run: node --import tsx scripts/auditProLifestyle.ts
+      - run: npm run audit:pro-career
+      - run: node --import tsx scripts/auditProWorld.ts
+      - run: npm run build

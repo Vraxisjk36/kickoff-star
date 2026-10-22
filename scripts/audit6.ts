@@ -79,9 +79,9 @@ console.log('\n[B] the pipeline genuinely takes weeks')
   // Drive an ideal negotiation and count the WEEKS it consumes. A player who
   // accepts everything immediately should still need multiple weeks, because
   // each club-side stage needs a tick to progress.
-  function runFast(agentId: string) {
+  function runFast(agentId: string, kind: 'academy' | 'professional' = 'academy') {
     const p = mkPlayer({ agentId })
-    let n = startNegotiation(p, 'c1', 'Harborview FC', 6)
+    let n = startNegotiation(p, 'c1', 'Harborview FC', 6, kind)
     let week = p.totalWeeksElapsed ?? 0
     let guard = 0
     while (isLive(n) && guard++ < 60) {
@@ -106,7 +106,14 @@ console.log('\n[B] the pipeline genuinely takes weeks')
 
   const fast = runFast('independent')
   console.log(`    fastest possible path: ${fast.weeks} weeks`)
-  check(fast.weeks >= 4, `even accepting everything takes ${fast.weeks} weeks — this is not a one-day thing`)
+  check(fast.weeks === 1, `academy talks span two calendar weeks with ${fast.weeks} weekly transition`)
+  const professional = runFast('independent', 'professional')
+  check(professional.weeks >= 4, 'professional talks retain their longer stage-by-stage clock')
+  const p = mkPlayer({ agentId: 'parent' })
+  let locked = startNegotiation(p, 'c2', 'Riverton Academy', 6)
+  for (const choice of ['keen', 'accept', 'commit']) locked = resolveChoice(locked, choice, p).negotiation
+  check(locked.stage === 'medical' && !locked.awaitingPlayer && resolveChoice(locked, 'honest', p).negotiation === locked,
+    'Academy medical cannot be skipped in the opening week')
   check(fast.n.stage === 'complete', 'the happy path actually completes')
   check(STAGE_ORDER.length === 5, '5 named stages: approach → terms → agreement → medical → signing')
   check(stageIndex('approach') < stageIndex('terms') && stageIndex('medical') < stageIndex('signing'), 'stages are correctly ordered')

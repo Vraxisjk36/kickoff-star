@@ -274,7 +274,9 @@ console.log('\n[H] INJURY DECISIONS — real agency on a knock, not a zero-stake
   // and pushed to near-maximum fatigue/injury-proneness, matching how other
   // rare-event checks in this codebase (e.g. audit8's ad-boost scenarios) use
   // a large enough sample that a real miss would mean something, not just bad luck.
-  const veryRiskyPlayer = mk('ST', { fitness: { stamina: 8 }, recentInjuryCount: 5 } as Partial<Player>)
+  // Selection requires 50 energy to start. Force match stamina low after
+  // kickoff to exercise the injury roll without making the player unavailable.
+  const veryRiskyPlayer = mk('ST', { fitness: { stamina: 50 }, recentInjuryCount: 5 } as Partial<Player>)
   for (let run = 0; run < 250 && !sawInjuryDecisionMoment; run++) {
     const t = generateTeam(4), o = generateTeam(4)
     let s = { ...initMatch(veryRiskyPlayer, t, o, true), matchStamina: 8 }

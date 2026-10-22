@@ -4,7 +4,7 @@ import { useCareerStore } from '../../store/careerStore'
 import {
   shopFor, itemById, equipmentBoosts, monthlyAllowance, allowanceDue,
   availableJobs, rewardForStreak, formatMoney, canWorkThisWeek, weeklyLivingCost, ALLOWANCE_INTERVAL_WEEKS,
-  type ShopItem,
+  playerShopPrice, rewardedCashAmount, type ShopItem,
 } from '../../engine/economy'
 import { Panel, EmptyNote, Icon } from '../../components/ui'
 import iconContract from '../../assets/icons/contract.png'
@@ -14,7 +14,7 @@ import iconEnergy from '../../assets/icons/energy.png'
 import iconBoots from '../../assets/icons/boots.png'
 import iconTraining from '../../assets/icons/training.png'
 import AnimatedNumber from '../../components/AnimatedNumber'
-import { watchRewardedAd, remainingToday } from '../../engine/ads'
+import { watchRewardedAd, remainingToday, rewardedAdsAvailable } from '../../engine/ads'
 import { getAgent, netWage } from '../../engine/agents'
 
 // P29/P34 — the money screen. Everything is earnable in-game: allowance, odd
@@ -37,7 +37,8 @@ function Money({ amount }: { amount: number }) {
 }
 
 function ItemCard({ item, player, onBuy }: { item: ShopItem; player: Player; onBuy: (id: string) => void }) {
-  const affordable = (player.money ?? 0) >= item.price
+  const price=playerShopPrice(player,item)
+  const affordable = (player.money ?? 0) >= price
   const owned = (player.equipment ?? []).find((o) => o.itemId === item.id)
   const held = (player.consumables ?? {})[item.id] ?? 0
 
@@ -46,8 +47,22 @@ function ItemCard({ item, player, onBuy }: { item: ShopItem; player: Player; onB
       <div className="flex items-start gap-2 mb-1">
         <span className="text-[11px] text-ks-ink flex-1 leading-snug">{item.name}</span>
         {held > 0 && <span className="text-[9px] text-ks-gold uppercase tracking-wider shrink-0">x{held}</span>}
-        {owned && <span className="text-[9px] text-ks-gold uppercase tracking-wider shrink-0">{owned.weeksRemaining}w left</span>}
+        {owned && <span className="text-[9px] text-ks-gold uppercase tracking-wider shrink-0">{owned.condition ?? Math.round((owned.weeksRemaining / Math.max(1, item.durationWeeks ?? owned.weeksRemaining)) * 100)}% · {owned.weeksRemaining}w</span>}
       </div>
+
+      {(player.finances?.transactions.length ?? 0) > 0 && (
+        <Panel title={<span className="flex items-center gap-1"><Icon src={iconCoins} />recent transactions</span>}>
+          <div className="flex flex-col gap-1.5">
+            {[...(player.finances?.transactions ?? [])].reverse().slice(0, 6).map((transaction) => (
+              <div key={transaction.id} className="flex items-center gap-2 text-[10px]">
+                <span className="text-ks-muted w-8">wk {transaction.week}</span>
+                <span className="text-ks-ink flex-1 truncate">{transaction.description}</span>
+                <span className={transaction.amount >= 0 ? 'text-green-500' : 'text-orange-400'}>{transaction.amount >= 0 ? '+' : '−'}{formatMoney(Math.abs(transaction.amount))}</span>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      )}
       <p className="text-[10px] text-ks-muted leading-relaxed mb-2">{item.description}</p>
       <button
         onClick={() => onBuy(item.id)}
@@ -58,7 +73,7 @@ function ItemCard({ item, player, onBuy }: { item: ShopItem; player: Player; onB
             : 'border border-ks-border text-ks-muted/50'
         }`}
       >
-        {affordable ? `buy · ${formatMoney(item.price)}` : `${formatMoney(item.price)} — can't afford`}
+        {affordable ? `buy · ${formatMoney(price)}` : `${formatMoney(item.price)} — can't afford`}
       </button>
     </div>
   )
@@ -69,6 +84,8 @@ export default function ShopTab({ player }: { player: Player }) {
   // number, people love it." Only animates on a REAL change — prevMoney
   // lags one render behind, so AnimatedNumber gets a genuine from->to on
   // the render right after money changes, not a restart every re-render.
+  const isPro = !!player.turnedPro && !!player.proCareer
+  const cashReward=rewardedCashAmount(player)
   const currentMoney = player.money ?? 0
   const prevMoneyRef = useRef(currentMoney)
   const [displayFrom, setDisplayFrom] = useState(currentMoney)
@@ -87,6 +104,7 @@ export default function ShopTab({ player }: { player: Player }) {
   const sendMoneyHome = useCareerStore((s) => s.sendMoneyHome)
   const [flash, setFlash] = useState<string | null>(null)
   const [section, setSection] = useState<'kit' | 'jobs'>('kit')
+  const [cashAdBusy, setCashAdBusy] = useState(false)
 
   const say = (msg: string) => { setFlash(msg); window.setTimeout(() => setFlash(null), 2600) }
 
@@ -112,14 +130,29 @@ export default function ShopTab({ player }: { player: Player }) {
             <div className="font-display text-3xl text-ks-gold tabular-nums leading-none">£<AnimatedNumber from={displayFrom} to={currentMoney} duration={700} /></div>
           </div>
           <div className="text-right">
-            <div className="text-[9px] text-ks-muted uppercase tracking-wider">allowance</div>
-            <div className="text-[11px] text-ks-ink">{formatMoney(monthlyAllowance(player))} / {ALLOWANCE_INTERVAL_WEEKS}wks</div>
+            <div className="text-[9px] text-ks-muted uppercase tracking-wider">{isPro ? 'professional wage' : 'allowance'}</div>
+            <div className="text-[11px] text-ks-ink">{isPro ? formatMoney(player.contract?.terms.weeklyWage ?? 0) : formatMoney(monthlyAllowance(player))} / {isPro ? 'week' : `${ALLOWANCE_INTERVAL_WEEKS}wks`}</div>
             <div className="text-[9px] text-ks-muted">
-              {allowanceDue(player) ? 'due now' : `in ${Math.max(0, weeksToAllowance)}w`}
+              {isPro ? player.proCareer?.freeAgentSinceWeek !== undefined ? 'free agent' : 'first team' : allowanceDue(player) ? 'due now' : `in ${Math.max(0, weeksToAllowance)}w`}
             </div>
           </div>
         </div>
       </div>
+
+      {rewardedAdsAvailable() && remainingToday('cash') > 0 && <section className="rounded-xl border border-ks-gold/50 bg-gradient-to-r from-[#1d1b11] to-[#11130e] p-4">
+        <div className="font-display tracking-widest text-[10px] text-ks-gold">EXTRA POCKET MONEY</div>
+        <p className="text-xs text-ks-ink mt-1">{formatMoney(cashReward)} toward recovery or kit. No energy cost.</p>
+        <button type="button" disabled={cashAdBusy} onClick={async () => {
+          if (cashAdBusy) return
+          setCashAdBusy(true)
+          try {
+            const reward = await watchRewardedAd('cash')
+            if (reward) { grantCashFromAd(cashReward); say('earned '+formatMoney(cashReward)) }
+            else say('ad unavailable or not completed')
+          } finally { setCashAdBusy(false) }
+        }} className="mt-3 w-full min-h-12 rounded-lg bg-ks-gold text-ks-black font-display text-sm disabled:opacity-50">{cashAdBusy ? 'LOADING AD…' : 'WATCH AD · GET '+formatMoney(cashReward)}</button>
+        <p className="mt-2 text-[10px] text-ks-muted">Optional · {remainingToday('cash')} available today · odd jobs and allowance still work as usual</p>
+      </section>}
 
       {/* P30: once you're on a scholarship, wages replace the allowance as the
           main income — so the contract belongs on the money screen. */}
@@ -129,7 +162,7 @@ export default function ShopTab({ player }: { player: Player }) {
             <div className="flex items-end justify-between">
               <div>
                 <div className="text-[11px] text-ks-ink">{player.contract.clubName}</div>
-                <div className="text-[9px] text-ks-muted uppercase tracking-wider">scholarship</div>
+                <div className="text-[9px] text-ks-muted uppercase tracking-wider">{isPro ? 'professional contract' : 'scholarship'}</div>
               </div>
               <div className="text-right">
                 <div className="font-display text-xl text-ks-gold leading-none">
@@ -145,7 +178,7 @@ export default function ShopTab({ player }: { player: Player }) {
             <div className="border-t border-ks-border/60 pt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
               <MiniRow label="per appearance" value={formatMoney(player.contract.terms.appearanceFee)} />
               <MiniRow label="per goal" value={formatMoney(player.contract.terms.goalBonus)} />
-              <MiniRow label="digs & travel" value={`−${formatMoney(weeklyLivingCost(player))}/wk`} />
+              <MiniRow label={isPro ? 'monthly residence' : 'digs & travel'} value={isPro ? formatMoney(player.proCareer?.residence?.monthlyRent ?? 0) : `−${formatMoney(weeklyLivingCost(player))}/wk`} />
               <MiniRow label="career earnings" value={formatMoney(player.careerEarnings ?? 0)} />
               <MiniRow label="agent fees paid" value={formatMoney(player.agentFeesPaid ?? 0)} />
             </div>
@@ -251,7 +284,7 @@ export default function ShopTab({ player }: { player: Player }) {
       </Panel>
 
       <div className="flex gap-1.5 p-1 rounded-xl bg-[#0f0f0d] border border-ks-border">
-        {(['kit', 'jobs'] as const).map((v) => (
+        {(['kit', ...(!isPro ? ['jobs' as const] : [])] as const).map((v) => (
           <button
             key={v}
             onClick={() => setSection(v)}
@@ -320,20 +353,6 @@ export default function ShopTab({ player }: { player: Player }) {
             One job a week, and it costs more energy than the wages can buy back in drinks —
             you work for boots, not for stamina.
           </p>
-          {/* P64 — a free alternative that costs no in-game energy, just
-              real attention — deliberately paid less than the cheapest
-              odd job since it doesn't compete with the actual economy. */}
-          {remainingToday('cash') > 0 && (
-            <button
-              onClick={async () => {
-                const reward = await watchRewardedAd('cash')
-                if (reward) { grantCashFromAd(10); say('earned £10') }
-              }}
-              className="w-full mt-2 rounded-lg border border-ks-border bg-[#0f0f0d] py-2 font-display tracking-widest text-[10px] uppercase text-ks-muted"
-            >
-              watch ad for £10 · {remainingToday('cash')} left today
-            </button>
-          )}
         </Panel>
       )}
     </div>

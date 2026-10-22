@@ -124,8 +124,8 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
   }} />
   return <div className="relative pb-4">
     <WeeklyHub tab={tab} onTabChange={setTab} onOpenOffers={() => setTab('club')} onExitToMenu={onExitToMenu} league={world} academyLeague={null} playerTeam={team} playerDivision={division} proCalendar={calendar} onProTrain={beginTraining} proMatchKind={kind} proMatchOpponent={opponent?.name} proMatchDate={matchDate} />
-    <div className="career-continue fixed left-0 right-0 px-3 py-2 max-w-md mx-auto z-20 rounded-t-2xl border border-ks-gold/25 bg-[#0d120e]/95 backdrop-blur-xl shadow-[0_-10px_32px_rgba(0,0,0,.7)]" style={{ bottom: 'calc(var(--safe-bottom) + 4.25rem)' }}>
-      <button className="w-full flex items-center justify-between gap-3 bg-gradient-to-r from-[#d4af37] to-[#f2d979] text-[#15170e] font-display tracking-wide rounded-xl px-4 py-3 text-xs shadow-lg active:scale-[.99] transition-transform" onClick={() => matchReady && day === matchDay ? (!player.injury && !(player.suspensionMatches ?? 0) && player.fitness.stamina >= 30 ? setMode('matchday') : sitOut()) : canTrain ? setMode('training') : advance()}>
+    <div className="career-continue fixed right-3 z-20 w-[min(76vw,290px)] pointer-events-none" style={{ bottom: 'calc(var(--safe-bottom) + 5.2rem)' }}>
+      <button className="pointer-events-auto w-full truncate bg-gradient-to-r from-[#d4af37] to-[#f2d979] text-[#15170e] font-display tracking-wide rounded-full border border-[#fff2aa]/50 px-3 py-3 text-[11px] shadow-[0_6px_25px_rgba(0,0,0,.7)] active:scale-[.98] transition-transform" onClick={() => matchReady && day === matchDay ? (!player.injury && !(player.suspensionMatches ?? 0) && player.fitness.stamina >= 30 ? setMode('matchday') : sitOut()) : canTrain ? setMode('training') : advance()}>
         {matchReady && day===matchDay
           ? national ? `INTERNATIONAL · ${getNation(national.opponentId).name} →`
             : player.injury || (player.suspensionMatches??0)>0 || player.fitness.stamina<30 ? 'UNAVAILABLE · SIMULATE MATCH →' : `MATCHDAY · ${opponent?.name??'OPPONENT'} →`

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import TopScorers from '../../components/TopScorers'
 import type { Player } from '../../types/player'
 import type { Division } from '../../engine/league'
@@ -17,6 +18,7 @@ export default function ClubTab({ player, playerTeam, division, isAcademy, isPro
   isAcademy: boolean
   isPro?: boolean
 }) {
+  const [clubView,setClubView]=useState<'overview'|'squad'|'division'>('overview')
   const sorted = sortStandings(division.standings)
   const pos = sorted.findIndex((s) => s.teamId === playerTeam.id) + 1
   const standing = sorted.find((s) => s.teamId === playerTeam.id)
@@ -30,6 +32,8 @@ export default function ClubTab({ player, playerTeam, division, isAcademy, isPro
     <div className="flex flex-col gap-2.5">
       <section className="club-hero" style={{'--club-primary':playerTeam.primaryColor,'--club-secondary':playerTeam.secondaryColor} as React.CSSProperties}><div className="club-stand"/><small>{isPro ? 'PROFESSIONAL CLUB' : isAcademy?'ACADEMY CLUB':player.grassrootsPath==='school'?'SCHOOL TEAM':'GRASSROOTS CLUB'} · {divName}</small><div className="club-identity"><TeamCrest primary={playerTeam.primaryColor} secondary={playerTeam.secondaryColor} short={playerTeam.short} /><div><h2>{playerTeam.name}</h2><p>{pos>0?ordinal(pos):'—'} IN LEAGUE · PRESTIGE {playerTeam.prestige}/10</p></div><div className="club-strength"><b>{teamOverall(playerTeam)}</b><span>TEAM OVR</span></div></div><div className="club-record"><div><span>PLAYED</span><b>{standing?.played??0}</b></div><div><span>W-D-L</span><b>{standing?.won??0}-{standing?.drawn??0}-{standing?.lost??0}</b></div><div><span>POINTS</span><b>{standing?.points??0}</b></div><div><span>GD</span><b>{((standing?.goalsFor??0)-(standing?.goalsAgainst??0))>0?'+':''}{(standing?.goalsFor??0)-(standing?.goalsAgainst??0)}</b></div></div></section>
 
+      {isPro && <nav aria-label="Club sections" className="sticky top-[7.5rem] z-10 grid grid-cols-3 gap-1 rounded-xl border border-ks-gold/25 bg-[#12160f]/95 backdrop-blur-xl p-1">{(['overview','squad','division'] as const).map(view=><button key={view} onClick={()=>setClubView(view)} aria-current={clubView===view?'page':undefined} className={`rounded-lg py-3 text-[11px] font-display uppercase tracking-wide transition-all ${clubView===view?'bg-gradient-to-r from-[#c9a43a] to-[#f0d577] text-[#16170e] shadow-md':'text-ks-muted hover:text-ks-ink'}`}>{view}</button>)}</nav>}
+      {(!isPro||clubView==='overview') && <>
       <div className="home-section-label"><span>SQUAD PROFILE</span><i/></div><Panel title="💪 team strength">
         <div className="flex flex-col gap-1.5">
           {(['attack', 'midfield', 'defense'] as const).map((line) => (
@@ -59,7 +63,8 @@ export default function ClubTab({ player, playerTeam, division, isAcademy, isPro
         </div>
       </Panel>
 
-      <Panel title="🎽 squad">
+      </>}
+      {(!isPro||clubView==='squad') && <Panel title="🎽 squad">
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2 rounded-md border border-ks-gold/40 bg-ks-gold/10 px-2 py-2">
             <span className="text-[9px] text-ks-gold w-8">YOU</span>
@@ -79,6 +84,7 @@ export default function ClubTab({ player, playerTeam, division, isAcademy, isPro
         </div>
       </Panel>
 
+      {(!isPro||clubView==='division') && <> 
       <div className="home-section-label"><span>THE DIVISION</span><i/></div>
       <Panel title={`rivals — ${divName}`}>
         <div className="flex flex-col gap-2">
@@ -106,7 +112,8 @@ export default function ClubTab({ player, playerTeam, division, isAcademy, isPro
         </div>
       </Panel>
 
-      <Panel title="🗓️ your season">
+      </>}
+      {(!isPro||clubView==='overview') && <Panel title="🗓️ your season">
         <div className="flex flex-col gap-1.5">
           <StatRow label="goals" value={player.seasonGoals ?? 0} />
           <StatRow label="assists" value={player.seasonAssists ?? 0} />
@@ -119,7 +126,7 @@ export default function ClubTab({ player, playerTeam, division, isAcademy, isPro
             }
           />
         </div>
-      </Panel>
+      </Panel>}
     </div>
   )
 }

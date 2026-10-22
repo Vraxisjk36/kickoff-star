@@ -12,6 +12,7 @@ const scenes = {
   people: { eyebrow: 'YOUR INNER CIRCLE', title: 'EVERY BOND COUNTS.', mark: '03', tint: 'blue' },
   fixtures: { eyebrow: 'COMPETITION CENTRE', title: 'THE ROAD AHEAD.', mark: '04', tint: 'amber' },
   table: { eyebrow: 'COMPETITION CENTRE', title: 'THE ROAD AHEAD.', mark: '04', tint: 'amber' },
+  lifestyle: { eyebrow: 'LIFESTYLE', title: 'LIFE BEYOND FOOTBALL.', mark: '06', tint: 'teal' },
   shop: { eyebrow: 'OFF THE PITCH', title: 'BUILD YOUR FUTURE.', mark: '05', tint: 'teal' },
   scouts: { eyebrow: 'PLAYER DOSSIER', title: 'THE MAKING OF A PLAYER', mark: '01', tint: 'gold' },
 } as const

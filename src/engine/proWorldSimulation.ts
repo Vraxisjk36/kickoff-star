@@ -9,7 +9,7 @@ import { brazilSerieDQualification } from './proBrazilSerieD'
 import { spanishSegundaFederacion, italianSerieD, portugueseCampeonato, southAfricaProvincial, promotionEligible } from './proRegionalRules'
 import { createAcademyIntake, hydrateDeepDivisions, hydrateFifthDivisions, hydrateGroupedFourthDivisions, hydrateGroupedFifthDivisions, hydrateGroupedDivisions, hydrateLowerDivisions, hydrateNewBackgroundLeagues, createProWorld, newProLeagueSeason, proRoll } from './proWorldFactory'
 import { ageOf, growOrDecline, nextShirtNumber, seasonalInjury, shouldRetire, signBackgroundReplacement } from './proLifecycle'
-import { advanceTournamentsTo, beginClubWorldSeason, beginContinentalSeason, beginNationsLeague, beginWorldQualifiers, beginDomesticSeason, beginNationalSeason, beginWorldSeason, beginSouthAfricanTopEight, invalidateTournamentCalendar } from './proTournaments'
+import { advanceTournamentsTo, beginClubWorldSeason, beginContinentalSeason, beginNationsLeague, beginWorldQualifiers, beginDomesticSeason, beginNationalSeason, beginWorldSeason, beginSouthAfricanTopEight, beginPreseasonInvitational, invalidateTournamentCalendar } from './proTournaments'
 import type { IsoDate, ProClub, ProFixture, ProPlayer, ProStandingRow, ProWorldState } from './proWorld'
 
 function ordered(rows: ProStandingRow[]): ProStandingRow[] {
@@ -730,8 +730,11 @@ export function advanceProWorldTo(source: ProWorldState, targetDate: IsoDate): P
       beginWorldSeason(world, Number(milestone.date.slice(0, 4)))
       beginClubWorldSeason(world, Number(milestone.date.slice(0, 4)))
     }
-    if (milestone.kind === 'summer-cups' && world.competitions['mtn8-rsa']?.seasonId !== milestone.date.slice(0, 4))
-      beginSouthAfricanTopEight(world, Number(milestone.date.slice(0, 4)))
+    if (milestone.kind === 'summer-cups') {
+      if (world.competitions['mtn8-rsa']?.seasonId !== milestone.date.slice(0, 4))
+        beginSouthAfricanTopEight(world, Number(milestone.date.slice(0, 4)))
+      beginPreseasonInvitational(world, Number(milestone.date.slice(0, 4)))
+    }
     if (milestone.kind === 'continental' && world.competitions['continental-uefa']?.seasonId !== milestone.date.slice(0, 4)) {
       beginContinentalSeason(world, Number(milestone.date.slice(0, 4)))
       beginNationsLeague(world, Number(milestone.date.slice(0, 4)))

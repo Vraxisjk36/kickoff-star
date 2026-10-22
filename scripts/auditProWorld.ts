@@ -14,6 +14,14 @@ assert.equal(clubSeasonPhase('2026-06-15'), 'off-season')
 assert.equal(clubSeasonPhase('2026-07-15'), 'pre-season')
 assert.equal(clubSeasonPhase('2026-07-15', true), 'international-duty')
 assert.equal(clubSeasonPhase('2026-08-15'), 'regular-season')
+const playableNine = ['eng', 'esp', 'ger', 'fra', 'ita', 'ned', 'por', 'sco', 'rsa']
+for (const association of playableNine) {
+  const profile = proCalendarProfile(association, 2026)
+  assert.equal(profile.startMonth, 8, `${association}: August league start`)
+  assert.equal(profile.endMonth, 5, `${association}: May league finish`)
+  assert.deepEqual(validateCalendarProfile(profile), [], `${association}: valid calendar`)
+}
+
 assert.deepEqual(validateProLeaguePlan(), [])
 assert.equal(PRO_LEAGUE_PLAN.length, 100)
 assert.equal(PRO_SATELLITE_ASSOCIATIONS.length, 118)

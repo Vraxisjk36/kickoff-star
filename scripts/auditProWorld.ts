@@ -86,9 +86,9 @@ assert.equal(signed.world.clubs[buyer.id].finances.cash, buyer.finances.cash - g
 const start = performance.now()
 const firstSummer = advanceProWorldTo(world, '2026-07-15')
 for (const country of playableNine) {
-  const comp = firstSummer.competitions[`preseason-${country}`]
-  assert.equal(comp?.seasonId, '2026', `${country}: July invitational created`)
-  const games = Object.values(firstSummer.fixtures).filter(game => game.competitionId === `preseason-${country}`)
+  const cups = Object.values(firstSummer.competitions).filter(comp => comp.id.startsWith(`preseason-${country}-`))
+  assert.ok(cups.length > 0 && cups.every(comp => comp.seasonId === '2026'), `${country}: July invitationals created`)
+  const games = Object.values(firstSummer.fixtures).filter(game => game.competitionId.startsWith(`preseason-${country}-`))
   assert.ok(games.length > 0 && games.every(game => game.kickoffDate.slice(5, 7) === '07'), `${country}: July tournament fixtures`)
 }
 const firstAutumn = advanceProWorldTo(firstSummer, '2026-11-15')

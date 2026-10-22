@@ -1,6 +1,6 @@
 import { nextProMilestone } from '../src/engine/proMilestones'
 import { allPlayableRecordCatalog, proLeagueRecords, worldPlayerAwards } from '../src/engine/proHonours'
-import { proWorldClubIdentity } from '../src/engine/proWorldFactory'
+import { proWorldClubIdentity, proClubTacticalIdentity } from '../src/engine/proWorldFactory'
 import { seniorTrialOffers } from '../src/engine/proTrialOffers'
 import assert from 'node:assert/strict'
 import type { Player } from '../src/types/player'
@@ -30,7 +30,15 @@ import { PRO_INTERACTIVE_COUNTRIES, PRO_LEAGUE_PLAN, canStartInteractiveProCaree
 assert.equal(proRatingTarget('eng',1,4,20),82,'Manchester Red squad target')
 assert.equal(proClubReputationTarget('eng',1,4,82),94,'Manchester Red heritage')
 assert.equal(proRatingTarget('eng',1,0,20),88,'Manchester Sky squad target')
+// Distinct tactical DNA survives deterministic world generation and does not
+// depend on the current table position or historical reputation.
+assert.equal(proClubTacticalIdentity('eng',1,0),'possession','Manchester Sky philosophy')
+assert.equal(proClubTacticalIdentity('eng',1,4),'counter','Manchester Red philosophy')
+assert.equal(proClubTacticalIdentity('esp',1,0),'possession','Royal Madrid philosophy')
+assert.notEqual(proClubTacticalIdentity('eng',1,0),proClubTacticalIdentity('eng',1,4))
 const reputationWorld = createProWorld(1907,'2026-08-01')
+assert.equal(reputationWorld.managers['manager-club-eng-01'].tacticalStyle,'possession')
+assert.equal(reputationWorld.managers['manager-club-eng-05'].tacticalStyle,'counter')
 const manRed = reputationWorld.clubs['club-eng-05']
 assert.equal(manRed.reputation,94)
 const manRedPlayers = Object.values(reputationWorld.players).filter(player=>player.clubId===manRed.id)

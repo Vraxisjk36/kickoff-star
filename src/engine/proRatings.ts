@@ -13,8 +13,18 @@ const TOP_FLIGHT_BASE: Readonly<Record<string,number>>={
 const confedFallback:Readonly<Record<string,number>>={
   uefa:70,conmebol:68,concacaf:63,caf:60,afc:62,ofc:54
 }
+/** Initial first-team strength by stable club identity (not league position).
+ * Fictional gameplay targets, not copied EA SPORTS FC database ratings.
+ * Subsequent seasons remain governed by simulated form and development.
+ */
+const FEATURED_CLUB_STRENGTH: Readonly<Record<string,readonly number[]>> = {
+  eng: [88,88,88,84,79,79,82,83,77,80,76,78,77,77,77,73,75,72,76,72],
+  esp: [89,88,85,82,81,80,79,79,77,79,76,76,75,76,76,73,76,74,72,72],
+}
 export function proRatingTarget(country:string,tier:number,rank:number,clubs:number,
   confederation='uefa'):number {
+  if (tier === 1 && FEATURED_CLUB_STRENGTH[country]?.[rank] !== undefined)
+    return FEATURED_CLUB_STRENGTH[country][rank]
   const base=TOP_FLIGHT_BASE[country]??confedFallback[confederation]??64
   const position=clubs>1?rank/(clubs-1):.5
   // Top European clubs 84-87; typical PL side 76-82. Lower divisions

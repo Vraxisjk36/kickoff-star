@@ -125,7 +125,7 @@ export function recoveryPrice(player:Player,basePrice:number):number {
 export function rewardedCashAmount(player:Player):number {
   if (!player.turnedPro || !player.proCareer) return 10
   const wage=Math.max(350,player.contract?.terms.weeklyWage??350)
-  return Math.min(10000,Math.max(75,Math.round(Math.sqrt(wage/350)*75/25)*25))
+  return Math.max(100,Math.round(wage*.4/25)*25)
 }
 export function playerShopPrice(player:Player,item:ShopItem):number {
   return item.kind==='consumable'?recoveryPrice(player,item.price):item.price

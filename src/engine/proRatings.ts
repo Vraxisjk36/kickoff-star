@@ -18,8 +18,19 @@ const confedFallback:Readonly<Record<string,number>>={
  * Subsequent seasons remain governed by simulated form and development.
  */
 const FEATURED_CLUB_STRENGTH: Readonly<Record<string,readonly number[]>> = {
-  eng: [88,88,88,84,79,79,82,83,77,80,76,78,77,77,77,73,75,72,76,72],
+  eng: [88,88,88,84,82,79,82,83,77,80,76,78,77,77,77,73,75,72,76,72],
   esp: [89,88,85,82,81,80,79,79,77,79,76,76,75,76,76,73,76,74,72,72],
+}
+/** Club heritage is distinct from present-day squad quality.
+ * Indexed by original club identity so promotions do not alter history.
+ */
+const FEATURED_CLUB_HERITAGE: Readonly<Record<string,Readonly<Record<number,number>>>> = {
+  eng: {0:91,1:91,2:96,3:89,4:94,5:87,6:85,7:84},
+  esp: {0:98,1:97,2:90,3:85,4:83},
+}
+export function proClubReputationTarget(country:string,tier:number,rank:number,squadStrength:number):number {
+  const heritage=tier===1?FEATURED_CLUB_HERITAGE[country]?.[rank]:undefined
+  return Math.max(35,Math.min(99,heritage??squadStrength))
 }
 export function proRatingTarget(country:string,tier:number,rank:number,clubs:number,
   confederation='uefa'):number {

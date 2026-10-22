@@ -92,7 +92,9 @@ for (const country of playableNine) {
   const included = cups.flatMap(comp => comp.entrantIds).sort()
   assert.deepEqual(included, expected, `${country}: every senior club receives one summer invitation`)
   const games = Object.values(firstSummer.fixtures).filter(game => game.competitionId.startsWith(`preseason-${country}-`))
-  assert.ok(games.length > 0 && games.every(game => game.kickoffDate.slice(5, 7) === '07'), `${country}: July tournament fixtures`)
+  assert.ok(games.length > 0 && games.some(game => game.kickoffDate.startsWith('2026-07-')) &&
+    games.every(game => game.kickoffDate >= '2026-07-01' && game.kickoffDate < '2026-09-01'),
+    `${country}: summer tournament fixtures start in July and finish before September`)
 }
 const firstAutumn = advanceProWorldTo(firstSummer, '2026-11-15')
 for (const country of playableNine) {

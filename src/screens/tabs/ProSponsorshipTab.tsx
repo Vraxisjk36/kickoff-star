@@ -23,7 +23,7 @@ export default function ProSponsorshipTab({player}:{player:Player}){
      <button type="button" onClick={()=>setSection('offers')} aria-current={section==='offers'?'page':undefined} className={`min-h-11 rounded-lg text-xs font-display ${section==='offers'?'bg-ks-gold text-ks-black':'text-ks-muted'}`}>OFFERS ({sponsorships?.offers?.length??0})</button>
      <button type="button" onClick={()=>setSection('contracts')} aria-current={section==='contracts'?'page':undefined} className={`min-h-11 rounded-lg text-xs font-display ${section==='contracts'?'bg-ks-gold text-ks-black':'text-ks-muted'}`}>MY DEALS ({sponsorships?.contracts?.length??0})</button>
    </nav>
-   {message&&<p role="status" className="text-xs text-ks-gold mb-3">{message}</p>
+   {message&&<p role="status" className="text-xs text-ks-gold mb-3">{message}</p>}
    {section==='offers' && <>
    <p className="text-xs font-display text-ks-ink mb-2">CONTRACT OFFERS</p>
    {(sponsorships?.offers??[]).map(o=><div key={o.id} className="border border-ks-border rounded-lg p-3 mb-2">

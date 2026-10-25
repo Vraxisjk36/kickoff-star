@@ -6,7 +6,7 @@ import { registrationOpen } from './proMovement'
 import { worldPlayerAwards, proLeagueRecords, type PlayerAward } from './proHonours'
 
 export interface ProMilestone {
-  id:string;kind:'competition'|'transfer'|'ceremony'|'record'
+  id:string;kind:'competition'|'transfer'|'ceremony'|'record'|'retirement'
   eyebrow:string;title:string;description:string;detail:string
   winners?:PlayerAward[]
 }
@@ -19,6 +19,18 @@ const awardCeremony=(season:ProSeasonRecord):ProMilestone=>({
 })
 export function nextProMilestone(state:ProCareerState,cup?:ProFixture|null):ProMilestone|null {
   const seen=new Set(state.seenMilestones??[])
+  if(state.retired && !seen.has('career:retirement')){
+    const seasons=state.seasonRecords??[]
+    const appearances=seasons.reduce((total,season)=>total+season.appearances,0)
+    const goals=seasons.reduce((total,season)=>total+season.goals,0)
+    const assists=seasons.reduce((total,season)=>total+season.assists,0)
+    const titles=seasons.filter(season=>season.leagueChampion).length
+    const clubs=new Set(seasons.map(season=>season.clubName)).size
+    return {id:'career:retirement',kind:'retirement',eyebrow:'THE FINAL WHISTLE',
+      title:'A CAREER TO REMEMBER',
+      description:`After ${seasons.length} completed seasons across ${clubs} club${clubs===1?'':'s'}, your professional journey has come to an end.`,
+      detail:`Career ledger: ${appearances} appearances · ${goals} goals · ${assists} assists · ${titles} league title${titles===1?'':'s'}. Your story is written into football history.`}
+  }
   const previous=state.seasonRecords?.find(r=>r.season===state.season-1)
   if(previous && state.week===1){
     const candidate=awardCeremony(previous)

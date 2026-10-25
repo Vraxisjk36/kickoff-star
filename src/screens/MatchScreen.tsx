@@ -309,14 +309,14 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
   const clockLabel = displayMinute > 90 ? `90+${displayMinute - 90}'` : `${displayMinute}'`
 
   return (
-    <div className="match-screen relative h-[100dvh] w-full bg-ks-black flex flex-col overflow-hidden">
+    <div className="match-screen relative h-[100dvh] w-full bg-ks-black flex flex-col overflow-hidden isolate">
       {captainMoment && caughtUp && (
         <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center px-5">
-          <div className="w-full max-w-md max-h-[85dvh] overflow-y-auto rounded-2xl border border-ks-gold/40 bg-[#0f0f0d] p-5 shadow-2xl">
+          <div className="w-full max-w-md max-h-[85dvh] overflow-y-auto rounded-2xl border border-ks-gold/40 bg-gradient-to-br from-[#252313] via-[#141b13] to-[#0f0f0d] p-5 shadow-[0_22px_70px_rgba(0,0,0,.65)]">
             <div className="text-[10px] uppercase tracking-[0.28em] text-ks-gold font-display mb-2">© Captain's Moment</div>
             <div className="text-ks-ink text-base font-display mb-5">{captainMoment.situation}</div>
             <div className="flex flex-col gap-2">
-              {captainMoment.options.map((o,i)=><button key={i} onClick={()=>handleCaptainChoice(i)} className="w-full text-left rounded-xl border border-ks-border bg-black/30 px-4 py-3 text-sm text-ks-ink active:border-ks-gold">{o.label}</button>)}
+              {captainMoment.options.map((o,i)=><button key={i} onClick={()=>handleCaptainChoice(i)} className="w-full min-h-12 text-left rounded-xl border border-ks-border bg-black/30 px-4 py-3 text-sm text-ks-ink active:border-ks-gold active:scale-[.99] transition-transform focus-visible:outline focus-visible:outline-2 focus-visible:outline-ks-gold">{o.label}</button>)}
             </div>
           </div>
         </div>
@@ -556,7 +556,7 @@ export default function MatchScreen({ player, playerTeam, opponent, playerIsHome
                 minutesPlayed: Math.max(0, Math.min(state.minute, state.subMinute ?? state.minute) - state.entryMinute), yellowCards: state.yellowCards,
               })
             }}
-            className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-3.5 text-sm shadow-[0_0_25px_rgba(212,175,55,0.3)]"
+            className="w-full min-h-12 bg-gradient-to-r from-[#d4af37] to-[#f3d979] text-[#12170e] font-display tracking-wide rounded-xl py-3.5 text-sm shadow-[0_10px_30px_rgba(212,175,55,.22)] active:scale-[.98] transition-transform"
           >
             match summary →
           </button>

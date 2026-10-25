@@ -48,6 +48,8 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
   const [shopView,setShopView]=useState<'sponsors'|'essentials'|'finances'>('sponsors')
   const [fixtureFilter,setFixtureFilter]=useState<'upcoming'|'results'>('upcoming')
   const [fixtureLimit,setFixtureLimit]=useState(8)
+  const [archiveExpanded,setArchiveExpanded]=useState(false)
+  const [clubDetailsExpanded,setClubDetailsExpanded]=useState(false)
   const [proLeagueView, setProLeagueView] = useState<'fixtures' | 'table' | 'international' | 'world'>('fixtures')
   const windowOpen = pro.freeAgentSinceWeek !== undefined || (pro.date ? registrationOpen(pro.associationId ?? 'eng', pro.date) : false)
   const championshipCycle = internationalCycle(pro.season)
@@ -76,7 +78,7 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
           <button onClick={()=>setHomeView('schedule')} className="rounded-xl border border-ks-gold/30 bg-[#17190f] p-3 text-left"><span className="block text-[10px] text-ks-gold font-display">TODAY</span><span className="block text-ks-ink text-sm mt-2">{proTrainingAvailable(pro.day??0,proMatchDay(pro,matchKind??'league',matchDate))?'Training session':'Match preparation'}</span><span className="block text-[10px] text-ks-muted mt-1">View schedule →</span></button>
           <button onClick={()=>onGoTo('club')} className="rounded-xl border border-ks-border bg-[#111710] p-3 text-left"><span className="block text-[10px] text-ks-gold font-display">YOUR CONTRACT</span><span className="block text-ks-ink text-sm mt-2">£{(player.contract?.terms.weeklyWage??0).toLocaleString()}/wk</span><span className="block text-[10px] text-ks-muted mt-1">Club & transfers →</span></button>
           <button onClick={()=>onGoTo('fixtures')} className="rounded-xl border border-ks-border bg-[#111710] p-3 text-left"><span className="block text-[10px] text-ks-gold font-display">LEAGUE POSITION</span><span className="block text-ks-ink text-xl mt-1 font-display">#{table.findIndex(r=>r.teamId===club.id)+1}</span><span className="block text-[10px] text-ks-muted mt-1">{row.points} pts · Fixtures →</span></button>
-          <button onClick={()=>onGoTo('player')} className="rounded-xl border border-ks-border bg-[#111710] p-3 text-left"><span className="block text-[10px] text-ks-gold font-display">TEAM STATUS</span><span className="block text-ks-ink text-sm mt-2">{player.squadRole==='starting-xi'?'Starting XI':'First team'}</span><span className="block text-[10px] text-ks-muted mt-1">Coach trust {Math.round(player.coachTrust??50)} →</span></button>
+          <button onClick={()=>onGoTo('player')} className="rounded-xl border border-ks-border bg-[#111710] p-3 text-left"><span className="block text-[10px] text-ks-gold font-display">TEAM STATUS</span><span className="block text-ks-ink text-sm mt-2">{player.squadRole==='starting-xi'?'Starting XI':'First team'}</span><span className="block text-[10px] text-ks-muted mt-1">Coach trust {Math.round(player.coachTrust??0)} / 10 →</span></button>
         </div>
         <div className="rounded-xl border border-ks-gold/25 bg-[#151810] p-3 flex justify-between gap-3 items-center"><div className="min-w-0"><div className="text-[10px] text-ks-gold font-display">NEXT MATCH</div><div className="text-sm text-ks-ink mt-1 truncate">{matchOpponent??opponent?.name??nextOpponent?.name??'Awaiting fixture'}</div></div><button onClick={()=>onGoTo('fixtures')} className="text-xs text-ks-gold shrink-0">VIEW →</button></div>
         <div className="grid grid-cols-2 gap-2">
@@ -106,7 +108,7 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
           </div>):<p className="text-ks-muted text-xs">The first annual awards ceremony arrives after your first professional season.</p>}
       </Section>
       <Section title="PROFESSIONAL SEASON ARCHIVE">
-        {(pro.seasonRecords??[]).length ? [...(pro.seasonRecords??[])].reverse().map(record=>
+        {(pro.seasonRecords??[]).length ? [...(pro.seasonRecords??[])].reverse().slice(0,archiveExpanded?undefined:3).map(record=>
           <div key={record.season} className="border-b border-ks-border/40 py-3">
             <div className="flex items-center justify-between gap-2">
               <div className="text-xs font-display text-ks-ink">SEASON {record.season} · {record.clubName}</div>
@@ -119,13 +121,16 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
             </div>
             {record.leagueChampion && <div className="text-xs text-ks-gold mt-2">🏆 LEAGUE CHAMPIONS</div>}
           </div>) : <p className="text-xs text-ks-muted">Your professional season records will appear here after your first completed campaign.</p>}
+        {(pro.seasonRecords??[]).length>3 && <button type="button" onClick={()=>setArchiveExpanded(value=>!value)} aria-expanded={archiveExpanded} className="mt-3 w-full rounded-xl border border-ks-gold/30 bg-[#181c13] px-4 py-3 text-xs font-display text-ks-gold focus-visible:outline focus-visible:outline-2 focus-visible:outline-ks-gold">{archiveExpanded?'SHOW RECENT SEASONS':'VIEW ALL '+(pro.seasonRecords??[]).length+' SEASONS'} →</button>}
       </Section>
     </> : tab === 'people' ? <>
       <PeopleTab player={player} />
-      {cards('YOUR REPRESENTATION', <>{stat('Agent', getAgent(player.agentId)?.name ?? 'Unrepresented')}{stat('Coach trust', Math.round(player.coachTrust ?? 50))}</>)}
+      {cards('YOUR REPRESENTATION', <>{stat('Agent', getAgent(player.agentId)?.name ?? 'Unrepresented')}{stat('Coach trust', `${Math.round(player.coachTrust ?? 0)} / 10`)}</>)}
       {cards('PRO DRESSING ROOM', <div className="flex flex-col gap-2">{club.notablePlayers.map(person => <div key={person.name} className="flex justify-between text-sm text-ks-ink"><span>{person.name}</span><span className="text-ks-muted">{person.position}</span></div>)}</div>)}
     </> : tab === 'club' ? <>
       <ClubTab player={player} playerTeam={club} division={division} isAcademy={false} isPro />
+      <button type="button" onClick={()=>setClubDetailsExpanded(value=>!value)} aria-expanded={clubDetailsExpanded} className="w-full rounded-xl border border-ks-gold/30 bg-[#181c13] px-4 py-3 text-left text-xs font-display text-ks-gold focus-visible:outline focus-visible:outline-2 focus-visible:outline-ks-gold">{clubDetailsExpanded?'HIDE CLUB OPERATIONS':'CLUB OPERATIONS · CONTRACTS & TRANSFERS'} →</button>
+      {clubDetailsExpanded && <>
       {pro.clubObjective && cards('BOARD EXPECTATIONS', <div>
         {stat('Objective', ({ title: 'Fight for the title', continental: 'Qualify near the top', 'top-half': 'Finish in the top half', survival: 'Avoid relegation' } as Record<string,string>)[pro.clubObjective.type])}
         {stat('Target position', `#${pro.clubObjective.targetPosition} or better`)}
@@ -150,6 +155,7 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
         {pro.talks ? <div className="mt-3 text-ks-ink text-sm"><b>{offerName(pro.talks.offer.worldClubId, pro.talks.offer.teamId)}</b><p className="text-ks-muted text-xs mt-1">{moneySymbol}{pro.talks.offer.weeklyWage.toLocaleString()}/week · {pro.talks.readyWeek > player.totalWeeksElapsed ? `${pro.talks.readyWeek - player.totalWeeksElapsed} week(s) to terms` : 'terms ready to sign'}</p><div className="flex gap-3 mt-3"><button disabled={pro.talks.readyWeek > player.totalWeeksElapsed} onClick={() => signMove()} className="text-ks-gold text-xs disabled:opacity-35">SIGN DEAL →</button><button disabled={pro.talks.readyWeek > player.totalWeeksElapsed || pro.talks.countered} onClick={counterTalks} className="text-ks-muted text-xs disabled:opacity-35">ASK FOR 5% MORE</button></div></div> : <><button disabled={!windowOpen || !!pro.loan} onClick={requestOffers} className="text-ks-gold text-xs mt-3 disabled:opacity-35">ASK AGENT FOR OFFERS →</button>{pro.marketOffers?.map(offer => <button key={offer.teamId} onClick={() => openTalks(offer.teamId)} className="block w-full text-left border-t border-ks-border/50 py-3 text-xs text-ks-ink">{offerName(offer.worldClubId, offer.teamId)}<span className="float-right text-ks-gold">{moneySymbol}{offer.weeklyWage.toLocaleString()}/wk →</span></button>)}</>}
         {windowOpen && pro.freeAgentSinceWeek === undefined && !pro.loan && player.squadRole !== 'starting-xi' && <div className="border-t border-ks-border mt-4 pt-3"><p className="text-ks-muted text-xs">Need senior minutes? A temporary loan keeps your parent contract.</p>{division.teams.filter(team => team.id !== club.id).slice(0, 2).map(team => <button key={team.id} onClick={() => acceptLoan(team.id)} className="block text-ks-gold text-xs mt-2">REQUEST LOAN · {team.name} →</button>)}</div>}
       </div>)}
+      </>}
     </> : tab === 'fixtures' || tab === 'table' ? <>
       <nav className="flex gap-1 p-1 rounded-xl border border-ks-border bg-[#0f0d0d]" aria-label="Professional competition views">
         {(['fixtures','table','international','world'] as const).map(view =>

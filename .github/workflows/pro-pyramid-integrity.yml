@@ -49,6 +49,9 @@ jobs:
       - run: node --import tsx scripts/auditWorldwideInternational.ts
       - run: node --import tsx scripts/auditProLifestyle.ts
       - run: node --import tsx scripts/auditProRelationships.ts
+      # Phase 5 gate: protect the original school-to-academy route as well as the pro career.
+      - run: npm run audit:v4
+      - run: npm run audit:season
       - run: npm run audit:pro-career
       # Extended world-save regression: 20 seasons, deterministic resume, finances and save budget.
       - run: node --import tsx scripts/auditProWorld.ts

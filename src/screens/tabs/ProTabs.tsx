@@ -16,7 +16,7 @@ import StandingsTable from '../../components/StandingsTable'
 import ProWeeklyCalendar from './ProWeeklyCalendar'
 import { proMatchDay, proTrainingAvailable } from '../../engine/proWeeklySchedule'
 import { useCareerStore } from '../../store/careerStore'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ProNewsScreen from '../ProNewsScreen'
 import ProWorldPanel from '../ProWorldPanel'
 import { registrationOpen } from '../../engine/proMovement'
@@ -51,6 +51,10 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
   const [archiveExpanded,setArchiveExpanded]=useState(false)
   const [clubDetailsExpanded,setClubDetailsExpanded]=useState(false)
   const [proLeagueView, setProLeagueView] = useState<'fixtures' | 'table' | 'international' | 'world'>('fixtures')
+  useEffect(() => {
+    if (tab === 'table') setProLeagueView('table')
+    else if (tab === 'fixtures') setProLeagueView('fixtures')
+  }, [tab])
   const windowOpen = pro.freeAgentSinceWeek !== undefined || (pro.date ? registrationOpen(pro.associationId ?? 'eng', pro.date) : false)
   const championshipCycle = internationalCycle(pro.season)
   const championship = player.nationality && pro.international
@@ -71,7 +75,7 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
     {tab === 'home' ? <>
       {header}
       <nav aria-label="Home sections" className="grid grid-cols-3 gap-1 rounded-xl border border-ks-border p-1 bg-[#0f120e]">
-        {(['overview','schedule','updates'] as const).map(view=><button key={view} onClick={()=>setHomeView(view)} className={`rounded-lg py-2.5 text-[11px] font-display uppercase ${homeView===view?'bg-ks-gold text-ks-black':'text-ks-muted'}`}>{view}</button>)}
+        {(['overview','schedule','updates'] as const).map(view=><button key={view} onClick={()=>setHomeView(view)} aria-current={homeView===view?'page':undefined} className={`rounded-lg min-h-11 py-2.5 text-[11px] font-display uppercase transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-ks-gold ${homeView===view?'bg-ks-gold text-ks-black':'text-ks-muted'}`}>{view}</button>)}
       </nav>
       {homeView==='overview' && <>
         <div className="grid grid-cols-2 gap-2">
@@ -159,8 +163,8 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
     </> : tab === 'fixtures' || tab === 'table' ? <>
       <nav className="flex gap-1 p-1 rounded-xl border border-ks-border bg-[#0f0d0d]" aria-label="Professional competition views">
         {(['fixtures','table','international','world'] as const).map(view =>
-          <button key={view} onClick={() => setProLeagueView(view)}
-            className={`flex-1 py-3 rounded-lg font-display text-[10px] uppercase tracking-wide ${proLeagueView===view?'bg-ks-gold text-ks-black':'text-ks-muted'}`}>{view}</button>)}
+          <button key={view} onClick={() => setProLeagueView(view)} aria-current={proLeagueView===view?'page':undefined}
+            className={`flex-1 min-h-11 py-3 rounded-lg font-display text-[10px] uppercase tracking-wide transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-ks-gold ${proLeagueView===view?'bg-ks-gold text-ks-black':'text-ks-muted'}`}>{view}</button>)}
       </nav>
       <section className="table-hero"><small>PROFESSIONAL FOOTBALL · COMPETITION CENTRE</small>
         <h1>{pro.activeCompetitionId ? proCompetitionName(pro.activeCompetitionId) : 'Professional League'}</h1>

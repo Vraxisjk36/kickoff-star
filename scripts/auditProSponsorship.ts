@@ -25,4 +25,15 @@ assert.equal(pay.pay,offer.weeklyPay)
 assert.equal(pay.state.contracts[0].weeksPaid,1)
 const youth=sponsorWeek(emptySponsorState(),poor,1,1)
 assert.ok(youth.state.offers.every(o=>!o.shoeDeal))
+// Repeated sponsorship weeks must account for each payment exactly once.
+let payoutState = signed.state
+let totalPaid = 0
+for (let week = 1; week <= 12; week++) {
+ const payout = sponsorWeek(payoutState, player, 2, week)
+ payoutState = payout.state
+ totalPaid += payout.pay
+ assert.ok(payout.pay >= 0, 'Weekly sponsorship payout cannot be negative')
+}
+assert.equal(totalPaid, offer.weeklyPay * 12, 'Twelve weeks must yield twelve payments')
+assert.equal(payoutState.contracts[0].weeksPaid, 13, 'Payment counter must match credited weeks')
 console.log('70 sponsors, deterministic offers, eligibility, exclusivity, signing bonuses and recurring weekly payments passed')

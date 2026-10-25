@@ -48,6 +48,7 @@ export interface ProCareerState {
   retired?: boolean
   seasonRecords?: ProSeasonRecord[]
   seenMilestones?: string[]
+  pressHistory?: import('./proPress').PressHistory[]
   clubObjective?: ProClubObjective
   lastRenewalWeek?: number
   /** Persisted unattached status after an expired contract; career still advances. */

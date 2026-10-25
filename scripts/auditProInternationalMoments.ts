@@ -8,7 +8,7 @@ const state = { seenMilestones: [], international: {
 } } as unknown as ProCareerState
 const debut = nextInternationalCareerMoment(state)
 assert.equal(debut?.id, 'national-debut:rsa')
-assert.equal(nextInternationalCareerMoment({ ...state, seenMilestones: [debut!.id] }), null)
+assert.equal(nextInternationalCareerMoment({ ...state, seenMilestones: [debut!.id] })?.id, 'national-selection:senior-int-rsa-1-8')
 const caps = { ...state, international: { ...state.international!, caps: 25, goals: 10, pending: null } }
 assert.equal(nextInternationalCareerMoment(caps)?.id, 'national-caps:rsa:1')
 const seen = ['national-caps:rsa:1','national-caps:rsa:10','national-caps:rsa:25']

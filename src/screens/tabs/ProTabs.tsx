@@ -263,10 +263,19 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
       {shopView==='sponsors'&&<ProSponsorshipTab player={player}/>}
       {shopView==='essentials'&&<ShopTab player={player}/>}
       {shopView==='finances'&&<Section title="PROFESSIONAL PAY & RESIDENCE">
-        {cards('FINANCIAL OVERVIEW',<>{stat('Balance',`£${(player.money??0).toLocaleString()}`)}{stat('Career earnings',`£${(player.careerEarnings??0).toLocaleString()}`)}{stat('Weekly wage',`£${(player.contract?.terms.weeklyWage??0).toLocaleString()}`)}{stat('Pending bonuses',`£${(pro.pendingBonus??0).toLocaleString()}`)}</>)}
-        {cards('RESIDENCE',<>{stat('City',pro.residence?.city??'Settling in')}{stat('Monthly rent',`£${(pro.residence?.monthlyRent??0).toLocaleString()}`)}</>)}
+        {cards('FINANCIAL OVERVIEW',<>
+          <div className="rounded-xl border border-ks-gold/30 bg-gradient-to-r from-[#242919] to-[#10140e] p-4 mb-3">
+            <p className="text-[10px] font-display uppercase tracking-widest text-ks-muted">Available balance · {moneySymbol}</p>
+            <p className="text-2xl font-display text-ks-gold tabular-nums mt-1">{(player.money??0).toLocaleString()}</p>
+            <p className="text-[11px] text-ks-muted mt-2">Your current spendable funds, before future wages and bills.</p>
+          </div>
+          {stat('Career earnings',`${moneySymbol} ${(player.careerEarnings??0).toLocaleString()}`)}
+          {stat('Weekly wage',`${moneySymbol} ${(player.contract?.terms.weeklyWage??0).toLocaleString()}`)}
+          {stat('Pending bonuses',`${moneySymbol} ${(pro.pendingBonus??0).toLocaleString()}`)}
+        </>)}
+        {cards('RESIDENCE',<>{stat('City',pro.residence?.city??'Settling in')}{stat('Monthly rent',`${moneySymbol} ${(pro.residence?.monthlyRent??0).toLocaleString()}`)}</>)}
         {cards('PAY STATEMENTS',<div>
-          {[...(pro.payStatements??[])].reverse().slice(0,showAllPayStatements?undefined:6).map(statement=><div key={statement.month} className="flex items-center justify-between gap-3 py-2.5 border-b border-ks-border/60 text-xs"><span className="text-ks-muted">{statement.month}</span><span className="font-display text-ks-ink tabular-nums">NET £{statement.net.toLocaleString()}</span></div>)}
+          {[...(pro.payStatements??[])].reverse().slice(0,showAllPayStatements?undefined:6).map(statement=><div key={statement.month} className="flex items-center justify-between gap-3 py-2.5 border-b border-ks-border/60 text-xs"><span className="text-ks-muted">{statement.month}</span><span className="font-display text-ks-ink tabular-nums">NET {moneySymbol} {statement.net.toLocaleString()}</span></div>)}
           {!pro.payStatements?.length&&<p className="text-xs text-ks-muted">First statement arrives at month end.</p>}
           {(pro.payStatements??[]).length>6&&<button type="button" onClick={()=>setShowAllPayStatements(value=>!value)} aria-expanded={showAllPayStatements} className="mt-3 w-full min-h-11 rounded-lg border border-ks-gold/30 bg-[#181c13] text-xs font-display text-ks-gold">{showAllPayStatements?'SHOW RECENT PAYMENTS':'VIEW ALL '+(pro.payStatements??[]).length+' STATEMENTS'} →</button>}
         </div>)}

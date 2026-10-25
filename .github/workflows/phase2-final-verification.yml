@@ -1,0 +1,41 @@
+name: Phase 2 Final Integrity Verification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/phase2-final-verification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out Phase 2 development branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/v32-v4-unified
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Verify 20-year save and career simulation
+        run: node --import tsx scripts/auditProWorld.ts
+      - name: Verify professional league pyramids
+        run: npm run audit:pro-pyramids
+      - name: Verify international football
+        run: node --import tsx scripts/auditWorldwideInternational.ts
+      - name: Verify lifestyle and sponsorship
+        run: |
+          node --import tsx scripts/auditProLifestyle.ts
+          node --import tsx scripts/auditProSponsorship.ts
+      - name: Verify Phase 2 professional career
+        run: npm run audit:pro-career
+      - name: Verify production build
+        run: npm run build

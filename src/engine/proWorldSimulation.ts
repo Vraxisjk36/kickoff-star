@@ -780,7 +780,7 @@ export function advanceProWorldTo(source: ProWorldState, targetDate: IsoDate): P
   advanceTournamentsTo(world, targetDate)
   world.recentEvents = world.recentEvents.sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id)).slice(-240)
   world.championHistory.sort((a, b) => a.seasonId.localeCompare(b.seasonId) || a.competitionId.localeCompare(b.competitionId))
-  world.seasonHistory = world.seasonHistory.filter(record => Number(targetDate.slice(0, 4)) - Number(record.seasonId) <= 8)
+  world.seasonHistory = world.seasonHistory.filter(record => Number(targetDate.slice(0, 4)) - Number(record.seasonId) <= 5)
     .sort((a, b) => a.seasonId.localeCompare(b.seasonId) || a.competitionId.localeCompare(b.competitionId))
   world.currentDate = targetDate
   return world

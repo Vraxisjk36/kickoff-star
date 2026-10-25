@@ -14,7 +14,7 @@ import ProLifestyleTab from './ProLifestyleTab'
 import ProSponsorshipTab from './ProSponsorshipTab'
 import StandingsTable from '../../components/StandingsTable'
 import ProWeeklyCalendar from './ProWeeklyCalendar'
-import { proMatchDay, proTrainingAvailable } from '../../engine/proWeeklySchedule'
+import { mondayFrom, proMatchDay, proTrainingAvailable } from '../../engine/proWeeklySchedule'
 import { useCareerStore } from '../../store/careerStore'
 import { useEffect, useMemo, useState } from 'react'
 import ProNewsScreen from '../ProNewsScreen'
@@ -48,6 +48,7 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
   const [shopView,setShopView]=useState<'sponsors'|'essentials'|'finances'>('sponsors')
   const [fixtureFilter,setFixtureFilter]=useState<'upcoming'|'results'>('upcoming')
   const [fixtureLimit,setFixtureLimit]=useState(8)
+  const [competitionFilter,setCompetitionFilter]=useState<'all'|'league'>('all')
   const [archiveExpanded,setArchiveExpanded]=useState(false)
   const [clubDetailsExpanded,setClubDetailsExpanded]=useState(false)
   const [showAllPayStatements,setShowAllPayStatements]=useState(false)
@@ -197,6 +198,8 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
       {proLeagueView==='fixtures' && <div className="rounded-xl border border-ks-border overflow-hidden bg-[#10110e]">
         <div className="px-4 py-3 border-b border-ks-gold/20 font-display text-xs tracking-widest text-ks-gold">YOUR MATCH CALENDAR</div>
         <div className="grid grid-cols-2 gap-1 p-2">{(['upcoming','results'] as const).map(filter=><button key={filter} onClick={()=>{setFixtureFilter(filter);setFixtureLimit(8)}} className={`rounded-lg py-2.5 text-[11px] font-display uppercase ${fixtureFilter===filter?'bg-ks-gold text-ks-black':'bg-white/5 text-ks-muted'}`}>{filter}</button>)}</div>
+        <div className="flex gap-2 px-3 pb-2"><button type="button" onClick={()=>setCompetitionFilter('all')} className={`rounded-md px-3 py-2 text-xs ${competitionFilter==='all'?'bg-ks-gold text-ks-black':'bg-white/5 text-ks-muted'}`}>ALL AVAILABLE</button><button type="button" onClick={()=>setCompetitionFilter('league')} className={`rounded-md px-3 py-2 text-xs ${competitionFilter==='league'?'bg-ks-gold text-ks-black':'bg-white/5 text-ks-muted'}`}>LEAGUE</button></div>
+        <p className="px-3 pb-2 text-[10px] text-ks-muted">League schedule shown below. Cup, continental and friendly fixtures appear in the weekly schedule when generated; they are not yet included in this season-long list.</p>
         {division.fixtures.filter(f=>(f.homeTeamId===club.id||f.awayTeamId===club.id)&&(fixtureFilter==='results'?f.played:!f.played)).sort((a,b)=>fixtureFilter==='results'?b.week-a.week:a.week-b.week).slice(0,fixtureLimit).map(f=>{
           const isHome=f.homeTeamId===club.id
           const other=division.teams.find(t=>t.id===(isHome?f.awayTeamId:f.homeTeamId))

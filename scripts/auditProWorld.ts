@@ -130,6 +130,10 @@ assert.ok(Object.values(twentyYears.players).filter(candidate => candidate.clubI
 assert.ok(Object.values(twentyYears.clubs).every(club => Number.isFinite(club.finances.cash) && club.finances.cash >= 0 &&
   Number.isFinite(club.finances.debt) && club.finances.debt! >= 0 && club.finances.committedAnnualWages > 0), 'invalid club finances')
 assert.ok(twentyYears.recentEvents.every(event => event.date <= twentyYears.currentDate), 'future news published early')
+const largestFields = Object.entries(twentyYears).map(([key, value]) =>
+  [key, JSON.stringify(value).length] as const).sort((a, b) => b[1] - a[1]).slice(0, 10)
+console.log('20-year save footprint:', JSON.stringify(largestFields), 'fixtures', Object.keys(twentyYears.fixtures).length,
+  'players', Object.keys(twentyYears.players).length, 'academy', Object.keys(twentyYears.academyProspects).length)
 const bytes = JSON.stringify(twentyYears).length
 assert.ok(bytes < 32 * 1024 * 1024, `20-year save exceeds import limit: ${bytes}`)
 assert.equal(advanceProWorldTo(twentyYears, twentyYears.currentDate), twentyYears, 'same-day advance must be idempotent')

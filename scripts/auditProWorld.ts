@@ -116,7 +116,7 @@ const tenYears = advanceProWorldTo(world, '2036-01-01')
 const twentyYears = advanceProWorldTo(tenYears, '2046-01-01')
 const elapsed = Math.round(performance.now() - start)
 assert.equal(twentyYears.championHistory.filter(record => record.competitionId.startsWith('top-')).length,
-  100 * 20 + 17, 'every league season archived; Brazil 2026 begins in January')
+  100 * 20 + 16, 'every league season archived; 16 calendar-year leagues add their initial 2026 season')
 assert.ok(twentyYears.championHistory.filter(record => record.competitionId.startsWith('second-')).length >=
   PRO_LOWER_LEAGUE_PLAN.length * 20, 'every lower-division season archived')
 assert.ok(twentyYears.championHistory.filter(record => record.competitionId.startsWith('third-') || record.competitionId.startsWith('fourth-')).length >=

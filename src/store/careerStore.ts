@@ -1,3 +1,4 @@
+import { recordProRelationship } from '../engine/proRelationships'
 import { sponsorWeek, acceptSponsor } from '../engine/proSponsorship'
 import { purchaseLuxuryAsset } from '../engine/proLifestyle'
 import { create } from 'zustand'
@@ -782,7 +783,9 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     if (!player || !pro || pro.talks) return
     const offer = pro.marketOffers?.find(item => item.teamId === teamId && item.expiresWeek > player.totalWeeksElapsed)
     if (!offer || !pro.date || (pro.freeAgentSinceWeek === undefined && !registrationOpen(pro.associationId ?? 'eng', pro.date))) return
-    setState({ player: { ...player, proCareer: { ...pro, talks: { offer, readyWeek: player.totalWeeksElapsed + 2, countered: false }, marketOffers: [] } } })
+    setState({ player: { ...player, proCareer: { ...pro, talks: { offer, readyWeek: player.totalWeeksElapsed + 2, countered: false }, marketOffers: [],
+      relationships: recordProRelationship(pro.relationships, { id: `talk:${offer.worldClubId}:${player.totalWeeksElapsed}`, clubId: offer.worldClubId,
+        kind: 'negotiation', description: 'Opened formal transfer negotiations' }) } } })
     void getState().saveCurrent()
   },
   counterProTransferTalks: () => {

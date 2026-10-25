@@ -94,7 +94,7 @@ for (const country of playableNine) {
   const games = Object.values(firstSummer.fixtures).filter(game => game.competitionId.startsWith(`preseason-${country}-`))
   assert.ok(games.length > 0 && games.some(game => game.kickoffDate.startsWith('2026-07-')) &&
     games.every(game => game.kickoffDate >= '2026-07-01' && game.kickoffDate < '2026-09-01'),
-    `${country}: summer tournament fixtures start in July and finish before September`)
+    `${country}: summer tournament fixtures start in July and finish before September; count=${games.length}, first=${games.map(game => game.kickoffDate).sort()[0]}, last=${games.map(game => game.kickoffDate).sort().at(-1)}, sample=${games.slice(0, 5).map(game => game.kickoffDate).join(',')}`)
 }
 const firstAutumn = advanceProWorldTo(firstSummer, '2026-11-15')
 for (const country of playableNine) {

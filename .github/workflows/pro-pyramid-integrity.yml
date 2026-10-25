@@ -16,6 +16,9 @@ on:
       - 'scripts/auditProSponsorship.ts'
       - 'scripts/auditProCareerPhase2.ts'
       - 'scripts/auditProRelationships.ts'
+      - 'scripts/auditProPress.ts'
+      - 'scripts/auditProCareerLegacy.ts'
+      - 'scripts/auditProInternationalMoments.ts'
       - 'scripts/auditProWorld.ts'
       - 'src/screens/ProCareer.tsx'
       - 'src/screens/tabs/Pro*.tsx'
@@ -36,7 +39,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      # Phase 2 release verification: run the longest save/calendar regression first.
+      # Phase 3 integration: validate long saves, league worlds, media, relationships, awards and international milestones.
       - run: node --import tsx scripts/auditProWorld.ts
       - run: npm run audit:pro-pyramids
       - run: node --import tsx scripts/auditWorldwideInternational.ts

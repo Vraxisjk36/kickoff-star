@@ -8,7 +8,9 @@ const state = { seenMilestones: [], international: {
 } } as unknown as ProCareerState
 const debut = nextInternationalCareerMoment(state)
 assert.equal(debut?.id, 'national-debut:rsa')
-assert.equal(nextInternationalCareerMoment({ ...state, seenMilestones: [debut!.id] })?.id, 'national-selection:senior-int-rsa-1-8')
+assert.equal(nextInternationalCareerMoment({ ...state, seenMilestones: [debut!.id] }), null, 'the debut fixture must not trigger a second announcement before the first cap')
+const returning = { ...state, international: { ...state.international!, caps: 1, pending: { ...state.international!.pending!, id: 'senior-int-rsa-1-16', week: 16 } } }
+assert.equal(nextInternationalCareerMoment({ ...returning, seenMilestones: [debut!.id] })?.id, 'national-selection:senior-int-rsa-1-16', 'a later call-up can announce a returning international')
 const caps = { ...state, international: { ...state.international!, caps: 25, goals: 10, pending: null } }
 assert.equal(nextInternationalCareerMoment(caps)?.id, 'national-caps:rsa:1')
 const seen = ['national-caps:rsa:1','national-caps:rsa:10','national-caps:rsa:25']

@@ -1,3 +1,4 @@
+import { recordProRelationship, transferRelationshipModifier } from './proRelationships'
 import type { Player } from '../types/player'
 import { createProCareer, type ProCareerState, type ProClubObjective, type ProMarketOffer, type ProPayStatement } from './proCareer'
 import { createProWorld } from './proWorldFactory'
@@ -358,7 +359,7 @@ export function generateMarketOffers(state: ProCareerState, player: Player): Pro
   const candidates = targets.map((id): (ProMarketOffer & { foreign: boolean; score: number }) | null => {
     const club = world.clubs[id]
     const localTeam = Object.entries(state.clubWorldIds!).find(([, worldId]) => worldId === id)?.[0]
-    const weeklyWage = Math.max(350, Math.round(base * (1 + (club.reputation - 58) * .012)))
+    const weeklyWage = Math.max(350, Math.round(base * (1 + (club.reputation - 58) * .012 + transferRelationshipModifier(state.relationships, id))))
     const annualWage = weeklyWage * 52
     const affordable = assessProDeal(club.finances, { annualWage, probableAnnualBonuses: Math.round(annualWage * .1),
       annualTransferCost: 0, annualAgentFee: Math.round(annualWage * .05), upfrontTransferPayment: annualWage * 2,
@@ -419,6 +420,8 @@ export function finalizeProMove(state: ProCareerState, player: Player): { state:
     resolvedWeek: undefined, backgroundWorld: result.world,
     shirtNumber: result.world.players[`career-${player.id}`].shirtNumber,
     residence: { countryId: club.associationId, city: club.homeCity, monthlyRent: housingFor(nextPlayer), hotelUntil: addDays(state.date, 21) },
-    talks: null, marketOffers: [] }
+    talks: null, marketOffers: [],
+    relationships: recordProRelationship(state.relationships, { id: `signed:${offer.worldClubId}:${state.date}`,
+      clubId: offer.worldClubId, kind: 'transfer', description: `Signed for ${club.name}` }) }
   return { state: syncPlayableProLeague(moved, result.world), player: nextPlayer }
 }

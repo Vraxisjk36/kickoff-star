@@ -50,6 +50,7 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
   const [fixtureLimit,setFixtureLimit]=useState(8)
   const [archiveExpanded,setArchiveExpanded]=useState(false)
   const [clubDetailsExpanded,setClubDetailsExpanded]=useState(false)
+  const [showAllPayStatements,setShowAllPayStatements]=useState(false)
   const [proLeagueView, setProLeagueView] = useState<'fixtures' | 'table' | 'international' | 'world'>('fixtures')
   useEffect(() => {
     if (tab === 'table') setProLeagueView('table')
@@ -257,14 +258,18 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
       {proLeagueView==='world' && pro.backgroundWorld && <ProWorldPanel world={pro.backgroundWorld}/>}
     </> : tab === 'lifestyle' ? <ProLifestyleTab player={player}/> : <>
       <nav aria-label="Professional shop sections" className="grid grid-cols-3 gap-1 p-1 rounded-xl border border-ks-border bg-[#10120e]">
-        {(['sponsors','essentials','finances'] as const).map(view=><button key={view} onClick={()=>setShopView(view)} className={`rounded-lg py-2.5 text-[9px] font-display uppercase ${shopView===view?'bg-ks-gold text-ks-black':'text-ks-muted'}`}>{view}</button>)}
+        {(['sponsors','essentials','finances'] as const).map(view=><button key={view} onClick={()=>setShopView(view)} aria-current={shopView===view?'page':undefined} className={`rounded-lg min-h-11 py-2.5 text-[10px] font-display uppercase transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-ks-gold ${shopView===view?'bg-ks-gold text-ks-black':'text-ks-muted'}`}>{view}</button>)}
       </nav>
       {shopView==='sponsors'&&<ProSponsorshipTab player={player}/>}
       {shopView==='essentials'&&<ShopTab player={player}/>}
       {shopView==='finances'&&<Section title="PROFESSIONAL PAY & RESIDENCE">
         {cards('FINANCIAL OVERVIEW',<>{stat('Balance',`£${(player.money??0).toLocaleString()}`)}{stat('Career earnings',`£${(player.careerEarnings??0).toLocaleString()}`)}{stat('Weekly wage',`£${(player.contract?.terms.weeklyWage??0).toLocaleString()}`)}{stat('Pending bonuses',`£${(pro.pendingBonus??0).toLocaleString()}`)}</>)}
         {cards('RESIDENCE',<>{stat('City',pro.residence?.city??'Settling in')}{stat('Monthly rent',`£${(pro.residence?.monthlyRent??0).toLocaleString()}`)}</>)}
-        {cards('PAY STATEMENTS',<div>{[...(pro.payStatements??[])].reverse().slice(0,6).map(statement=><div key={statement.month} className="py-2 border-b border-ks-border text-xs text-ks-ink">{statement.month} · NET £{statement.net.toLocaleString()}</div>)}{!pro.payStatements?.length&&<p className="text-xs text-ks-muted">First statement arrives at month end.</p>}</div>)}
+        {cards('PAY STATEMENTS',<div>
+          {[...(pro.payStatements??[])].reverse().slice(0,showAllPayStatements?undefined:6).map(statement=><div key={statement.month} className="flex items-center justify-between gap-3 py-2.5 border-b border-ks-border/60 text-xs"><span className="text-ks-muted">{statement.month}</span><span className="font-display text-ks-ink tabular-nums">NET £{statement.net.toLocaleString()}</span></div>)}
+          {!pro.payStatements?.length&&<p className="text-xs text-ks-muted">First statement arrives at month end.</p>}
+          {(pro.payStatements??[]).length>6&&<button type="button" onClick={()=>setShowAllPayStatements(value=>!value)} aria-expanded={showAllPayStatements} className="mt-3 w-full min-h-11 rounded-lg border border-ks-gold/30 bg-[#181c13] text-xs font-display text-ks-gold">{showAllPayStatements?'SHOW RECENT PAYMENTS':'VIEW ALL '+(pro.payStatements??[]).length+' STATEMENTS'} →</button>}
+        </div>)}
       </Section>}
     </>}
     {newsOpen && <ProNewsScreen articles={pro.news ?? []} onClose={() => setNewsOpen(false)} />}

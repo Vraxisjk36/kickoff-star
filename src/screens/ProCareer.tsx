@@ -1,3 +1,4 @@
+import { pressMomentForSeason } from '../engine/proPress'
 import { useEffect, useState } from 'react'
 import { useCareerStore } from '../store/careerStore'
 import { proFixture, PRO_CAREER_DESTINATIONS } from '../engine/proCareer'
@@ -35,6 +36,7 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
   const completePreseason = useCareerStore(s=>s.completeProPreseasonFriendly)
   const acknowledgeCeremony = useCareerStore(s => s.acknowledgeProSeasonCeremony)
   const acknowledgeMilestone = useCareerStore(s => s.acknowledgeProMilestone)
+  const answerPress = useCareerStore(s => s.answerProPress)
   const spendXp = useCareerStore(s => s.spendAttributeXp)
   const ensureLivingWorld = useCareerStore(s => s.ensureLivingWorld)
   const [tab, setTab] = useState<HubTab>('home')
@@ -87,6 +89,8 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
     else if(cup || national)advance()
     setMode('hub')
   }
+  const pressMoment = pressMomentForSeason(pro.season, pro.week, team.name, pro.seasonLeagueGoals ?? 0)
+  const unansweredPress = pressMoment && !pro.pressHistory?.some(item => item.id === pressMoment.id)
   const milestone=nextProMilestone(pro,cup)
   if(milestone?.kind==='ceremony' && mode==='hub')return <ProMilestoneScreen
     event={milestone} playerName={player.name}
@@ -101,6 +105,21 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
   if(milestone && mode==='hub') return <ProMilestoneScreen event={milestone} playerName={player.name}
     onContinue={()=>acknowledgeMilestone(milestone.id)}/>
 
+  if (unansweredPress && mode === 'hub') return <main className="min-h-screen bg-[#080d09] text-ks-ink px-5 py-8">
+    <div className="max-w-md mx-auto">
+      <p className="text-ks-gold font-display text-xs">KICKOFF STAR · PRESS ROOM</p>
+      <section className="mt-8 rounded-3xl border border-ks-gold/30 bg-[#172418] p-6">
+        <h1 className="font-display text-3xl">{pressMoment.headline}</h1>
+        <p className="text-ks-muted text-sm mt-4">{pressMoment.context}</p>
+        <p className="mt-5">{pressMoment.question}</p>
+      </section>
+      <div className="mt-6 space-y-3">
+        <button className="w-full rounded-xl border border-ks-border p-4" onClick={() => answerPress('humble')}>Respect the team</button>
+        <button className="w-full rounded-xl border border-ks-gold/40 p-4" onClick={() => answerPress('confident')}>Show ambition</button>
+        <button className="w-full rounded-xl border border-ks-border p-4" onClick={() => answerPress('controversial')}>Make headlines</button>
+      </div>
+    </div>
+  </main>
   if(mode==='training') return <TrainingScreen player={player} onComplete={(outcome:TrainingOutcome,spent,injury,xp,attrs)=>{
     completeTraining(outcome,spent,injury)
     setTrainingReward({xp,attrs})

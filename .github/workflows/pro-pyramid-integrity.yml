@@ -35,7 +35,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      # Run the largest save/calendar regression first to surface world failures early.
+      # Phase 2 release verification: run the longest save/calendar regression first.
       - run: node --import tsx scripts/auditProWorld.ts
       - run: npm run audit:pro-pyramids
       - run: node --import tsx scripts/auditWorldwideInternational.ts

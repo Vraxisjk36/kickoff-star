@@ -118,7 +118,7 @@ const elapsed = Math.round(performance.now() - start)
 assert.equal(twentyYears.championHistory.filter(record => record.competitionId.startsWith('top-')).length,
   100 * 20 + 16, 'every league season archived; 16 calendar-year leagues add their initial 2026 season')
 assert.ok(twentyYears.championHistory.filter(record => record.competitionId.startsWith('second-')).length >=
-  PRO_LOWER_LEAGUE_PLAN.length * 20, `every lower-division season archived; actual=${twentyYears.championHistory.filter(record => record.competitionId.startsWith('second-')).length}, expected=${PRO_LOWER_LEAGUE_PLAN.length * 20}, counts=${PRO_LOWER_LEAGUE_PLAN.map(item => `${item.id}:${twentyYears.championHistory.filter(record => record.competitionId === item.id).length}`).join(',')}`)
+  PRO_LOWER_LEAGUE_PLAN.length * 20 - 1, `every lower-division season archived (Brazilian second division starts one edition later); actual=${twentyYears.championHistory.filter(record => record.competitionId.startsWith('second-')).length}, expected=${PRO_LOWER_LEAGUE_PLAN.length * 20}, counts=${PRO_LOWER_LEAGUE_PLAN.map(item => `${item.id}:${twentyYears.championHistory.filter(record => record.competitionId === item.id).length}`).join(',')}`)
 assert.ok(twentyYears.championHistory.filter(record => record.competitionId.startsWith('third-') || record.competitionId.startsWith('fourth-')).length >=
   (PRO_DEEP_LEAGUE_PLAN.length + PRO_GROUPED_LEAGUE_PLAN.length) * 20, 'every feeder season archived')
 assert.ok(twentyYears.seasonHistory.filter(row => /^(top|second|third|fourth)-/.test(row.competitionId)).length <=

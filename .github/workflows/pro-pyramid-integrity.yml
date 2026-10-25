@@ -50,4 +50,8 @@ jobs:
       - run: node --import tsx scripts/auditProLifestyle.ts
       - run: node --import tsx scripts/auditProRelationships.ts
       - run: npm run audit:pro-career
+      # Extended world-save regression: 20 seasons, deterministic resume, finances and save budget.
+      - run: node --import tsx scripts/auditProWorld.ts
+      # Economy regression: salary bands, luxury ownership and sponsor payment continuity.
+      - run: node --import tsx scripts/auditProSponsorship.ts
       - run: npm run build

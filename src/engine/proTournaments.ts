@@ -131,7 +131,11 @@ function schedule(world: ProWorldState, comp: ProCompetition, pairs: [string, st
 }
 function createCompetition(world: ProWorldState, id: string, kind: ProCompetition['kind'], year: number,
   entrants: string[], stage: NonNullable<ProCompetition['tournament']>['stage'], start: IsoDate): void {
-  if (world.competitions[id] && !world.competitions[id].tournament?.completed) throw new Error(`Active tournament ${id}`)
+  if (world.competitions[id] && !world.competitions[id].tournament?.completed) {
+    const active = world.competitions[id]
+    const pending = Object.values(world.fixtures).filter(fixture => fixture.competitionId === id && !fixture.result)
+    throw new Error(`Active tournament ${id} (${active.seasonId}, ${active.tournament?.stage}, pending=${pending.length}, first=${pending.map(fixture => fixture.kickoffDate).sort()[0] ?? 'none'})`)
+  }
   const comp: ProCompetition = { id, associationId: kind === 'domestic-cup' ? id.split('-').at(-1)! : null,
     kind, seasonId: String(year), entrantIds: entrants,
     format: { legs: 1, scheduledRounds: 0 }, tournament: { stage, round: 0 } }

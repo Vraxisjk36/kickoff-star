@@ -1,3 +1,4 @@
+import { recordProRelationship } from './proRelationships'
 import type { Player } from '../types/player'
 import type { LeagueWorld, Division, Fixture } from './league'
 import { batchSimDivisionRound, recordPlayerMatchResult, resetSchoolLeagueSeason } from './league'
@@ -185,7 +186,11 @@ export function resolveProMatch(state: ProCareerState, player: Player, result: {
       result.home ? result.scored : result.conceded, result.home ? result.conceded : result.scored,
       scheduled.id, state.activeCompetitionId)
     : state.backgroundWorld
-  return { state: { ...state, world, backgroundWorld, resolvedWeek: state.week,
+  const relationships = opponentClub ? recordProRelationship(state.relationships, {
+    id: `fixture:${scheduled.id}:${opponentClub}`, clubId: opponentClub, kind: 'fixture',
+    description: `${result.scored}-${result.conceded} against ${result.opponent.name}` },
+    result.scored > result.conceded ? 'win' : result.scored < result.conceded ? 'loss' : 'draw') : state.relationships
+  return { state: { ...state, world, backgroundWorld, relationships, resolvedWeek: state.week,
     seasonLeagueGoals:(state.seasonLeagueGoals??0)+result.goals,
     seasonLeagueAssists:(state.seasonLeagueAssists??0)+result.assists,
     seasonLeagueAppearances:(state.seasonLeagueAppearances??0)+(result.minutes>0?1:0) },

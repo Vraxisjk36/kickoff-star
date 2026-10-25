@@ -24,18 +24,18 @@ export default function ProLifestyleTab({player}:{player:Player}){
     <div className="flex justify-between items-center gap-2 mb-2">
       <div><p className="font-display text-ks-gold text-sm tracking-widest">LIFESTYLE & ASSETS</p>
       <p className="text-[10px] text-ks-muted">New listings each week · Season {pro.season}, Week {pro.week}</p></div>
-      <span className="text-xs text-ks-gold font-display">{cash(player.money??0)}</span>
+      <span className="text-xs text-ks-gold font-display tabular-nums">{cash(player.money??0)}</span>
     </div>
     <div className="grid grid-cols-2 gap-2 rounded-lg border border-ks-border p-2 mb-3 text-[11px]">
       <div><span className="text-ks-muted">Asset value</span><p className="text-ks-gold">{cash(luxuryNetWorth(assets))}</p></div>
       <div><span className="text-ks-muted">Weekly maintenance</span><p className="text-ks-ink">{cash(luxuryWeeklyUpkeep(assets))}</p></div>
     </div>
-    <div className="grid grid-cols-4 gap-1 mb-3">
-      {KINDS.map(kind=><button key={kind.id} onClick={()=>{setCategory(kind.id);setMessage('');setShowAll(false)}} className={`rounded-lg border py-2 text-[10px] ${category===kind.id?'border-ks-gold text-ks-gold':'border-ks-border text-ks-muted'}`}>{kind.icon} {kind.label}</button>)}
+    <div className="grid grid-cols-4 gap-1 mb-3" role="group" aria-label="Asset categories">
+      {KINDS.map(kind=><button key={kind.id} onClick={()=>{setCategory(kind.id);setMessage('');setShowAll(false)}} aria-pressed={category===kind.id} className={`rounded-lg border min-h-11 py-2 text-[10px] ${category===kind.id?'border-ks-gold text-ks-gold':'border-ks-border text-ks-muted'}`}>{kind.icon} {kind.label}</button>)}
     </div>
     <div className="grid grid-cols-2 gap-2 mb-3">
-      <button onClick={()=>{setView('market');setShowAll(false)}} className={`rounded-md py-2 text-xs ${view==='market'?'bg-ks-gold text-ks-black':'border border-ks-border text-ks-muted'}`}>Weekly market</button>
-      <button onClick={()=>{setView('assets');setShowAll(false)}} className={`rounded-md py-2 text-xs ${view==='assets'?'bg-ks-gold text-ks-black':'border border-ks-border text-ks-muted'}`}>My assets ({assets.length})</button>
+      <button onClick={()=>{setView('market');setShowAll(false)}} aria-current={view==='market'?'page':undefined} className={`rounded-md min-h-11 py-2 text-xs ${view==='market'?'bg-ks-gold text-ks-black':'border border-ks-border text-ks-muted'}`}>Weekly market</button>
+      <button onClick={()=>{setView('assets');setShowAll(false)}} aria-current={view==='assets'?'page':undefined} className={`rounded-md min-h-11 py-2 text-xs ${view==='assets'?'bg-ks-gold text-ks-black':'border border-ks-border text-ks-muted'}`}>My assets ({assets.length})</button>
     </div>
     {message&&<p role="status" className="text-xs text-ks-gold mb-3">{message}</p>}
     {view==='market'?<div className="grid grid-cols-2 gap-2">

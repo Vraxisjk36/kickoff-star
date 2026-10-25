@@ -21,6 +21,10 @@ on:
       - 'scripts/auditProInternationalMoments.ts'
       - 'scripts/auditProWorld.ts'
       - 'src/screens/ProCareer.tsx'
+      - 'src/screens/ProMilestoneScreen.tsx'
+      - 'src/screens/MatchDayScreen.tsx'
+      - 'src/screens/MatchScreen.tsx'
+      - 'src/screens/MatchSummary.tsx'
       - 'src/screens/tabs/Pro*.tsx'
       - 'src/store/careerStore.ts'
       - 'package.json'
@@ -39,7 +43,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      # Phase 3 integration: validate long saves, league worlds, media, relationships, awards and international milestones.
+      # Phase 4 UI safety gate: validate long saves, football systems and compile all matchday and career screens.
       - run: node --import tsx scripts/auditProWorld.ts
       - run: npm run audit:pro-pyramids
       - run: node --import tsx scripts/auditWorldwideInternational.ts

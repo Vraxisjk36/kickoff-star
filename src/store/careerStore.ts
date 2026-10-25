@@ -796,7 +796,13 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const club = pro.backgroundWorld?.clubs[proposed.worldClubId]
     const annualWage = proposed.weeklyWage * 52
     if (!club || !assessProDeal(club.finances, { annualWage, probableAnnualBonuses: Math.round(annualWage * .1), annualTransferCost: 0,
-      annualAgentFee: Math.round(annualWage * .05), upfrontTransferPayment: annualWage * 2, signingBonus: proposed.weeklyWage, role: 'rotation' }).affordable) return
+      annualAgentFee: Math.round(annualWage * .05), upfrontTransferPayment: annualWage * 2, signingBonus: proposed.weeklyWage, role: 'rotation' }).affordable) {
+      setState({ player: { ...player, proCareer: { ...pro, talks: null,
+        relationships: recordProRelationship(pro.relationships, { id: `rejected:${proposed.worldClubId}:${player.totalWeeksElapsed}`,
+          clubId: proposed.worldClubId, kind: 'rejection', description: 'Club withdrew after unaffordable wage demands' }) } } })
+      void getState().saveCurrent()
+      return
+    }
     setState({ player: { ...player, proCareer: { ...pro, talks: { offer: proposed, readyWeek: player.totalWeeksElapsed + 1, countered: true } } } })
     void getState().saveCurrent()
   },

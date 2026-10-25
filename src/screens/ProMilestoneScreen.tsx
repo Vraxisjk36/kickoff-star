@@ -13,7 +13,7 @@ export default function ProMilestoneScreen({event,playerName,onContinue}:{event:
   return <main className="min-h-screen bg-[#080d09] text-ks-ink px-5 py-8 pb-[calc(2rem+env(safe-area-inset-bottom))]">
     <div className="max-w-md mx-auto animate-[fadeIn_.45s_ease-out]">
       <div className="text-ks-gold font-display uppercase text-xs tracking-[.25em]">KICKOFF STAR · CAREER MOMENT</div>
-      <div className={\`relative isolate overflow-hidden rounded-3xl border border-ks-gold/30 bg-gradient-to-br \${visual.glow} mt-8 p-6 shadow-[0_18px_65px_rgba(0,0,0,.5)]\`}>
+      <div className={`relative isolate overflow-hidden rounded-3xl border border-ks-gold/30 bg-gradient-to-br ${visual.glow} mt-8 p-6 shadow-[0_18px_65px_rgba(0,0,0,.5)]`}>
         <div className="text-6xl opacity-30 absolute right-5 top-5">{visual.icon}</div>
         <div className="font-display text-[10px] tracking-[.25em] text-ks-gold mt-8">{visual.label} · {event.eyebrow}</div>
         <h1 className="font-display text-3xl sm:text-4xl text-ks-ink leading-tight mt-5 max-w-[85%]">{event.title}</h1>

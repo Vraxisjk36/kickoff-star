@@ -1,3 +1,4 @@
+import { nextInternationalCareerMoment } from './proInternationalMoments'
 import type { ProCareerState, ProSeasonRecord } from './proCareer'
 import type { ProFixture } from './proWorld'
 import { proCompetitionName } from './proTournaments'
@@ -31,6 +32,8 @@ export function nextProMilestone(state:ProCareerState,cup?:ProFixture|null):ProM
       description:`After ${seasons.length} completed seasons across ${clubs} club${clubs===1?'':'s'}, your professional journey has come to an end.`,
       detail:`Career ledger: ${appearances} appearances · ${goals} goals · ${assists} assists · ${titles} league title${titles===1?'':'s'}. Your story is written into football history.`}
   }
+  const nationalStory = nextInternationalCareerMoment(state)
+  if (nationalStory) return { ...nationalStory, kind: 'competition' }
   const previous=state.seasonRecords?.find(r=>r.season===state.season-1)
   if(previous && state.week===1){
     const candidate=awardCeremony(previous)

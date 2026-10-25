@@ -607,7 +607,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const result = resolvePressChoice(moment, choice)
     setState({ player: { ...player,
       reputation: Math.max(0, Math.min(100, (player.reputation ?? 50) + result.reputationDelta)),
-      coachTrust: Math.max(0, Math.min(100, (player.coachTrust ?? 50) + result.trustDelta)),
+      coachTrust: Math.max(-10, Math.min(10, (player.coachTrust ?? 0) + result.trustDelta)),
       proCareer: { ...pro, pressHistory: [...(pro.pressHistory ?? []), result.history].slice(-100) } } })
     void getState().saveCurrent()
   },

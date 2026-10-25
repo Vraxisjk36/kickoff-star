@@ -1,3 +1,4 @@
+import { pressMomentForSeason, resolvePressChoice, type PressChoice } from '../engine/proPress'
 import { recordProRelationship } from '../engine/proRelationships'
 import { sponsorWeek, acceptSponsor } from '../engine/proSponsorship'
 import { purchaseLuxuryAsset } from '../engine/proLifestyle'
@@ -157,6 +158,7 @@ interface CareerStore {
   advanceProCareer: () => void
   trainProCareer: () => void
   acknowledgeProMilestone: (id:string) => void
+  answerProPress: (choice:PressChoice) => void
   acknowledgeProSeasonCeremony: (kind:'preseason'|'kickoff') => void
   completeProPreseasonFriendly: (rating:number, energy:number, goals:number, assists:number) => void
   completeProTraining: (outcome: TrainingOutcome, energySpent: number, injury?: {severity: string; weeksOut: number; description: string} | null) => void
@@ -593,6 +595,20 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
         (rating>=7.5?3:rating>=6.5?1:-1))),
       matchRatings:[...player.matchRatings,rating].slice(-10),
       reputation:Math.max(0,Math.min(100,(player.reputation??20)+(goals+assists>0?1:0)))}})
+    void getState().saveCurrent()
+  },
+  answerProPress: (choice) => {
+    const { player } = getState()
+    const pro = player?.proCareer
+    if (!player || !pro || pro.retired) return
+    const clubName = pro.world.divisions[1].teams.find(t => t.id === pro.world.playerTeamId)?.name ?? 'your club'
+    const moment = pressMomentForSeason(pro.season, pro.week, clubName, pro.seasonLeagueGoals ?? 0)
+    if (!moment || pro.pressHistory?.some(item => item.id === moment.id)) return
+    const result = resolvePressChoice(moment, choice)
+    setState({ player: { ...player,
+      reputation: Math.max(0, Math.min(100, (player.reputation ?? 50) + result.reputationDelta)),
+      coachTrust: Math.max(0, Math.min(100, (player.coachTrust ?? 50) + result.trustDelta)),
+      proCareer: { ...pro, pressHistory: [...(pro.pressHistory ?? []), result.history].slice(-100) } } })
     void getState().saveCurrent()
   },
   acknowledgeProMilestone: (id) => {

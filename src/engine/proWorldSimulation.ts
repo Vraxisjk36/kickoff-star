@@ -741,7 +741,19 @@ export function advanceProWorldTo(source: ProWorldState, targetDate: IsoDate): P
   for (let year = Number(source.currentDate.slice(0, 4)); year <= Number(targetDate.slice(0, 4)); year++) {
     milestones.push({ date: `${year}-01-01`, kind: 'national' }, { date: `${year}-07-01`, kind: 'summer-cups' }, { date: `${year}-08-01`, kind: 'domestic' }, { date: `${year}-09-01`, kind: 'continental' })
   }
-  for (const milestone of milestones.filter(item => item.date >= source.currentDate && item.date <= targetDate)
+  // The starting timestamp can itself be a milestone. When resuming a save
+  // exactly on that date, do not create the same tournament edition twice.
+  const milestoneApplied = (item: (typeof milestones)[number]): boolean => {
+    const year = item.date.slice(0, 4)
+    if (item.kind === 'summer-cups')
+      return Object.values(world.competitions).some(comp => comp.id.startsWith('preseason-') && comp.seasonId === year)
+    if (item.kind === 'domestic') return world.competitions['cup-eng']?.seasonId === year
+    if (item.kind === 'continental') return world.competitions['continental-uefa']?.seasonId === year
+    return Object.values(world.competitions).some(comp => comp.seasonId === year &&
+      /^(national-|qualifiers-|world-national$|world-club$)/.test(comp.id))
+  }
+  for (const milestone of milestones.filter(item => item.date <= targetDate &&
+    (item.date > source.currentDate || item.date === source.currentDate && !milestoneApplied(item)))
     .sort((a, b) => a.date.localeCompare(b.date))) {
     advanceLeaguesTo(world, milestone.date)
     advanceTournamentsTo(world, milestone.date)

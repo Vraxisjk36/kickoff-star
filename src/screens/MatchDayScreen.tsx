@@ -35,6 +35,7 @@ export default function MatchDayScreen({ player, playerTeam, opponent, isHome, o
 }) {
   const [entered, setEntered] = useState(false)
   const [walkout, setWalkout] = useState(false)
+  const [lineupExpanded, setLineupExpanded] = useState(false)
   const [adBusy, setAdBusy] = useState(false)
   const [adError, setAdError] = useState('')
   const restoreEnergyFromAd = useCareerStore(s => s.restoreEnergyFromAd)
@@ -73,7 +74,7 @@ export default function MatchDayScreen({ player, playerTeam, opponent, isHome, o
   const venue = matchVenue(isHome ? playerTeam : opponent, competitionId, player.careerClock.phase === 'academy')
 
   return (
-    <div className="matchday-stage relative min-h-screen w-full bg-ks-black flex flex-col justify-start px-5 py-8 overflow-y-auto">
+    <div className="matchday-stage relative min-h-screen w-full bg-ks-black flex flex-col justify-start px-4 sm:px-5 py-6 sm:py-8 pb-[calc(1.5rem+env(safe-area-inset-bottom))] overflow-y-auto">
       <div className="matchday-lights absolute inset-0"/><div className="matchday-pitch-lines" aria-hidden="true"><i/><i/><i/></div><div className="matchday-crowd absolute inset-x-0 bottom-0 h-[34%]"/><div className="absolute inset-0" style={{
         background: 'radial-gradient(ellipse 70% 45% at 50% 30%, rgba(212,175,55,0.10), transparent 62%), linear-gradient(180deg,#0a0a09,#050504)',
       }} />
@@ -85,7 +86,7 @@ export default function MatchDayScreen({ player, playerTeam, opponent, isHome, o
         <div className="matchday-kicker">KICKOFF STAR · MATCHDAY</div>{(isRegional||isNational||isContinental)&&<div className={`showpiece-ribbon ${isNational||isContinental?'national':'regional'}`}><i>★</i><span>{isContinental?'CONTINENTAL STAGE':isNational?'NATIONAL STAGE':'REGIONAL STAGE'}</span><i>★</i></div>}<div className="text-center font-display tracking-[0.3em] text-[10px] text-ks-gold uppercase mb-6">{competitionLabel ?? 'matchday'}</div>
 
         {/* the fixture */}
-        <div className="fixture-stage flex items-center justify-center gap-4 mb-3">
+        <div className="fixture-stage flex items-center justify-center gap-3 sm:gap-4 mb-3 rounded-2xl border border-ks-gold/20 bg-[#0b100c]/80 px-2 py-5 shadow-[0_18px_50px_rgba(0,0,0,.45)]">
           <div className="flex-1 flex flex-col items-center gap-2">
             <TeamCrest primary={playerTeam.primaryColor} secondary={playerTeam.secondaryColor} short={playerTeam.short} />
             <span className="font-display text-ks-ink text-xs tracking-wide text-center leading-tight">{playerTeam.name}</span>
@@ -106,7 +107,11 @@ export default function MatchDayScreen({ player, playerTeam, opponent, isHome, o
         {player.weeklyFocus?.week === (player.totalWeeksElapsed ?? 0) &&
           <p className="text-center text-[10px] text-ks-gold mb-3">YOUR WEEK: {player.weeklyFocus.kind === 'film' ? 'FILM STUDY' : player.weeklyFocus.kind === 'shift' ? 'COMMUNITY SHIFT' : 'RECOVERY'}</p>}
 
-        <section className="rounded-xl border border-ks-border bg-[#0f0f0d] px-3 py-3 mb-3" aria-label="Pre-match team sheet">
+        <button type="button" onClick={() => setLineupExpanded(value => !value)} aria-expanded={lineupExpanded} aria-controls="matchday-team-sheet" className="w-full flex items-center justify-between gap-3 rounded-xl border border-ks-gold/30 bg-gradient-to-r from-[#211e10] to-[#10150e] px-4 py-3 mb-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-ks-gold">
+          <span><span className="block text-[10px] font-display tracking-[.14em] text-ks-gold">TEAM SHEET</span><span className="block text-xs text-ks-ink mt-1">{playerTeam.name} · Starting XI & bench</span></span>
+          <span className="text-ks-gold text-xs font-display shrink-0">{lineupExpanded ? 'HIDE −' : 'VIEW +'}</span>
+        </button>
+        {lineupExpanded && <section id="matchday-team-sheet" className="rounded-xl border border-ks-border bg-[#0f0f0d] px-3 py-3 mb-3" aria-label="Pre-match team sheet">
           <div className="flex items-center justify-between mb-2"><h2 className="font-display tracking-widest text-[10px] text-ks-gold uppercase">team sheet</h2><span className="text-[9px] text-ks-muted">{playerTeam.name} · starting XI</span></div>
           <div className="grid grid-cols-2 gap-x-3 gap-y-1">
             {sheet.starters.map(member => <div key={`${member.number}-${member.name}`} className={`flex items-center gap-1.5 min-w-0 text-[10px] ${member.isPlayer ? 'text-ks-gold' : 'text-ks-ink'}`}>
@@ -119,7 +124,7 @@ export default function MatchDayScreen({ player, playerTeam, opponent, isHome, o
           {(opponent.notablePlayers?.length ?? 0) > 0 && <div className="border-t border-ks-border/60 mt-2 pt-2"><span className="text-[9px] uppercase tracking-widest text-ks-muted">{opponent.name} players to watch</span>
             <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">{opponent.notablePlayers.map(member => <span key={`${member.name}-${member.position}`} className="text-[9px] text-ks-muted">{member.name} · {member.position}</span>)}</div>
           </div>}
-        </section>
+        </section>}
 
         {/* your state going in */}
         <div className="rounded-xl border border-ks-border bg-[#0f0f0d] px-4 py-3.5 mb-3">
@@ -193,7 +198,7 @@ export default function MatchDayScreen({ player, playerTeam, opponent, isHome, o
         <button
           onClick={() => { if (walkout) return; setWalkout(true); window.setTimeout(onKickOff, 900) }}
           disabled={walkout || adBusy || player.fitness.stamina < 30}
-          className="matchday-walkout disabled:opacity-60 disabled:pointer-events-none w-full bg-ks-gold text-ks-black font-display tracking-widest rounded-xl py-4 text-sm uppercase active:scale-[0.99]"
+          className="matchday-walkout disabled:opacity-60 disabled:pointer-events-none w-full bg-gradient-to-r from-[#d4af37] to-[#f3d979] text-[#12170e] font-display tracking-widest rounded-xl py-4 min-h-12 text-sm uppercase shadow-[0_10px_32px_rgba(212,175,55,.2)] active:scale-[0.98] transition-transform focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ks-gold"
         >
           {walkout ? 'walking out…' : 'walk out'}
         </button>

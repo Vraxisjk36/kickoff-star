@@ -71,6 +71,7 @@ export interface ProCareerState {
   sponsorships?: import('./proSponsorship').SponsorState
   payStatements?: ProPayStatement[]
   pendingBonus?: number
+  relationships?: import('./proRelationships').ProRelationshipLedger
   marketOffers?: ProMarketOffer[]
   talks?: { offer: ProMarketOffer; readyWeek: number; countered: boolean } | null
   loan?: { parentTeamId: string; parentWorldClubId: string; borrowingClubId: string; ends: string; originalWage: number; returnSeason: number } | null

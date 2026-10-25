@@ -67,6 +67,7 @@ export default function MatchSummary({ rating, goals, assists, won, drew, injury
     { label: 'Discipline', detail: `${yellowCards} yellow · ${redCarded ? '1 red' : 'no red'}`, value: ratingBreakdown.discipline },
   ].filter((row) => Math.abs(row.value) >= .005) : []
   const [revealedRows, setRevealedRows] = useState(0)
+  const [showRoundResults, setShowRoundResults] = useState(false)
   const tallyTimerRef = useRef<number | null>(null)
   const tallyComplete = !ratingBreakdown || revealedRows >= ratingRows.length
   const runningRating = ratingBreakdown
@@ -111,16 +112,16 @@ export default function MatchSummary({ rating, goals, assists, won, drew, injury
       ]
 
   return (
-    <div className="match-result-stage relative min-h-screen w-full bg-ks-black flex flex-col px-5 py-8 overflow-y-auto">
+    <div className="match-result-stage relative min-h-screen w-full bg-ks-black flex flex-col px-4 sm:px-5 py-6 sm:py-8 pb-[calc(2rem+env(safe-area-inset-bottom))] overflow-y-auto">
       <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 60% 40% at 50% 25%, rgba(212,175,55,0.08), transparent 60%), linear-gradient(180deg,#0a0a09,#050504)' }} />
       <div className="relative z-10 max-w-md mx-auto w-full">
         <div className="text-center mb-6">
           <div className="font-display tracking-widest text-[11px] text-ks-muted uppercase mb-2">match summary</div>
           <div className={`font-display text-4xl tracking-wide ${resultColor}`}>{resultText}</div>
-          {homeTeamName && awayTeamName && <div className="mt-5 rounded-xl border border-ks-gold/30 bg-[#151711] px-3 py-4">
+          {homeTeamName && awayTeamName && <div className="mt-5 rounded-2xl border border-ks-gold/40 bg-gradient-to-br from-[#25230f] via-[#151b12] to-[#0c110d] px-3 py-5 shadow-[0_18px_50px_rgba(0,0,0,.45)]">
             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
               <span className="text-xs text-ks-ink text-left leading-snug">{homeTeamName}</span>
-              <span className="font-display text-xl text-ks-gold tabular-nums">{homeGoals ?? '–'} : {awayGoals ?? '–'}</span>
+              <span className="font-display text-2xl sm:text-3xl text-ks-gold tabular-nums tracking-wide">{homeGoals ?? '–'} : {awayGoals ?? '–'}</span>
               <span className="text-xs text-ks-ink text-right leading-snug">{awayTeamName}</span>
             </div>
             <div className="mt-2 text-[10px] uppercase tracking-widest text-ks-muted">FULL TIME · PROFESSIONAL FOOTBALL</div>
@@ -204,6 +205,8 @@ export default function MatchSummary({ rating, goals, assists, won, drew, injury
 
         {roundFixtures.length > 0 && (
           <div className="mb-5">
+            <button type="button" onClick={() => setShowRoundResults(value => !value)} aria-expanded={showRoundResults} aria-controls="match-round-results" className="w-full flex items-center justify-between gap-3 rounded-xl border border-ks-gold/30 bg-[#181c13] px-4 py-3 mb-3 text-left text-xs font-display text-ks-gold"><span>ROUND RESULTS · {roundFixtures.length} MATCHES</span><span>{showRoundResults ? 'HIDE −' : 'VIEW +'}</span></button>
+            {showRoundResults && <div id="match-round-results">
             <div className="font-display tracking-widest text-[10px] text-ks-muted uppercase mb-2">round results</div>
             <div className="rounded-xl border border-ks-border bg-[#0f0f0d] divide-y divide-ks-border/50">
               {roundFixtures.map((f) => {
@@ -221,6 +224,7 @@ export default function MatchSummary({ rating, goals, assists, won, drew, injury
                 )
               })}
             </div>
+            </div>}
           </div>
         )}
 
@@ -230,7 +234,7 @@ export default function MatchSummary({ rating, goals, assists, won, drew, injury
             if (tallyTimerRef.current !== null) window.clearInterval(tallyTimerRef.current)
             setRevealedRows(ratingRows.length)
           }
-        }} className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-3.5 text-sm shadow-[0_0_25px_rgba(212,175,55,0.3)]">
+        }} className="w-full bg-gradient-to-r from-[#d4af37] to-[#f3d979] text-[#12170e] font-display tracking-wide rounded-xl py-3.5 min-h-12 text-sm shadow-[0_10px_30px_rgba(212,175,55,.22)] active:scale-[.98] transition-transform">
           {tallyComplete ? 'continue' : 'show full breakdown'}
         </button>
       </div>

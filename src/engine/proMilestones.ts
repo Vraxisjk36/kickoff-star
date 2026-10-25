@@ -1,3 +1,4 @@
+import { nextCareerLegacyMoment } from './proCareerLegacy'
 import { nextInternationalCareerMoment } from './proInternationalMoments'
 import type { ProCareerState, ProSeasonRecord } from './proCareer'
 import type { ProFixture } from './proWorld'
@@ -39,6 +40,8 @@ export function nextProMilestone(state:ProCareerState,cup?:ProFixture|null):ProM
     const candidate=awardCeremony(previous)
     if(!seen.has(candidate.id))return candidate
   }
+  const legacy = nextCareerLegacyMoment(state)
+  if (legacy) return { ...legacy, kind: 'record' }
   if(state.activeCompetitionId){
     const records=proLeagueRecords(state.associationId??'eng',state.activeCompetitionId,
       state.seasonRecords??[],state)

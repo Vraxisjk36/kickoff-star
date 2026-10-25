@@ -25,5 +25,28 @@ for(const [kind,count,weekly] of [['house',70,7],['car',40,6],['plane',20,4],['b
  const hidden=catalog.find(x=>!current.some(y=>y.id===x.id))!
  assert.equal(purchaseLuxuryAsset(1e9,[],hidden.id,3,12,'player-one').error,'Listing is no longer available')
 }
+// Salary-band regression checks: spending cannot exceed available cash.
+for (const wage of [250, 1000, 5000, 25000, 100000]) {
+ const annualPay = wage * 52
+ for (const kind of ['house', 'car', 'plane', 'boat'] as LuxuryKind[]) {
+  const options = weeklyLuxuryListings(kind, 3, 12, 'salary-audit')
+  for (const item of options) {
+   const result = purchaseLuxuryAsset(annualPay, [], item.id, 3, 12, 'salary-audit')
+   assert.equal(result.money >= 0, true, 'Balance must never become negative')
+   if (item.price > annualPay) {
+    assert.equal(result.error, 'Insufficient funds')
+    assert.equal(result.assets.length, 0)
+   } else {
+    assert.equal(result.money, annualPay - item.price)
+    assert.equal(result.assets.length, 1)
+   }
+  }
+ }
+}
+for (const item of LUXURY_CATALOG) {
+ assert.ok(Number.isFinite(item.price) && item.price > 0, 'Invalid asset price')
+ assert.ok(Number.isFinite(item.upkeepWeekly) && item.upkeepWeekly >= 0, 'Invalid upkeep')
+ assert.ok(item.upkeepWeekly * 52 <= item.price, 'Upkeep exceeds asset price per year')
+}
 assert.equal(LUXURY_CATALOG.length,150)
 console.log('Lifestyle: 70 houses, 40 named cars, 20 aircraft, 20 boats; weekly rotations, pricing, ownership and purchase safeguards passed')

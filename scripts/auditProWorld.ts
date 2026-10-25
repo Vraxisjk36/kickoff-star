@@ -84,7 +84,17 @@ assert.equal(signed.world.clubs[seller.id].finances.cash, seller.finances.cash +
 assert.equal(signed.world.clubs[buyer.id].finances.cash, buyer.finances.cash - goodDeal.upfrontTransferPayment - goodDeal.signingBonus)
 
 const start = performance.now()
-const firstSummer = advanceProWorldTo(world, '2026-07-15')
+// Knockout rounds are replaced by the next draw once completed. Inspect the
+// opening July round before advancing to mid-July, when August ties may be the
+// only fixtures remaining in the live fixture index.
+const summerOpening = advanceProWorldTo(world, '2026-07-02')
+for (const country of playableNine) {
+  const openingGames = Object.values(summerOpening.fixtures)
+    .filter(game => game.competitionId.startsWith(`preseason-${country}-`))
+  assert.ok(openingGames.length > 0 && openingGames.every(game => game.kickoffDate.startsWith('2026-07-')),
+    `${country}: July opening tournament round`)
+}
+const firstSummer = advanceProWorldTo(summerOpening, '2026-07-15')
 for (const country of playableNine) {
   const cups = Object.values(firstSummer.competitions).filter(comp => comp.id.startsWith(`preseason-${country}-`))
   assert.ok(cups.length > 0 && cups.every(comp => comp.seasonId === '2026'), `${country}: July invitationals created`)
@@ -92,9 +102,8 @@ for (const country of playableNine) {
   const included = cups.flatMap(comp => comp.entrantIds).sort()
   assert.deepEqual(included, expected, `${country}: every senior club receives one summer invitation`)
   const games = Object.values(firstSummer.fixtures).filter(game => game.competitionId.startsWith(`preseason-${country}-`))
-  assert.ok(games.length > 0 && games.some(game => game.kickoffDate.startsWith('2026-07-')) &&
-    games.every(game => game.kickoffDate >= '2026-07-01' && game.kickoffDate < '2026-09-01'),
-    `${country}: summer tournament fixtures start in July and finish before September; count=${games.length}, first=${games.map(game => game.kickoffDate).sort()[0]}, last=${games.map(game => game.kickoffDate).sort().at(-1)}, sample=${games.slice(0, 5).map(game => game.kickoffDate).join(',')}`)
+  assert.ok(games.length > 0 && games.every(game => game.kickoffDate >= '2026-07-01' && game.kickoffDate < '2026-09-01'),
+    `${country}: active summer tournament rounds remain within the preseason window`)
 }
 const firstAutumn = advanceProWorldTo(firstSummer, '2026-11-15')
 for (const country of playableNine) {

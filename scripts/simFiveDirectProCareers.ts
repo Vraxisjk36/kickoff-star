@@ -2,6 +2,8 @@
 // Synthetic match decisions are seeded; transfers/cups are NOT fabricated.
 import { reseed, rand } from '../src/engine/rng'
 import { createProCareer, proFixture, resolveProMatch, advanceProWeek } from '../src/engine/proCareer'
+import { attachProWorld, pendingProCup, resolveProCup, advanceLivingWorld, generateMarketOffers, finalizeProMove } from '../src/engine/proIntegration'
+import { worldPlayerAwards } from '../src/engine/proHonours'
 import { seniorTrialOffers } from '../src/engine/proTrialOffers'
 import type { Player } from '../src/types/player'
 import { toOvr, computeCurrentAbility } from '../src/engine/rating'
@@ -22,17 +24,36 @@ for(const cfg of configs){
   let player={
     id:'sim-'+cfg.seed,name:cfg.name,surname:'Pro',position:cfg.pos,nationality:'eng',
     attributes:{kind:cfg.pos==='GK'?'goalkeeper':'outfield',values:attrs},
-    careerClock:{ageYears:18,phase:'pro'},fitness:{stamina:100},
+    careerClock:{ageYears:18,phase:'pro'},potential:17,fitness:{stamina:100},
     squadRole:'starting-xi',reputation:20,coachTrust:60,
     seasonAppearances:0,seasonGoals:0,seasonAssists:0,
     totalWeeksElapsed:0,careerEarnings:0,money:0,
-    contract:{expiresWeek:2000,terms:{weeklyWage:1200}},
+    contract:{clubName:offer.name,signedWeek:0,expiresWeek:2000,terms:{weeklyWage:1200,years:20,signingBonus:0,appearanceFee:0,goalBonus:0}},
   } as unknown as Player
-  let career=createProCareer(offer.name,5,offer.associationId,offer.tier)
+  let career=attachProWorld(createProCareer(offer.name,5,offer.associationId,offer.tier),player)
   let apps=0,goals=0,assists=0,peak=toOvr(computeCurrentAbility(player)),weeks=0
   const clubs=[offer.name]
   const seasonResults:unknown[]=[]
+  const awards:string[]=[]
+  const cups:Record<string,number>={}
+  let cupApps=0,cupGoals=0,cupAssists=0,transferAttempts=0,completedTransfers=0
   while(!career.retired && weeks<1400){
+    // Conclude negotiated offers after their required waiting period.
+    if(career.talks){const moved=finalizeProMove(career,player);if(moved){career=moved.state;player=moved.player;completedTransfers++;clubs.push(player.contract?.clubName??'Unknown')}}
+    if(career.week<=3 && career.season%3===0 && !career.talks){
+      const offers=generateMarketOffers(career,player)
+      if(offers.length){transferAttempts++;career={...career,talks:{offer:offers[0],readyWeek:(player.totalWeeksElapsed??0)+2,countered:false}}}
+    }
+    // Cup matches use the actual tournament fixture and resolution engine.
+    for(let cupIndex=0;cupIndex<3;cupIndex++){
+      const cup=pendingProCup(career);if(!cup)break
+      const g=rand()<(cfg.pos==='ST'?.30:.09)?1:0,a=rand()<.16?1:0
+      const scored=g+(rand()<.6?1:0),conceded=rand()<.5?1:0
+      const result=resolveProCup(career,player,cup.id,{scored,conceded,goals:g,assists:a,rating:6.7+g,energy:85,minutes:90,yellowCards:0,redCarded:false})
+      if(!result)throw Error('Cup resolution failed: '+cup.id)
+      career=result.state;cupApps++;cupGoals+=g;cupAssists+=a
+      cups[cup.competitionId]=(cups[cup.competitionId]??0)+1
+    }
     const fixture=proFixture(career)
     if(fixture){
       const home=fixture.homeTeamId===career.world.playerTeamId
@@ -46,10 +67,15 @@ for(const cfg of configs){
       player={...player,seasonAppearances:(player.seasonAppearances??0)+1,seasonGoals:(player.seasonGoals??0)+g,seasonAssists:(player.seasonAssists??0)+a}
     }
     const prevSeason=career.season
+    const previous=career
     const advanced=advanceProWeek(career,player)
-    career=advanced.state;player=advanced.player;weeks++
+    const lived=advanceLivingWorld(previous,advanced.state,advanced.player)
+    career=lived.state;player=lived.player;weeks++
     peak=Math.max(peak,toOvr(computeCurrentAbility(player)))
-    if(career.season!==prevSeason)seasonResults.push(career.seasonRecords?.at(-1))
+    if(career.season!==prevSeason){
+      const season=career.seasonRecords?.at(-1)
+      if(season){seasonResults.push(season);for(const award of worldPlayerAwards(season))if(award.won)awards.push('Season '+season.season+': '+award.title)}
+    }
   }
   console.log('DIRECT_PRO_CAREER_JSON:'+JSON.stringify({
     name:cfg.name,position:cfg.pos,seed:cfg.seed,startingOverall:cfg.ovr,
@@ -57,8 +83,8 @@ for(const cfg of configs){
     retired:!!career.retired,retirementAge:player.careerClock.ageYears,
     seasons:career.seasonRecords?.length??0,appearances:apps,goals,assists,
     grossEarnings:player.careerEarnings,money:player.money,
-    clubs,transfers:0,leagueTitles:career.seasonRecords?.filter(s=>s.leagueChampion).length??0,
-    seasonResults,limitation:'Production pro-season engine and simulated match outcomes; no automated transfer, domestic cup or individual award simulation in this harness'
+    clubs,transferAttempts,completedTransfers,cupAppearances:cupApps,cupGoals,cupAssists,cupCompetitions:cups,individualAwards:awards,leagueTitles:career.seasonRecords?.filter(s=>s.leagueChampion).length??0,
+    seasonResults,limitation:'Real transfer, tournament and awards functions with seeded synthetic match decisions; cup fixture participation is not the same as verified cup trophy wins'
   }))
   if(!career.retired)process.exitCode=1
 }

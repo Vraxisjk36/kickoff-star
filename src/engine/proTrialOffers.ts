@@ -11,6 +11,7 @@ export interface SeniorTrialOffer {
   overall:number
   prestige:number
   reason:string
+  squadRole:'Development prospect'|'Rotation prospect'|'First-team candidate'
 }
 /** Exactly four *total* career offers, never four per country.
  * A 60-OVR academy graduate should expect lower-flight football in strong
@@ -43,16 +44,23 @@ export function seniorTrialOffers(points:number,ovr:number,careerSeed=''):Senior
     const size=plannedClubCount(country)
     candidates.push({country,tier:1,rank:size-1, label:'Exceptional trial · relegation-battle club'})
   }
-  const maxRating=standout?Math.min(79,ability+14):Math.min(76,ability+10)
+  // Club strength is NOT a minimum player rating. A promising youngster
+  // may sign for a stronger side on a development contract, not as a starter.
+  // Keep first-team expectations realistic and exclude elite (80+) clubs.
   const allowed=candidates.map(item=>{
     const size=item.tier===1?plannedClubCount(item.country):LOWER_DIVISIONS[item.country]?.clubs??18
     const overall=proRatingTarget(item.country,item.tier,item.rank,size)
     const club=proWorldClubIdentity(item.country,item.tier,item.rank)
     return {...item,overall,name:club.name}
-  }).filter(item=>item.overall<80 && item.overall<=maxRating &&
+  }).filter(item=>item.overall<80 &&
     (standout || item.tier===2 || !['eng','esp','ger','ita','fra'].includes(item.country)))
   const unique=new Set<string>()
   const selected:SeniorTrialOffer[]=[]
+  const roleFor=(overall:number):SeniorTrialOffer['squadRole']=>{
+    const gap=overall-ability
+    return gap>=9 || score<=2?'Development prospect':
+      gap>=3 || score<6?'Rotation prospect':'First-team candidate'
+  }
   const addFrom=(pool:typeof allowed,count:number)=>{
     for(const candidate of pool){
       if(count<=0)break
@@ -60,10 +68,11 @@ export function seniorTrialOffers(points:number,ovr:number,careerSeed=''):Senior
       if(unique.has(key))continue
       if(selected.some(item=>item.associationId===candidate.country))continue
       unique.add(key)
+      const squadRole=roleFor(candidate.overall)
       selected.push({id:key,associationId:candidate.country,tier:candidate.tier,
         rank:candidate.rank,name:candidate.name,overall:candidate.overall,
         prestige:Math.max(3,Math.min(8,Math.round(candidate.overall/12))),
-        reason:candidate.label})
+        squadRole,reason:`${candidate.label} · ${squadRole}`})
       count--
     }
   }
@@ -73,23 +82,28 @@ export function seniorTrialOffers(points:number,ovr:number,careerSeed=''):Senior
   if(standout)addFrom(allowed.filter(item=>item.tier===1&&major(item)),1)
   if(selected.length<4)addFrom(allowed.filter(item=>item.tier===2),4-selected.length)
   if(selected.length<4)addFrom(allowed.filter(item=>item.tier===1&&!major(item)),4-selected.length)
-  // A low-OVR graduate must never get trapped on the offers screen.
-  // Broaden second-division scouting by actual rating, while preserving
-  // the four-offer cap and prohibiting elite first-division approaches.
+  // Expand across actual league identities, not fabricated clubs or
+  // artificially reduced squad OVR. Retain one club per association.
   if(selected.length<4){
     const fallback:typeof allowed=[]
-    for(const country of strong){
-      const size=LOWER_DIVISIONS[country]?.clubs??18
-      for(let rank=0;rank<size;rank++){
-        const overall=proRatingTarget(country,2,rank,size)
-        if(overall>=80 || overall>maxRating)continue
-        const club=proWorldClubIdentity(country,2,rank)
-        fallback.push({country,tier:2,rank,label:'Development opportunity · second division',overall,name:club.name})
+    for(const country of [...strong,'rsa'] as const){
+      for(const tier of [2,1] as const){
+        if(tier===1&&!standout&&major({country,tier,rank:0,label:'',overall:0,name:''}))continue
+        const size=tier===1?plannedClubCount(country):LOWER_DIVISIONS[country]?.clubs??18
+        for(let rank=0;rank<size;rank++){
+          const overall=proRatingTarget(country,tier,rank,size)
+          if(overall>=80)continue
+          const club=proWorldClubIdentity(country,tier,rank)
+          fallback.push({country,tier,rank,label:'Scouted development pathway',overall,name:club.name})
+        }
       }
     }
-    fallback.sort((a,b)=>a.overall-b.overall)
+    fallback.sort((a,b)=>{
+      const ga=Math.abs(a.overall-ability),gb=Math.abs(b.overall-ability)
+      return ga-gb || ((a.rank+seed)%19)-((b.rank+seed)%19)
+    })
     addFrom(fallback,4-selected.length)
   }
-  if(selected.length!==4)throw new Error('Senior scouting failed to supply four affordable offers')
+  if(selected.length!==4)throw new Error('Senior scouting failed to supply four realistic offers')
   return selected
 }

@@ -20,6 +20,7 @@ on:
       - 'scripts/auditProCareerLegacy.ts'
       - 'scripts/auditProInternationalMoments.ts'
       - 'scripts/auditProWorld.ts'
+      - 'scripts/auditSeniorContinental.ts'
       - 'src/screens/ProCareer.tsx'
       - 'src/screens/ProMilestoneScreen.tsx'
       - 'src/screens/MatchDayScreen.tsx'
@@ -44,6 +45,7 @@ jobs:
           cache: npm
       - run: npm ci
       # Phase 4 UI safety gate: validate long saves, football systems and compile all matchday and career screens.
+      - run: node --import tsx scripts/auditSeniorContinental.ts
       - run: node --import tsx scripts/auditProWorld.ts
       - run: npm run audit:pro-pyramids
       - run: node --import tsx scripts/auditWorldwideInternational.ts

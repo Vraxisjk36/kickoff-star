@@ -71,7 +71,9 @@ export function prepareProGraduate(player:Player, trialPoints=4):Player {
   // A first professional contract starts on the senior scale. Preserve
   // variation (60–66), but never strand a youth-scale player at 29 OVR.
   const target=Math.max(60,Math.min(66,Math.round(60+score*.55+Math.max(-2,Math.min(2,(original-50)*.1)))))
-  if(original>=target)return player
+  // Once the player reaches senior-entry ability, graduation is idempotent.
+  // Avoid recalculating a higher target from the already-boosted OVR.
+  if(original>=60)return player
   const values=player.attributes.values as Record<string,number>
   const originalValues={...values}
   // Recalculate actual positional OVR, rather than assuming a fixed

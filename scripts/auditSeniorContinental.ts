@@ -74,6 +74,27 @@ for(const confederation of confeds){
   }
 }
 assert.equal(allCompIds.size,13)
+// Validate the real human-player cup interface for every continental tier,
+// including the three UEFA routes and both CAF routes. A generated fixture
+// must be playable and must not be recorded twice.
+import { pendingProCup, resolveProCup } from '../src/engine/proIntegration'
+import type { ProCareerState } from '../src/engine/proCareer'
+import type { Player } from '../src/types/player'
+for(const id of allCompIds){
+  const fixture=Object.values(world.fixtures).find(f=>f.competitionId===id&&!f.result)!
+  assert.ok(fixture,`${id}: no playable fixture`)
+  const player={id:'continental-audit',name:'Audit',position:'ST',squadRole:'starting-xi'} as Player
+  const state={backgroundWorld:world,date:fixture.kickoffDate,week:1,season:1,
+    world:{playerTeamId:'audit-team'},clubWorldIds:{'audit-team':fixture.homeId}} as ProCareerState
+  const pending=pendingProCup(state)
+  assert.equal(pending?.id,fixture.id,`${id}: player cannot access continental fixture`)
+  const outcome=resolveProCup(state,player,fixture.id,{scored:2,conceded:1,goals:1,assists:0,rating:8.5,energy:80,minutes:90,yellowCards:0,redCarded:false})
+  assert.ok(outcome,`${id}: human match result rejected`)
+  assert.equal(outcome.record.competitionId,id)
+  assert.equal(outcome.state.backgroundWorld?.fixtures[fixture.id].result?.homeGoals,2)
+  assert.equal(resolveProCup(outcome.state,player,fixture.id,{scored:2,conceded:1,goals:1,assists:0,rating:8.5,energy:80,minutes:90,yellowCards:0,redCarded:false}),null,`${id}: duplicate result accepted`)
+}
+
 const sample=Object.values(world.fixtures).find(f=>f.competitionId==='continental-caf')!
 assert.ok(recordTournamentResult(world,sample.id,2,1),'CAF fixture result must record')
 assert.equal(world.fixtures[sample.id].result?.homeGoals,2)

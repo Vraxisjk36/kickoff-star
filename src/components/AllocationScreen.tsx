@@ -136,6 +136,7 @@ export default function AllocationScreen({ title, subtitle, totalXp, attrs, valu
               {adBusy ? 'LOADING AD…' : 'WATCH AD · +150 XP →'}
             </button>
           )}
+          {!rewardedAdsAvailable() && <p className="text-[11px] text-ks-muted mt-3">Optional +150 XP video rewards are available in the Android app only.</p>}
           {adError && <p role="status" className="text-xs text-orange-300 mt-2">Ad unavailable or not completed. Your XP is unchanged.</p>}
         </div>
 

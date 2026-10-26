@@ -74,8 +74,9 @@ export interface ProCareerState {
   payStatements?: ProPayStatement[]
   pendingBonus?: number
   relationships?: import('./proRelationships').ProRelationshipLedger
+  scouting?: { requestedWeek: number; readyWeek: number; status: 'searching'|'ready'; candidates: ProMarketOffer[] } | null
   marketOffers?: ProMarketOffer[]
-  talks?: { offer: ProMarketOffer; readyWeek: number; countered: boolean } | null
+  talks?: { offer: ProMarketOffer; readyWeek: number; countered: boolean; stage?: 'personal'|'club-review'|'medical'|'ready'|'rejected'; history?: string[]; clubDecisionWeek?: number; medicalWeek?: number; rejectionReason?: string } | null
   loan?: { parentTeamId: string; parentWorldClubId: string; borrowingClubId: string; ends: string; originalWage: number; returnSeason: number } | null
   news?: import('./proNews').ProNewsArticle[]
 }

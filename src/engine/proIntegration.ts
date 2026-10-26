@@ -19,7 +19,6 @@ import type { MatchRecord } from './matchLedger'
 import { generateTeam, teamOverall } from './teams'
 import { calibrateSeniorTeam, proRatingTarget } from './proRatings'
 import type { LeagueWorld, Division } from './league'
-import { mondayFrom } from './proWeeklySchedule'
 
 const addDays = (date: string, days: number): string => new Date(Date.parse(`${date}T00:00:00Z`) + days * 86400000).toISOString().slice(0, 10)
 const monthIndex = (date: string) => Number(date.slice(0, 4)) * 12 + Number(date.slice(5, 7)) - 1

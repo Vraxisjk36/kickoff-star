@@ -1,0 +1,26 @@
+name: Five Career Simulation Reports
+on:
+  push:
+    branches: [codex/v32-v4-unified]
+    paths:
+      - 'scripts/careerReport.ts'
+      - '.github/workflows/five-career-report.yml'
+  workflow_dispatch: {}
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Simulate five player careers (six seasons each)
+        run: node --import tsx scripts/careerReport.ts | tee five-careers.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: five-career-report
+          path: five-careers.txt

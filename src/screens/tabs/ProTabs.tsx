@@ -69,6 +69,14 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
   const qualifierTable = player.nationality ? visibleQualifyingTable(player.nationality,
     pro.season, pro.week, pro.international?.fixtures ?? []) : []
   const moneySymbol = ({ eng: 'GBP', sco: 'GBP', esp: 'EUR', ger: 'EUR', fra: 'EUR', ita: 'EUR', ned: 'EUR', por: 'EUR', bra: 'BRL', rsa: 'ZAR' } as Record<string, string>)[pro.associationId ?? 'eng'] ?? 'GBP'
+  const linkedClubId = pro.clubWorldIds?.[club.id]
+  const otherMatches = linkedClubId && pro.backgroundWorld
+    ? Object.values(pro.backgroundWorld.fixtures)
+        .filter(match => match.homeId === linkedClubId || match.awayId === linkedClubId)
+        .filter(match => pro.backgroundWorld?.competitions[match.competitionId]?.kind !== 'league')
+        .filter(match => fixtureFilter === 'results' ? !!match.result : !match.result)
+        .sort((a,b) => fixtureFilter === 'results' ? b.kickoffDate.localeCompare(a.kickoffDate) : a.kickoffDate.localeCompare(b.kickoffDate))
+    : []
   const offerName = (id: string, teamId: string) => division.teams.find(team => team.id === teamId)?.name ?? pro.backgroundWorld?.clubs[id]?.name ?? id
   const cards = (title: string, body: React.ReactNode) => <Panel title={title}>{body}</Panel>
   const stat = (label: string, value: string | number) => <div className="flex justify-between border-b border-ks-border/40 py-2 text-sm"><span className="text-ks-muted">{label}</span><strong className="text-ks-ink">{value}</strong></div>
@@ -199,7 +207,19 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
         <div className="px-4 py-3 border-b border-ks-gold/20 font-display text-xs tracking-widest text-ks-gold">YOUR MATCH CALENDAR</div>
         <div className="grid grid-cols-2 gap-1 p-2">{(['upcoming','results'] as const).map(filter=><button key={filter} onClick={()=>{setFixtureFilter(filter);setFixtureLimit(8)}} className={`rounded-lg py-2.5 text-[11px] font-display uppercase ${fixtureFilter===filter?'bg-ks-gold text-ks-black':'bg-white/5 text-ks-muted'}`}>{filter}</button>)}</div>
         <div className="flex gap-2 px-3 pb-2"><button type="button" onClick={()=>setCompetitionFilter('all')} className={`rounded-md px-3 py-2 text-xs ${competitionFilter==='all'?'bg-ks-gold text-ks-black':'bg-white/5 text-ks-muted'}`}>ALL AVAILABLE</button><button type="button" onClick={()=>setCompetitionFilter('league')} className={`rounded-md px-3 py-2 text-xs ${competitionFilter==='league'?'bg-ks-gold text-ks-black':'bg-white/5 text-ks-muted'}`}>LEAGUE</button></div>
-        <p className="px-3 pb-2 text-[10px] text-ks-muted">League schedule shown below. Cup, continental and friendly fixtures appear in the weekly schedule when generated; they are not yet included in this season-long list.</p>
+        {competitionFilter === 'all' && otherMatches.slice(0,fixtureLimit).map(match => {
+          const isHome = match.homeId === linkedClubId
+          const otherId = isHome ? match.awayId : match.homeId
+          const otherName = pro.backgroundWorld?.clubs[otherId]?.name ?? 'Opponent'
+          const score = match.result ? (isHome ? match.result.homeGoals + '–' + match.result.awayGoals : match.result.awayGoals + '–' + match.result.homeGoals) : 'UPCOMING'
+          return <div key={match.id} className="flex items-center justify-between gap-3 px-3 py-3 border-b border-ks-border/30">
+            <div className="min-w-0"><div className="text-ks-ink text-xs">{otherName}</div>
+              <div className="text-ks-muted text-[10px]">{proCompetitionName(match.competitionId)} · {match.kickoffDate} · {isHome?'HOME':'AWAY'}</div></div>
+            <span className="text-ks-gold text-xs font-display">{score}</span>
+          </div>
+        })}
+        {competitionFilter === 'all' && otherMatches.length > fixtureLimit && <button type="button" onClick={()=>setFixtureLimit(n=>n+8)} className="w-full py-3 text-xs text-ks-gold">SHOW MORE CUP MATCHES ↓</button>}
+        <p className="px-3 pb-2 text-[10px] text-ks-muted">Cup and continental matches use scheduled dates. League dates below are estimates; friendlies and national call-ups remain on the weekly schedule.</p>
         {division.fixtures.filter(f=>(f.homeTeamId===club.id||f.awayTeamId===club.id)&&(fixtureFilter==='results'?f.played:!f.played)).sort((a,b)=>fixtureFilter==='results'?b.week-a.week:a.week-b.week).slice(0,fixtureLimit).map(f=>{
           const isHome=f.homeTeamId===club.id
           const other=division.teams.find(t=>t.id===(isHome?f.awayTeamId:f.homeTeamId))

@@ -77,6 +77,28 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
         .filter(match => fixtureFilter === 'results' ? !!match.result : !match.result)
         .sort((a,b) => fixtureFilter === 'results' ? b.kickoffDate.localeCompare(a.kickoffDate) : a.kickoffDate.localeCompare(b.kickoffDate))
     : []
+  const leagueCalendar = division.fixtures.filter(f => f.homeTeamId === club.id || f.awayTeamId === club.id).map(f => {
+    const isHome = f.homeTeamId === club.id
+    const opponent = division.teams.find(t => t.id === (isHome ? f.awayTeamId : f.homeTeamId))
+    const worldFixture = pro.backgroundWorld?.fixtures[f.id]
+    const base = pro.date ? Date.parse(mondayFrom(pro.date) + 'T00:00:00Z') : NaN
+    const estimated = Number.isFinite(base) ? new Date(base + (f.week - pro.week) * 604800000 + 5 * 86400000).toISOString().slice(0,10) : ''
+    return { id:'league-' + f.id, date:worldFixture?.kickoffDate ?? estimated, competition:pro.activeCompetitionId ? proCompetitionName(pro.activeCompetitionId) : 'League',
+      opponent:opponent?.name ?? 'Opponent', home:isHome, played:f.played,
+      score:f.played && f.homeGoals != null && f.awayGoals != null ? (isHome ? f.homeGoals + '–' + f.awayGoals : f.awayGoals + '–' + f.homeGoals) : '',
+      estimated:!worldFixture?.kickoffDate, crest:opponent }
+  })
+  const cupCalendar = otherMatches.map(f => {
+    const isHome = f.homeId === linkedClubId
+    const opponentId = isHome ? f.awayId : f.homeId
+    return { id:'cup-' + f.id, date:f.kickoffDate, competition:proCompetitionName(f.competitionId),
+      opponent:pro.backgroundWorld?.clubs[opponentId]?.name ?? 'Opponent', home:isHome, played:!!f.result,
+      score:f.result ? (isHome ? f.result.homeGoals + '–' + f.result.awayGoals : f.result.awayGoals + '–' + f.result.homeGoals) : '',
+      estimated:false, crest:undefined }
+  })
+  const matchCalendar = [...leagueCalendar,...(competitionFilter === 'all' ? cupCalendar : [])]
+    .filter(f => fixtureFilter === 'results' ? f.played : !f.played)
+    .sort((a,b) => fixtureFilter === 'results' ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date))
   const offerName = (id: string, teamId: string) => division.teams.find(team => team.id === teamId)?.name ?? pro.backgroundWorld?.clubs[id]?.name ?? id
   const cards = (title: string, body: React.ReactNode) => <Panel title={title}>{body}</Panel>
   const stat = (label: string, value: string | number) => <div className="flex justify-between border-b border-ks-border/40 py-2 text-sm"><span className="text-ks-muted">{label}</span><strong className="text-ks-ink">{value}</strong></div>
@@ -207,32 +229,17 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
         <div className="px-4 py-3 border-b border-ks-gold/20 font-display text-xs tracking-widest text-ks-gold">YOUR MATCH CALENDAR</div>
         <div className="grid grid-cols-2 gap-1 p-2">{(['upcoming','results'] as const).map(filter=><button key={filter} onClick={()=>{setFixtureFilter(filter);setFixtureLimit(8)}} className={`rounded-lg py-2.5 text-[11px] font-display uppercase ${fixtureFilter===filter?'bg-ks-gold text-ks-black':'bg-white/5 text-ks-muted'}`}>{filter}</button>)}</div>
         <div className="flex gap-2 px-3 pb-2"><button type="button" onClick={()=>setCompetitionFilter('all')} className={`rounded-md px-3 py-2 text-xs ${competitionFilter==='all'?'bg-ks-gold text-ks-black':'bg-white/5 text-ks-muted'}`}>ALL AVAILABLE</button><button type="button" onClick={()=>setCompetitionFilter('league')} className={`rounded-md px-3 py-2 text-xs ${competitionFilter==='league'?'bg-ks-gold text-ks-black':'bg-white/5 text-ks-muted'}`}>LEAGUE</button></div>
-        {competitionFilter === 'all' && otherMatches.slice(0,fixtureLimit).map(match => {
-          const isHome = match.homeId === linkedClubId
-          const otherId = isHome ? match.awayId : match.homeId
-          const otherName = pro.backgroundWorld?.clubs[otherId]?.name ?? 'Opponent'
-          const score = match.result ? (isHome ? match.result.homeGoals + '–' + match.result.awayGoals : match.result.awayGoals + '–' + match.result.homeGoals) : 'UPCOMING'
-          return <div key={match.id} className="flex items-center justify-between gap-3 px-3 py-3 border-b border-ks-border/30">
-            <div className="min-w-0"><div className="text-ks-ink text-xs">{otherName}</div>
-              <div className="text-ks-muted text-[10px]">{proCompetitionName(match.competitionId)} · {match.kickoffDate} · {isHome?'HOME':'AWAY'}</div></div>
-            <span className="text-ks-gold text-xs font-display">{score}</span>
+        <p className="px-3 pb-2 text-[10px] text-ks-muted">Chronological club calendar · league dates marked EST. are provisional. Preseason friendlies and international call-ups remain in the weekly schedule.</p>
+        {matchCalendar.slice(0,fixtureLimit).map(match => <div key={match.id} className="flex items-center gap-3 px-3 py-3 border-b border-ks-border/30">
+          {match.crest && <TeamCrest primary={match.crest.primaryColor} secondary={match.crest.secondaryColor} short={match.crest.short} size="sm"/>}
+          <div className="min-w-0 flex-1">
+            <div className="text-ks-ink text-xs truncate">{match.opponent}</div>
+            <div className="text-ks-muted text-[10px]">{match.competition} · {match.date ? (match.estimated ? 'EST. ' : '') + new Date(match.date+'T00:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}) : 'DATE PENDING'} · {match.home?'HOME':'AWAY'}</div>
           </div>
-        })}
-        {competitionFilter === 'all' && otherMatches.length > fixtureLimit && <button type="button" onClick={()=>setFixtureLimit(n=>n+8)} className="w-full py-3 text-xs text-ks-gold">SHOW MORE CUP MATCHES ↓</button>}
-        <p className="px-3 pb-2 text-[10px] text-ks-muted">Cup and continental matches use scheduled dates. League dates below are estimates; friendlies and national call-ups remain on the weekly schedule.</p>
-        {division.fixtures.filter(f=>(f.homeTeamId===club.id||f.awayTeamId===club.id)&&(fixtureFilter==='results'?f.played:!f.played)).sort((a,b)=>fixtureFilter==='results'?b.week-a.week:a.week-b.week).slice(0,fixtureLimit).map(f=>{
-          const isHome=f.homeTeamId===club.id
-          const other=division.teams.find(t=>t.id===(isHome?f.awayTeamId:f.homeTeamId))
-          const score=f.played && f.homeGoals!==null&&f.awayGoals!==null
-            ? `${isHome?f.homeGoals:f.awayGoals}–${isHome?f.awayGoals:f.homeGoals}` : 'UPCOMING'
-          return <div key={f.id} className="flex items-center gap-3 px-3 py-3 border-b border-ks-border/30 last:border-0">
-            {other && <TeamCrest primary={other.primaryColor} secondary={other.secondaryColor} short={other.short} size="sm"/>}
-            <div className="min-w-0 flex-1"><div className="text-ks-ink text-xs truncate">{other?.name??'Opponent'}</div>
-              <div className="text-ks-muted text-[10px]">ROUND {f.week} · {isHome?'HOME':'AWAY'}</div></div>
-            <span className={`text-xs font-display ${f.played?'text-ks-ink':'text-ks-gold'}`}>{score}</span>
-          </div>
-        })}
-        {division.fixtures.filter(f=>(f.homeTeamId===club.id||f.awayTeamId===club.id)&&(fixtureFilter==='results'?f.played:!f.played)).length>fixtureLimit&&<button onClick={()=>setFixtureLimit(n=>n+8)} className="w-full py-3 text-xs font-display text-ks-gold border-t border-ks-border/40">SHOW 8 MORE MATCHES ↓</button>}
+          <span className={`text-xs font-display ${match.played?'text-ks-ink':'text-ks-gold'}`}>{match.played?match.score:'UPCOMING'}</span>
+        </div>)}
+        {matchCalendar.length === 0 && <p className="p-4 text-sm text-ks-muted">No {fixtureFilter} fixtures scheduled yet.</p>}
+        {matchCalendar.length > fixtureLimit && <button type="button" onClick={()=>setFixtureLimit(n=>n+8)} className="w-full py-3 text-xs text-ks-gold">SHOW 8 MORE MATCHES ↓</button>}
       </div>}
       {proLeagueView==='international' && <Section title="SENIOR NATIONAL TEAM · COMPETITIONS" defaultOpen>
       <div>

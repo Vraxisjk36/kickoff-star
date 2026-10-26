@@ -90,7 +90,7 @@ export default function ProTrialScreen({ onComplete, onExitToMenu }: { onComplet
       <h1 className="font-display text-ks-ink text-4xl mt-3">FOUR CLUBS. YOUR CALL.</h1>
       <p className="text-ks-muted text-sm leading-relaxed my-5">Your nine assessments earned <strong className="text-ks-gold">{trial.points}/9</strong> scouting points. Four clubs across the entire world have invited you to join—NOT four clubs per country. Offers consider your ability and trial performance.</p>
       <div className="flex flex-col gap-3">
-        {seniorTrialOffers(trial.points,toOvr(computeCurrentAbility(prepareProGraduate(player)))).map((offer,index)=><button key={offer.id}
+        {seniorTrialOffers(trial.points,toOvr(computeCurrentAbility(prepareProGraduate(player,trial.points))),player.id).map((offer,index)=><button key={offer.id}
           onClick={()=>setChosenOffer(offer)}
           className="text-left rounded-xl border border-ks-gold/20 p-4 bg-gradient-to-r from-[#191b13] to-[#11100d] hover:border-ks-gold flex items-center gap-3">
           <div className="text-ks-gold font-display text-xl w-6">{index+1}</div>

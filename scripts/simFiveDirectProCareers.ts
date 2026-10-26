@@ -105,6 +105,8 @@ for(const cfg of configs.filter((_,i)=>process.env.SIM_INDEX===undefined || i===
       if(season){seasonResults.push(season);for(const award of worldPlayerAwards(season))if(award.won)awards.push('Season '+season.season+': '+award.title)}
     }
   }
+  const cupParticipationGaps=Object.entries(cupAudit).filter(([id, audit]) => !id.startsWith('preseason-') && audit.playedByWorld>0 && audit.playedByHuman===0).map(([id])=>id)
+  console.log('DIRECT_PRO_CUP_GAPS:'+JSON.stringify({name:cfg.name,competitionIds:cupParticipationGaps}))
   console.log('DIRECT_PRO_CAREER_JSON:'+JSON.stringify({
     name:cfg.name,position:cfg.pos,seed:cfg.seed,startingOverall:cfg.ovr,
     actualEngineOverall:toOvr(computeCurrentAbility(player)),peakOverall:peak,

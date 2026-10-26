@@ -18,13 +18,14 @@ export interface SeniorTrialOffer {
  * Exceptional nine-assessment trials unlock at most one bottom-tier top
  * division candidate. The match engine and pay still use full OVR.
  */
-export function seniorTrialOffers(points:number,ovr:number):SeniorTrialOffer[]{
+export function seniorTrialOffers(points:number,ovr:number,careerSeed=''):SeniorTrialOffer[]{
   const score=Math.max(0,Math.min(9,Math.floor(points)))
   const ability=Math.max(35,Math.min(90,Math.round(ovr)))
   const standout=score>=7 && ability>=57
   const strong=['eng','esp','ger','ita','fra','ned','por','sco'] as const
   const smaller=['rsa','sco','por','ned'] as const
-  const seed=(score*7+ability*3)%37
+  const identity=[...careerSeed].reduce((hash,char)=>((hash*31+char.charCodeAt(0))>>>0),17)
+  const seed=(score*7+ability*3+identity)%37
   const candidates:Array<{country:string;tier:1|2;rank:number;label:string}>=[]
   for(let n=0;n<18;n++){
     const country=strong[(n+seed)%strong.length]

@@ -96,7 +96,19 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
       score:f.result ? (isHome ? f.result.homeGoals + '–' + f.result.awayGoals : f.result.awayGoals + '–' + f.result.homeGoals) : '',
       estimated:false, crest:undefined }
   })
-  const matchCalendar = [...leagueCalendar,...(competitionFilter === 'all' ? cupCalendar : [])]
+  const internationalCalendar = competitionFilter === 'all'
+    ? [...(pro.international?.fixtures ?? []),...(pro.international?.pending ? [pro.international.pending] : [])]
+        .filter(match => match.season === pro.season)
+        .map(match => {
+          const monday = pro.date ? Date.parse(mondayFrom(pro.date) + 'T00:00:00Z') : NaN
+          const date = Number.isFinite(monday) ? new Date(monday + (match.week - pro.week) * 604800000 + 3 * 86400000).toISOString().slice(0,10) : ''
+          const result = 'scored' in match ? match : undefined
+          return { id:'national-' + match.id, date, competition:'International · ' + match.competition,
+            opponent:getNation(match.opponentId).name, home:match.home, played:!!result,
+            score:result ? result.scored + '–' + result.conceded : '', estimated:true, crest:undefined }
+        })
+    : []
+  const matchCalendar = [...leagueCalendar,...(competitionFilter === 'all' ? [...cupCalendar,...internationalCalendar] : [])]
     .filter(f => fixtureFilter === 'results' ? f.played : !f.played)
     .sort((a,b) => fixtureFilter === 'results' ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date))
   const offerName = (id: string, teamId: string) => division.teams.find(team => team.id === teamId)?.name ?? pro.backgroundWorld?.clubs[id]?.name ?? id
@@ -229,7 +241,7 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
         <div className="px-4 py-3 border-b border-ks-gold/20 font-display text-xs tracking-widest text-ks-gold">YOUR MATCH CALENDAR</div>
         <div className="grid grid-cols-2 gap-1 p-2">{(['upcoming','results'] as const).map(filter=><button key={filter} onClick={()=>{setFixtureFilter(filter);setFixtureLimit(8)}} className={`rounded-lg py-2.5 text-[11px] font-display uppercase ${fixtureFilter===filter?'bg-ks-gold text-ks-black':'bg-white/5 text-ks-muted'}`}>{filter}</button>)}</div>
         <div className="flex gap-2 px-3 pb-2"><button type="button" onClick={()=>setCompetitionFilter('all')} className={`rounded-md px-3 py-2 text-xs ${competitionFilter==='all'?'bg-ks-gold text-ks-black':'bg-white/5 text-ks-muted'}`}>ALL AVAILABLE</button><button type="button" onClick={()=>setCompetitionFilter('league')} className={`rounded-md px-3 py-2 text-xs ${competitionFilter==='league'?'bg-ks-gold text-ks-black':'bg-white/5 text-ks-muted'}`}>LEAGUE</button></div>
-        <p className="px-3 pb-2 text-[10px] text-ks-muted">Chronological club calendar · league dates marked EST. are provisional. Preseason friendlies and international call-ups remain in the weekly schedule.</p>
+        <p className="px-3 pb-2 text-[10px] text-ks-muted">Chronological club calendar · league dates marked EST. are provisional. Preseason friendlies remain in the weekly schedule; international dates are estimated.</p>
         {matchCalendar.slice(0,fixtureLimit).map(match => <div key={match.id} className="flex items-center gap-3 px-3 py-3 border-b border-ks-border/30">
           {match.crest && <TeamCrest primary={match.crest.primaryColor} secondary={match.crest.secondaryColor} short={match.crest.short} size="sm"/>}
           <div className="min-w-0 flex-1">

@@ -860,7 +860,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     if (!player?.proTrial || player.proTrial.week !== 3) return
     const wage = 350 + prestige * 175 + player.proTrial.points * 45
     const terms = { weeklyWage: wage, years: 2, appearanceFee: Math.round(wage * .08), goalBonus: Math.round(wage * .12), signingBonus: wage * 2 }
-    const graduate = prepareProGraduate(player)
+    const graduate = prepareProGraduate(player, player.proTrial.points)
     const professional = createProCareer(clubName, prestige, associationId, tier)
     const ownTeam = professional.world.divisions[1].teams.find(team => team.id === professional.world.playerTeamId)!
     const squadPrestige = Math.max(5,Math.min(9,Math.round(teamOverall(ownTeam)/10)))

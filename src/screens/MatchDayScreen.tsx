@@ -69,21 +69,23 @@ export default function MatchDayScreen({ player, playerTeam, opponent, isHome, o
     : gap <= -6 ? 'They\'re the better side on paper.'
     : 'There\'s very little between these two.'
   const isRegional=competitionLabel?.toLowerCase().includes('regional');const isNational=competitionLabel?.toLowerCase().includes('national')||competitionLabel?.toLowerCase().includes('international')
-  const isContinental=competitionId==='academyChampionsCup'
+  const isContinental=competitionId==='academyChampionsCup'||/champions|europa|conference|continental|union-/i.test(competitionId??'')
+  const isCup=/cup|trophy|final|knockout|invitational/i.test((competitionId??'')+' '+(competitionLabel??''))
+  const showpieceTheme=isContinental?'continental':isNational?'international':isCup?'cup':'league'
   const sheet = matchTeamSheet(player)
   const venue = matchVenue(isHome ? playerTeam : opponent, competitionId, player.careerClock.phase === 'academy')
 
   return (
     <div className="matchday-stage relative min-h-screen w-full bg-ks-black flex flex-col justify-start px-4 sm:px-5 py-6 sm:py-8 pb-[calc(1.5rem+env(safe-area-inset-bottom))] overflow-y-auto">
       <div className="matchday-lights absolute inset-0"/><div className="matchday-pitch-lines" aria-hidden="true"><i/><i/><i/></div><div className="matchday-crowd absolute inset-x-0 bottom-0 h-[34%]"/><div className="absolute inset-0" style={{
-        background: 'radial-gradient(ellipse 70% 45% at 50% 30%, rgba(212,175,55,0.10), transparent 62%), linear-gradient(180deg,#0a0a09,#050504)',
+        background: showpieceTheme==='continental' ? 'radial-gradient(ellipse 85% 60% at 50% 24%, rgba(42,101,207,.38), transparent 70%),linear-gradient(180deg,#09142c,#050711)' : showpieceTheme==='international' ? 'radial-gradient(ellipse 85% 60% at 50% 24%, rgba(42,146,105,.32), transparent 70%),linear-gradient(180deg,#071b18,#050907)' : showpieceTheme==='cup' ? 'radial-gradient(ellipse 85% 60% at 50% 24%, rgba(162,72,145,.28), transparent 70%),linear-gradient(180deg,#211020,#080609)' : 'radial-gradient(ellipse 70% 45% at 50% 30%, rgba(212,175,55,0.10), transparent 62%), linear-gradient(180deg,#0a0a09,#050504)',
       }} />
 
 {walkout && <div className="walkout-curtain"><span>THE PLAYERS ARE OUT</span><b>{playerTeam.name} · {opponent.name}</b></div>}
       <div className={`relative z-10 max-w-md mx-auto w-full transition-all duration-700 ${
         entered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
       }`}>
-        <div className="matchday-kicker">KICKOFF STAR · MATCHDAY</div>{(isRegional||isNational||isContinental)&&<div className={`showpiece-ribbon ${isNational||isContinental?'national':'regional'}`}><i>★</i><span>{isContinental?'CONTINENTAL STAGE':isNational?'NATIONAL STAGE':'REGIONAL STAGE'}</span><i>★</i></div>}<div className="text-center font-display tracking-[0.3em] text-[10px] text-ks-gold uppercase mb-6">{competitionLabel ?? 'matchday'}</div>
+        <div className="matchday-kicker">KICKOFF STAR · {showpieceTheme==='continental'?'EUROPEAN NIGHT':showpieceTheme==='international'?'INTERNATIONAL STAGE':showpieceTheme==='cup'?'CUP NIGHT':'MATCHDAY'}</div>{(isRegional||isNational||isContinental)&&<div className={`showpiece-ribbon ${isNational||isContinental?'national':'regional'}`}><i>★</i><span>{isContinental?'CONTINENTAL STAGE':isNational?'NATIONAL STAGE':'REGIONAL STAGE'}</span><i>★</i></div>}<div className="text-center font-display tracking-[0.3em] text-[10px] text-ks-gold uppercase mb-6">{competitionLabel ?? 'matchday'}</div>
 
         {/* the fixture */}
         <div className="fixture-stage flex items-center justify-center gap-3 sm:gap-4 mb-3 rounded-2xl border border-ks-gold/20 bg-[#0b100c]/80 px-2 py-5 shadow-[0_18px_50px_rgba(0,0,0,.45)]">

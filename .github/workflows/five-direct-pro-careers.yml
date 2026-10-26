@@ -1,0 +1,26 @@
+name: Five Direct Pro Retirement Simulations
+on:
+  push:
+    branches: [codex/v32-v4-unified]
+    paths:
+      - 'scripts/simFiveDirectProCareers.ts'
+      - '.github/workflows/five-direct-pro-careers.yml'
+  workflow_dispatch: {}
+jobs:
+  simulate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Run five direct-pro careers until retirement
+        run: node --import tsx scripts/simFiveDirectProCareers.ts | tee direct-pro-results.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: direct-pro-five-careers
+          path: direct-pro-results.txt

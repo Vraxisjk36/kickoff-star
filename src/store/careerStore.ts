@@ -574,6 +574,9 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       void getState().saveCurrent()
       return
     }
+    // Never let the living-world simulator silently auto-play a human cup tie.
+    // The player must complete the pending match before advancing the week.
+    if (pro.freeAgentSinceWeek === undefined && pendingProCup(pro)) return
     const result = advanceProWeek(player.proCareer, player)
     const living = advanceLivingWorld(player.proCareer, result.state, result.player)
     living.state = progressTransferNegotiations(living.state, living.player)

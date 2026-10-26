@@ -82,7 +82,7 @@ export function seniorTrialOffers(points:number,ovr:number,careerSeed=''):Senior
       const size=LOWER_DIVISIONS[country]?.clubs??18
       for(let rank=0;rank<size;rank++){
         const overall=proRatingTarget(country,2,rank,size)
-        if(overall>=80)continue
+        if(overall>=80 || overall>maxRating)continue
         const club=proWorldClubIdentity(country,2,rank)
         fallback.push({country,tier:2,rank,label:'Development opportunity · second division',overall,name:club.name})
       }

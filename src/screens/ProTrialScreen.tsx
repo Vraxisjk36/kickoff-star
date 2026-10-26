@@ -80,7 +80,7 @@ export default function ProTrialScreen({ onComplete, onExitToMenu }: { onComplet
       {(()=>{
         const wage=350+chosenOffer.prestige*175+trial.points*45
         return <div className="grid grid-cols-2 gap-2 mt-5">
-          {([['Contract length','2 YEARS'],['Weekly salary','£'+wage.toLocaleString()],['Signing bonus','£'+(wage*2).toLocaleString()],['Appearance fee','£'+Math.round(wage*.08).toLocaleString()],['Goal bonus','£'+Math.round(wage*.12).toLocaleString()],['Squad role',trial.points>=6?'STARTING XI':'ROTATION']] as const).map(([name,value])=><div key={name} className="rounded-lg bg-black/30 border border-ks-border/60 p-3"><div className="text-[10px] text-ks-muted">{name}</div><div className="text-ks-gold font-display text-sm mt-1">{value}</div></div>)}
+          {([['Contract length','2 YEARS'],['Weekly salary','£'+wage.toLocaleString()],['Signing bonus','£'+(wage*2).toLocaleString()],['Appearance fee','£'+Math.round(wage*.08).toLocaleString()],['Goal bonus','£'+Math.round(wage*.12).toLocaleString()],['Squad role',chosenOffer.squadRole.toUpperCase()]] as const).map(([name,value])=><div key={name} className="rounded-lg bg-black/30 border border-ks-border/60 p-3"><div className="text-[10px] text-ks-muted">{name}</div><div className="text-ks-gold font-display text-sm mt-1">{value}</div></div>)}
         </div>
       })()}
       <p className="text-xs text-ks-muted mt-4">Review your salary and bonuses before committing. Signing starts your professional career and credits your signing bonus.</p>

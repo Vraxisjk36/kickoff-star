@@ -3,6 +3,7 @@
 import { reseed, rand } from '../src/engine/rng'
 import { createProCareer, proFixture, resolveProMatch, advanceProWeek } from '../src/engine/proCareer'
 import { attachProWorld, pendingProCup, resolveProCup, advanceLivingWorld, generateMarketOffers, finalizeProMove } from '../src/engine/proIntegration'
+import { completeSeniorInternational } from '../src/engine/proInternational'
 import { worldPlayerAwards } from '../src/engine/proHonours'
 import { seniorTrialOffers } from '../src/engine/proTrialOffers'
 import type { Player } from '../src/types/player'
@@ -24,7 +25,7 @@ for(const cfg of configs.filter((_,i)=>process.env.SIM_INDEX===undefined || i===
   let player={
     id:'sim-'+cfg.seed,name:cfg.name,surname:'Pro',position:cfg.pos,nationality:'eng',
     attributes:{kind:cfg.pos==='GK'?'goalkeeper':'outfield',values:attrs},
-    careerClock:{ageYears:18,phase:'pro'},potential:17,fitness:{stamina:100},
+    careerClock:{ageYears:18,phase:'pro'},potential:20,turnedPro:true,matchRatings:[8,8,8,8,8,8,8,8],fitness:{stamina:100},
     squadRole:'starting-xi',reputation:20,coachTrust:60,
     seasonAppearances:0,seasonGoals:0,seasonAssists:0,
     totalWeeksElapsed:0,careerEarnings:0,money:0,
@@ -38,6 +39,7 @@ for(const cfg of configs.filter((_,i)=>process.env.SIM_INDEX===undefined || i===
   const awards:string[]=[]
   const cups:Record<string,number>={}
   let cupApps=0,cupGoals=0,cupAssists=0,transferAttempts=0,completedTransfers=0
+  let internationalApps=0, internationalGoals=0, internationalAssists=0, internationalCallups=0, missedCupWindows=0
   while(!career.retired && weeks<1400){
     // Conclude negotiated offers after their required waiting period.
     if(career.talks){const moved=finalizeProMove(career,player);if(moved){career=moved.state;player=moved.player;completedTransfers++;lastTransferSeason=career.season;clubs.push(player.contract?.clubName??'Unknown')}}
@@ -45,6 +47,15 @@ for(const cfg of configs.filter((_,i)=>process.env.SIM_INDEX===undefined || i===
       const offers=generateMarketOffers(career,player)
       const candidates=offers.filter(o=>!clubs.slice(-3).includes(career.backgroundWorld?.clubs[o.worldClubId]?.name??''))
       if(candidates.length){transferAttempts++;career={...career,talks:{offer:candidates[0],readyWeek:(player.totalWeeksElapsed??0)+2,countered:false}}}
+    }
+    // Resolve national-team duty before club cups: selection overrides club fixtures.
+    if(career.international?.pending){
+      internationalCallups++
+      const ig=cfg.pos==='GK'?0:rand()<.2?1:0
+      const ia=cfg.pos==='GK'?0:rand()<.15?1:0
+      const ir=completeSeniorInternational(career,player,{scored:ig+1,conceded:1,goals:ig,assists:ia,rating:8.5,minutes:90})
+      if(!ir)throw Error('International fixture failed '+career.international.pending.id)
+      career=ir.state;player=ir.player;internationalApps++;internationalGoals+=ig;internationalAssists+=ia
     }
     // Cup matches use the actual tournament fixture and resolution engine.
     for(let cupIndex=0;cupIndex<3;cupIndex++){
@@ -87,7 +98,7 @@ for(const cfg of configs.filter((_,i)=>process.env.SIM_INDEX===undefined || i===
     retired:!!career.retired,retirementAge:player.careerClock.ageYears,
     seasons:career.seasonRecords?.length??0,appearances:apps,goals,assists,
     grossEarnings:player.careerEarnings,money:player.money,
-    clubs,transferAttempts,completedTransfers,cupAppearances:cupApps,cupGoals,cupAssists,cupCompetitions:cups,individualAwards:awards,leagueTitles:career.seasonRecords?.filter(s=>s.leagueChampion).length??0,
+    clubs,transferAttempts,completedTransfers,internationalApps,internationalGoals,internationalAssists,internationalCallups,missedCupWindows,cupAppearances:cupApps,cupGoals,cupAssists,cupCompetitions:cups,individualAwards:awards,leagueTitles:career.seasonRecords?.filter(s=>s.leagueChampion).length??0,
     seasonResults,limitation:'Real transfer, tournament and awards functions with seeded synthetic match decisions; cup fixture participation is not the same as verified cup trophy wins'
   }))
   if(!career.retired)process.exitCode=1

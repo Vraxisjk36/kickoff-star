@@ -159,7 +159,9 @@ export function attachProWorld(state: ProCareerState, player: Player): ProCareer
 export function pendingProCup(state: ProCareerState): ProFixture | null {
   if (!state.backgroundWorld || !state.date || !state.clubWorldIds || state.freeAgentSinceWeek !== undefined) return null
   const clubId = state.clubWorldIds[state.world.playerTeamId]
-  const weekStart=mondayFrom(state.date)
+  // Use the actual career tick interval, not Monday-to-Sunday: saves can
+  // start on Saturday and a Monday window silently skips the next fixture.
+  const weekStart=state.date
   const until = addDays(weekStart, 7)
   // National-team duty supersedes club cup and summer invitational selection.
   if (state.international?.pending) return null

@@ -4,6 +4,7 @@ import { proFixture } from '../../engine/proCareer'
 import { sortStandings } from '../../engine/league'
 import { toOvr, computeCurrentAbility } from '../../engine/rating'
 import { getAgent } from '../../engine/agents'
+import { rewardedAdsAvailable, remainingToday, watchRewardedAd } from '../../engine/ads'
 import Avatar from '../../components/Avatar'
 import { TeamCrest, Panel, Section } from '../../components/ui'
 import PlayerTab from './PlayerTab'
@@ -44,6 +45,18 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
   const signMove = useCareerStore(s => s.signProTransfer)
   const acceptLoan = useCareerStore(s => s.acceptProLoan)
   const [newsOpen, setNewsOpen] = useState(false)
+  const [rewardBusy,setRewardBusy] = useState(false)
+  const [rewardMessage,setRewardMessage] = useState('')
+  const restoreEnergy = useCareerStore(s=>s.restoreEnergyFromAd)
+  const grantCash = useCareerStore(s=>s.grantCashFromAd)
+  const claimReward = async (placement:'energy'|'cash') => {
+    if(rewardBusy || !rewardedAdsAvailable() || remainingToday(placement)===0)return
+    setRewardBusy(true);setRewardMessage('')
+    try { const reward=await watchRewardedAd(placement)
+      if(reward){if(placement==='energy')restoreEnergy(15);else grantCash(500);setRewardMessage(placement==='energy'?'+15 energy awarded':'+500 cash awarded')}
+      else setRewardMessage('Ad unavailable or not completed. No reward was added.')
+    } catch {setRewardMessage('Ad unavailable. Please try again later.') } finally {setRewardBusy(false) }
+  }
   const [homeView,setHomeView]=useState<'overview'|'schedule'|'updates'>('overview')
   const [shopView,setShopView]=useState<'sponsors'|'essentials'|'finances'>('sponsors')
   const [fixtureFilter,setFixtureFilter]=useState<'upcoming'|'results'>('upcoming')
@@ -122,6 +135,8 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
         {(['overview','schedule','updates'] as const).map(view=><button key={view} onClick={()=>setHomeView(view)} aria-current={homeView===view?'page':undefined} className={`rounded-lg min-h-11 py-2.5 text-[11px] font-display uppercase transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-ks-gold ${homeView===view?'bg-ks-gold text-ks-black':'text-ks-muted'}`}>{view}</button>)}
       </nav>
       {homeView==='overview' && <>
+        <div className="rounded-xl border border-ks-gold/30 bg-[#17190f] p-3"><p className="font-display text-xs text-ks-gold">REWARD CENTRE</p><p className="text-[11px] text-ks-muted mt-1">{rewardedAdsAvailable()?'Optional videos · daily limits apply':'Rewarded videos are available in the Android app, not the browser preview.'}</p>{rewardedAdsAvailable()&&<div className="grid grid-cols-2 gap-2 mt-3"><button disabled={rewardBusy||remainingToday('energy')===0} onClick={()=>void claimReward('energy')} className="rounded-lg border border-ks-gold/40 p-3 text-xs text-ks-gold disabled:opacity-40">WATCH AD · +15 ENERGY</button><button disabled={rewardBusy||remainingToday('cash')===0} onClick={()=>void claimReward('cash')} className="rounded-lg border border-ks-gold/40 p-3 text-xs text-ks-gold disabled:opacity-40">WATCH AD · +500 CASH</button></div>}{rewardMessage&&<p role="status" className="text-xs text-ks-muted mt-2">{rewardMessage}</p>}</div>
+
         <div className="grid grid-cols-2 gap-2">
           <button onClick={()=>setHomeView('schedule')} className="rounded-xl border border-ks-gold/30 bg-[#17190f] p-3 text-left"><span className="block text-[10px] text-ks-gold font-display">TODAY</span><span className="block text-ks-ink text-sm mt-2">{proTrainingAvailable(pro.day??0,proMatchDay(pro,matchKind??'league',matchDate))?'Training session':'Match preparation'}</span><span className="block text-[10px] text-ks-muted mt-1">View schedule →</span></button>
           <button onClick={()=>onGoTo('club')} className="rounded-xl border border-ks-border bg-[#111710] p-3 text-left"><span className="block text-[10px] text-ks-gold font-display">YOUR CONTRACT</span><span className="block text-ks-ink text-sm mt-2">£{(player.contract?.terms.weeklyWage??0).toLocaleString()}/wk</span><span className="block text-[10px] text-ks-muted mt-1">Club & transfers →</span></button>

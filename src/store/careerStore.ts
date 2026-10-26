@@ -789,17 +789,17 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   },
   requestProOffers: () => {
     const { player } = getState()
-    if (!player?.proCareer || player.proCareer.talks) return
+    if (!player?.proCareer || (player.proCareer.talks && player.proCareer.talks.stage !== 'rejected')) return
     if (player.proCareer.scouting?.status === 'searching') return
     const candidates = generateMarketOffers(player.proCareer, player)
     const elapsed = player.totalWeeksElapsed ?? 0
-    setState({ player: { ...player, proCareer: { ...player.proCareer, marketOffers: [], scouting: { requestedWeek: elapsed, readyWeek: elapsed + 2, status: 'searching', candidates } } } })
+    setState({ player: { ...player, proCareer: { ...player.proCareer, marketOffers: [], talks: null, scouting: { requestedWeek: elapsed, readyWeek: elapsed + 2, status: 'searching', candidates } } } })
     void getState().saveCurrent()
   },
   openProTransferTalks: (teamId) => {
     const { player } = getState()
     const pro = player?.proCareer
-    if (!player || !pro || pro.talks) return
+    if (!player || !pro || (pro.talks && pro.talks.stage !== 'rejected')) return
     const offer = pro.marketOffers?.find(item => item.teamId === teamId && item.expiresWeek > player.totalWeeksElapsed)
     if (!offer || !pro.date || (pro.freeAgentSinceWeek === undefined && !registrationOpen(pro.associationId ?? 'eng', pro.date))) return
     setState({ player: { ...player, proCareer: { ...pro, talks: { offer, readyWeek: player.totalWeeksElapsed + 2, countered: false, stage: 'personal', history: ['Initial contact opened'] }, marketOffers: [],

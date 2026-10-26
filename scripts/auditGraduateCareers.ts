@@ -14,7 +14,8 @@ for (const ability of [48,52,56,60,64,68]) {
       assert.equal(offers.length,4,`Four offers required: ${id}`)
       assert.equal(new Set(offers.map(o=>o.id)).size,4,`Duplicate club: ${id}`)
       assert.ok(offers.every(o=>o.overall<80),`Elite club offered: ${id}`)
-      assert.ok(offers.every(o=>o.overall<= (points>=7&&ability>=57?Math.min(79,ability+14):Math.min(76,ability+10))),`Unrealistic offer: ${id}`)
+      assert.ok(offers.every(o=>o.squadRole==='Development prospect'||o.squadRole==='Rotation prospect'||o.squadRole==='First-team candidate'),`Missing squad role: ${id}`)
+      assert.ok(offers.every(o=>o.overall-ability<9 || o.squadRole==='Development prospect'),`Unrealistic first-team expectation: ${id}`)
       assert.deepEqual(seniorTrialOffers(points,ability,id),offers,`Unstable scouting: ${id}`)
       distinct.add(offers.map(o=>o.id).join('|'))
       simulated++

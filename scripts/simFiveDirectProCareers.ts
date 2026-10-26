@@ -40,6 +40,7 @@ for(const cfg of configs.filter((_,i)=>process.env.SIM_INDEX===undefined || i===
   const cups:Record<string,number>={}
   let cupApps=0,cupGoals=0,cupAssists=0,transferAttempts=0,completedTransfers=0
   let internationalApps=0, internationalGoals=0, internationalAssists=0, internationalCallups=0, missedCupWindows=0
+  const cupAudit:Record<string,{scheduled:number;playedByWorld:number;playedByHuman:number}>={}
   while(!career.retired && weeks<1400){
     // Conclude negotiated offers after their required waiting period.
     if(career.talks){const moved=finalizeProMove(career,player);if(moved){career=moved.state;player=moved.player;completedTransfers++;lastTransferSeason=career.season;clubs.push(player.contract?.clubName??'Unknown')}}
@@ -81,6 +82,18 @@ for(const cfg of configs.filter((_,i)=>process.env.SIM_INDEX===undefined || i===
       apps++;goals+=g;assists+=a
       player={...player,seasonAppearances:(player.seasonAppearances??0)+1,seasonGoals:(player.seasonGoals??0)+g,seasonAssists:(player.seasonAssists??0)+a}
     }
+    if(career.backgroundWorld && career.clubWorldIds){
+      const clubId=career.clubWorldIds[career.world.playerTeamId]
+      for(const fixture of Object.values(career.backgroundWorld.fixtures)){
+        const comp=career.backgroundWorld.competitions[fixture.competitionId]
+        if(!comp?.tournament || (fixture.homeId!==clubId && fixture.awayId!==clubId))continue
+        const bucket=cupAudit[fixture.competitionId]??{scheduled:0,playedByWorld:0,playedByHuman:0}
+        bucket.scheduled++
+        if(fixture.result)bucket.playedByWorld++
+        if(cups[fixture.competitionId])bucket.playedByHuman=cups[fixture.competitionId]
+        cupAudit[fixture.competitionId]=bucket
+      }
+    }
     const prevSeason=career.season
     const previous=career
     const advanced=advanceProWeek(career,player)
@@ -98,7 +111,7 @@ for(const cfg of configs.filter((_,i)=>process.env.SIM_INDEX===undefined || i===
     retired:!!career.retired,retirementAge:player.careerClock.ageYears,
     seasons:career.seasonRecords?.length??0,appearances:apps,goals,assists,
     grossEarnings:player.careerEarnings,money:player.money,
-    clubs,transferAttempts,completedTransfers,internationalApps,internationalGoals,internationalAssists,internationalCallups,missedCupWindows,cupAppearances:cupApps,cupGoals,cupAssists,cupCompetitions:cups,individualAwards:awards,leagueTitles:career.seasonRecords?.filter(s=>s.leagueChampion).length??0,
+    clubs,transferAttempts,completedTransfers,internationalApps,internationalGoals,internationalAssists,internationalCallups,missedCupWindows,cupAudit,cupAppearances:cupApps,cupGoals,cupAssists,cupCompetitions:cups,individualAwards:awards,leagueTitles:career.seasonRecords?.filter(s=>s.leagueChampion).length??0,
     seasonResults,limitation:'Real transfer, tournament and awards functions with seeded synthetic match decisions; cup fixture participation is not the same as verified cup trophy wins'
   }))
   if(!career.retired)process.exitCode=1

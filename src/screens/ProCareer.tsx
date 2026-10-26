@@ -47,21 +47,21 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
   const [autoResolve, setAutoResolve] = useState(false)
   const [result, setResult] = useState<Result | null>(null)
   useEffect(() => { ensureLivingWorld() }, [ensureLivingWorld])
-  if (!player?.proCareer) return null
-  const pro = player.proCareer
-  // Pro careers do not use the School calendar's season-ad hooks.
-  // Run each break placement at most once per save/season (enforced by ads.ts).
-  const seasonLength = professionalSeasonWeeks(pro)
-  const atMidseasonBreak = pro.week === Math.floor(seasonLength / 2) + 1
-  const atEndseasonBreak = pro.season > 1 && pro.week === 1 &&
-    pro.preseasonIntroducedSeason === pro.season
+  const activePro = player?.proCareer
+  const seasonLength = activePro ? professionalSeasonWeeks(activePro) : 44
+  const atMidseasonBreak = !!activePro && activePro.week === Math.floor(seasonLength / 2) + 1
+  const atEndseasonBreak = !!activePro && activePro.season > 1 && activePro.week === 1 &&
+    activePro.preseasonIntroducedSeason === activePro.season
   useEffect(() => {
-    if (mode !== 'hub' || (pro.day ?? 0) !== 0 || (!atMidseasonBreak && !atEndseasonBreak)) return
-    const season = atEndseasonBreak ? pro.season - 1 : pro.season
+    if (!player || !activePro || mode !== 'hub' || (activePro.day ?? 0) !== 0 ||
+        (!atMidseasonBreak && !atEndseasonBreak)) return
+    const season = atEndseasonBreak ? activePro.season - 1 : activePro.season
     const breakPoint = atEndseasonBreak ? 'end' as const : 'mid' as const
     const timer = window.setTimeout(() => { void showSeasonInterstitial(player.id, season, breakPoint) }, 900)
     return () => window.clearTimeout(timer)
-  }, [player.id, pro.season, pro.week, pro.day, mode, atMidseasonBreak, atEndseasonBreak])
+  }, [player?.id, activePro?.season, activePro?.week, activePro?.day, mode, atMidseasonBreak, atEndseasonBreak])
+  if (!player?.proCareer) return null
+  const pro = player.proCareer
   const world = pro.world
   const division = world.divisions[1]
   const team = division.teams.find(t => t.id === world.playerTeamId)!

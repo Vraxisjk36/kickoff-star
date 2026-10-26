@@ -68,12 +68,20 @@ export function prepareProGraduate(player:Player, trialPoints=4):Player {
   // Strong school/academy careers and senior trial performance earn higher
   // entry ratings. Do not normalize every graduate to exactly 60 OVR.
   const score=Math.max(0,Math.min(9,trialPoints))
-  const target=Math.max(48,Math.min(66,Math.round(51+score*.95+Math.max(-5,Math.min(5,(original-45)*.18)))))
+  // A first professional contract starts on the senior scale. Preserve
+  // variation (60–66), but never strand a youth-scale player at 29 OVR.
+  const target=Math.max(60,Math.min(66,Math.round(60+score*.55+Math.max(-2,Math.min(2,(original-50)*.1)))))
   if(original>=target)return player
   const values=player.attributes.values as Record<string,number>
-  const gap=Math.max(0,Math.ceil((target-original)/3.95))
-  const normalized=Object.fromEntries(Object.entries(values).map(([key,value])=>
-    [key,Math.max(1,Math.min(20,value+gap))]))
-  const potential=Math.max(player.potential,Math.min(20,Math.max(...Object.values(normalized))+3))
-  return {...player,potential,attributes:{...player.attributes,values:normalized} as Player['attributes']}
+  const originalValues={...values}
+  // Recalculate actual positional OVR, rather than assuming a fixed
+  // attribute-to-OVR conversion that fails for low-rated graduates.
+  for(let increment=1;increment<=19;increment++){
+    const normalized=Object.fromEntries(Object.entries(originalValues).map(([key,value])=>
+      [key,Math.max(1,Math.min(20,value+increment))]))
+    const potential=Math.max(player.potential,Math.min(20,Math.max(...Object.values(normalized))+3))
+    const candidate={...player,potential,attributes:{...player.attributes,values:normalized} as Player['attributes']}
+    if(toOvr(computeCurrentAbility(candidate))>=target || increment===19)return candidate
+  }
+  return player
 }

@@ -63,10 +63,15 @@ export function calibrateSeniorTeam(team:Team,target:number):Team {
  * Joining a professional squad moves a genuine graduate onto the adult
  * playing scale, while retaining attribute strengths and weaknesses.
  */
-export function prepareProGraduate(player:Player):Player {
-  if(toOvr(computeCurrentAbility(player))>=60)return player
+export function prepareProGraduate(player:Player, trialPoints=4):Player {
+  const original=toOvr(computeCurrentAbility(player))
+  // Strong school/academy careers and senior trial performance earn higher
+  // entry ratings. Do not normalize every graduate to exactly 60 OVR.
+  const score=Math.max(0,Math.min(9,trialPoints))
+  const target=Math.max(48,Math.min(66,Math.round(51+score*.95+Math.max(-5,Math.min(5,(original-45)*.18)))))
+  if(original>=target)return player
   const values=player.attributes.values as Record<string,number>
-  const gap=Math.max(0,Math.ceil((60-toOvr(computeCurrentAbility(player)))/3.95))
+  const gap=Math.max(0,Math.ceil((target-original)/3.95))
   const normalized=Object.fromEntries(Object.entries(values).map(([key,value])=>
     [key,Math.max(1,Math.min(20,value+gap))]))
   const potential=Math.max(player.potential,Math.min(20,Math.max(...Object.values(normalized))+3))

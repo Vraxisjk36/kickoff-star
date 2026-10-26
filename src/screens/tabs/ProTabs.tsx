@@ -64,6 +64,7 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
   const [competitionFilter,setCompetitionFilter]=useState<'all'|'league'>('all')
   const [archiveExpanded,setArchiveExpanded]=useState(false)
   const [clubDetailsExpanded,setClubDetailsExpanded]=useState(false)
+  const [clubSection,setClubSection]=useState<'transfers'|'operations'>('transfers')
   const [showAllPayStatements,setShowAllPayStatements]=useState(false)
   const [proLeagueView, setProLeagueView] = useState<'fixtures' | 'table' | 'international' | 'world'>('fixtures')
   useEffect(() => {
@@ -192,8 +193,10 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
       {cards('PRO DRESSING ROOM', <div className="flex flex-col gap-2">{club.notablePlayers.map(person => <div key={person.name} className="flex justify-between text-sm text-ks-ink"><span>{person.name}</span><span className="text-ks-muted">{person.position}</span></div>)}</div>)}
     </> : tab === 'club' ? <>
       <ClubTab player={player} playerTeam={club} division={division} isAcademy={false} isPro />
+      <nav aria-label="Club management" className="grid grid-cols-2 gap-2"><button onClick={()=>{setClubSection("transfers");setClubDetailsExpanded(true)}} className={`rounded-xl border p-3 text-sm font-display ${clubSection==="transfers"?"border-ks-gold bg-ks-gold/15 text-ks-gold":"border-ks-border text-ks-muted"}`}>⇄ TRANSFER CENTRE</button><button onClick={()=>{setClubSection("operations");setClubDetailsExpanded(true)}} className={`rounded-xl border p-3 text-sm font-display ${clubSection==="operations"?"border-ks-gold bg-ks-gold/15 text-ks-gold":"border-ks-border text-ks-muted"}`}>CLUB OPERATIONS</button></nav>
       <button type="button" onClick={()=>setClubDetailsExpanded(value=>!value)} aria-expanded={clubDetailsExpanded} className="w-full rounded-xl border border-ks-gold/30 bg-[#181c13] px-4 py-3 text-left text-xs font-display text-ks-gold focus-visible:outline focus-visible:outline-2 focus-visible:outline-ks-gold">{clubDetailsExpanded?'HIDE CLUB OPERATIONS':'CLUB OPERATIONS · CONTRACTS & TRANSFERS'} →</button>
-      {clubDetailsExpanded && <>
+      {(clubDetailsExpanded || clubSection==='transfers') && <>
+      {clubSection==='operations' && <>
       {pro.clubObjective && cards('BOARD EXPECTATIONS', <div>
         {stat('Objective', ({ title: 'Fight for the title', continental: 'Qualify near the top', 'top-half': 'Finish in the top half', survival: 'Avoid relegation' } as Record<string,string>)[pro.clubObjective.type])}
         {stat('Target position', `#${pro.clubObjective.targetPosition} or better`)}
@@ -214,6 +217,7 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
             pro.lastRenewalWeek === player.totalWeeksElapsed}
           onClick={() => requestRenewal()}>REQUEST TWO-YEAR EXTENSION →</button>
       </div>)}
+      </>}
       {cards('TRANSFER DESK', <div><p className="text-ks-muted text-xs mb-3">Talks take two weeks. Club budgets and the registration window control which moves can happen.</p>{stat('Registration', pro.freeAgentSinceWeek !== undefined ? 'Free-agent signing' : windowOpen ? 'Open' : 'Closed')}
         {pro.talks ? <div className="mt-3 text-ks-ink text-sm"><b>{offerName(pro.talks.offer.worldClubId, pro.talks.offer.teamId)}</b><p className="text-ks-muted text-xs mt-1">{moneySymbol}{pro.talks.offer.weeklyWage.toLocaleString()}/week · {pro.talks.readyWeek > player.totalWeeksElapsed ? `${pro.talks.readyWeek - player.totalWeeksElapsed} week(s) to terms` : 'terms ready to sign'}</p><div className="flex gap-3 mt-3"><button disabled={pro.talks.readyWeek > player.totalWeeksElapsed} onClick={() => signMove()} className="text-ks-gold text-xs disabled:opacity-35">SIGN DEAL →</button><button disabled={pro.talks.readyWeek > player.totalWeeksElapsed || pro.talks.countered} onClick={counterTalks} className="text-ks-muted text-xs disabled:opacity-35">ASK FOR 5% MORE</button></div></div> : <><button disabled={!windowOpen || !!pro.loan} onClick={requestOffers} className="text-ks-gold text-xs mt-3 disabled:opacity-35">ASK AGENT FOR OFFERS →</button>{pro.marketOffers?.map(offer => <button key={offer.teamId} onClick={() => openTalks(offer.teamId)} className="block w-full text-left border-t border-ks-border/50 py-3 text-xs text-ks-ink">{offerName(offer.worldClubId, offer.teamId)}<span className="float-right text-ks-gold">{moneySymbol}{offer.weeklyWage.toLocaleString()}/wk →</span></button>)}</>}
         {windowOpen && pro.freeAgentSinceWeek === undefined && !pro.loan && player.squadRole !== 'starting-xi' && <div className="border-t border-ks-border mt-4 pt-3"><p className="text-ks-muted text-xs">Need senior minutes? A temporary loan keeps your parent contract.</p>{division.teams.filter(team => team.id !== club.id).slice(0, 2).map(team => <button key={team.id} onClick={() => acceptLoan(team.id)} className="block text-ks-gold text-xs mt-2">REQUEST LOAN · {team.name} →</button>)}</div>}

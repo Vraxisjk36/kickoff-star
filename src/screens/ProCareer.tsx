@@ -141,7 +141,7 @@ export default function ProCareer({ onExitToMenu }: { onExitToMenu: () => void }
     else complete(outcome)
     setResult(null); setMode('hub')
   }} />
-  return <div className="relative pb-4">
+  return <div className="relative pb-36">
     <WeeklyHub tab={tab} onTabChange={setTab} onOpenOffers={() => setTab('club')} onExitToMenu={onExitToMenu} league={world} academyLeague={null} playerTeam={team} playerDivision={division} proCalendar={calendar} onProTrain={beginTraining} proMatchKind={kind} proMatchOpponent={opponent?.name} proMatchDate={matchDate} />
     <div className="career-continue fixed right-3 z-20 w-[min(76vw,290px)] pointer-events-none" style={{ bottom: 'calc(var(--safe-bottom) + 5.2rem)' }}>
       <button className="pointer-events-auto w-full truncate bg-gradient-to-r from-[#d4af37] to-[#f2d979] text-[#15170e] font-display tracking-wide rounded-full border border-[#fff2aa]/50 px-3 py-3 text-[11px] shadow-[0_6px_25px_rgba(0,0,0,.7)] active:scale-[.98] transition-transform" onClick={() => matchReady && day === matchDay ? (!player.injury && !(player.suspensionMatches ?? 0) && player.fitness.stamina >= 30 ? setMode('matchday') : sitOut()) : canTrain ? setMode('training') : advance()}>

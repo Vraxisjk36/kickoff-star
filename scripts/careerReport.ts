@@ -308,6 +308,7 @@ async function main() {
     { label: 'Sam (GK, mid trial)', position: 'GK', trialQuality: 0.5, seed: 202 },
     { label: 'Jordan (CM, weak trial)', position: 'CM', trialQuality: 0.25, seed: 303 },
     { label: 'Casey (CB, strong trial)', position: 'CB', trialQuality: 0.75, seed: 404 },
+    { label: 'Morgan (ST, weak trial)', position: 'ST', trialQuality: 0.15, seed: 505 },
   ]
 
   for (const cfg of configs) {

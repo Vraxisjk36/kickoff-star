@@ -576,6 +576,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     }
     const result = advanceProWeek(player.proCareer, player)
     const living = advanceLivingWorld(player.proCareer, result.state, result.player)
+    living.state = progressTransferNegotiations(living.state, living.player)
     const sponsors=sponsorWeek(player.proCareer.sponsorships,living.player,player.proCareer.season,player.proCareer.week)
     setState({ player: { ...living.player,money:(living.player.money??0)+sponsors.pay,
       careerEarnings:(living.player.careerEarnings??0)+sponsors.pay,
@@ -789,8 +790,10 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
   requestProOffers: () => {
     const { player } = getState()
     if (!player?.proCareer || player.proCareer.talks) return
-    const offers = generateMarketOffers(player.proCareer, player)
-    setState({ player: { ...player, proCareer: { ...player.proCareer, marketOffers: offers } } })
+    if (player.proCareer.scouting?.status === 'searching') return
+    const candidates = generateMarketOffers(player.proCareer, player)
+    const elapsed = player.totalWeeksElapsed ?? 0
+    setState({ player: { ...player, proCareer: { ...player.proCareer, marketOffers: [], scouting: { requestedWeek: elapsed, readyWeek: elapsed + 2, status: 'searching', candidates } } } })
     void getState().saveCurrent()
   },
   openProTransferTalks: (teamId) => {
@@ -799,7 +802,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     if (!player || !pro || pro.talks) return
     const offer = pro.marketOffers?.find(item => item.teamId === teamId && item.expiresWeek > player.totalWeeksElapsed)
     if (!offer || !pro.date || (pro.freeAgentSinceWeek === undefined && !registrationOpen(pro.associationId ?? 'eng', pro.date))) return
-    setState({ player: { ...player, proCareer: { ...pro, talks: { offer, readyWeek: player.totalWeeksElapsed + 2, countered: false }, marketOffers: [],
+    setState({ player: { ...player, proCareer: { ...pro, talks: { offer, readyWeek: player.totalWeeksElapsed + 2, countered: false, stage: 'personal', history: ['Initial contact opened'] }, marketOffers: [],
       relationships: recordProRelationship(pro.relationships, { id: `talk:${offer.worldClubId}:${player.totalWeeksElapsed}`, clubId: offer.worldClubId,
         kind: 'negotiation', description: 'Opened formal transfer negotiations' }) } } })
     void getState().saveCurrent()
@@ -819,12 +822,13 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       void getState().saveCurrent()
       return
     }
-    setState({ player: { ...player, proCareer: { ...pro, talks: { offer: proposed, readyWeek: player.totalWeeksElapsed + 1, countered: true } } } })
+    setState({ player: { ...player, proCareer: { ...pro, talks: { ...pro.talks, offer: proposed, readyWeek: player.totalWeeksElapsed + 1, countered: true, history: [...(pro.talks.history??[]),'Wage counteroffer submitted'] } } } })
     void getState().saveCurrent()
   },
   signProTransfer: () => {
     const { player } = getState()
     if (!player?.proCareer) return false
+    if (player.proCareer.talks?.stage !== 'ready') return false
     const move = finalizeProMove(player.proCareer, player)
     if (!move) return false
     setState({ player: { ...move.player, proCareer: move.state } })
@@ -2876,3 +2880,21 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     void getState().saveCurrent()
   },
 }))
+
+function progressTransferNegotiations(pro: NonNullable<Player['proCareer']>, player: Player) {
+  const week = player.totalWeeksElapsed ?? 0
+  let next = pro
+  if (pro.scouting?.status === 'searching' && week >= pro.scouting.readyWeek) {
+    const interested = pro.scouting.candidates.filter((_,i) => (week+i)%4 !== 0).slice(0,3)
+    next = {...next, scouting:{...pro.scouting,status:'ready' as const},marketOffers:interested.map(o=>({...o,expiresWeek:week+6}))}
+  }
+  const t = next.talks
+  if (!t || t.stage === 'ready' || t.stage === 'rejected') return next
+  if (t.stage === 'personal' && week >= t.readyWeek) return {...next,talks:{...t,stage:'club-review' as const,clubDecisionWeek:week+2,history:[...(t.history??[]),'Personal terms provisionally agreed; club negotiations started']}}
+  if (t.stage === 'club-review' && week >= (t.clubDecisionWeek??Infinity)) {
+    const rejected = next.freeAgentSinceWeek === undefined && (week+t.offer.worldClubId.length)%5===0
+    return {...next,talks:rejected?{...t,stage:'rejected' as const,rejectionReason:'Current club rejected the approach',history:[...(t.history??[]),'Current club rejected the transfer']}:{...t,stage:'medical' as const,medicalWeek:week+1,history:[...(t.history??[]),'Clubs agreed; medical scheduled']}}
+  }
+  if (t.stage === 'medical' && week >= (t.medicalWeek??Infinity) && (next.freeAgentSinceWeek !== undefined || (!!next.date && registrationOpen(next.associationId??'eng',next.date)))) return {...next,talks:{...t,stage:'ready' as const,history:[...(t.history??[]),'Medical and registration cleared']}}
+  return next
+}

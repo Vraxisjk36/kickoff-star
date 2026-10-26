@@ -73,6 +73,23 @@ export function seniorTrialOffers(points:number,ovr:number,careerSeed=''):Senior
   if(standout)addFrom(allowed.filter(item=>item.tier===1&&major(item)),1)
   if(selected.length<4)addFrom(allowed.filter(item=>item.tier===2),4-selected.length)
   if(selected.length<4)addFrom(allowed.filter(item=>item.tier===1&&!major(item)),4-selected.length)
+  // A low-OVR graduate must never get trapped on the offers screen.
+  // Broaden second-division scouting by actual rating, while preserving
+  // the four-offer cap and prohibiting elite first-division approaches.
+  if(selected.length<4){
+    const fallback:typeof allowed=[]
+    for(const country of strong){
+      const size=LOWER_DIVISIONS[country]?.clubs??18
+      for(let rank=0;rank<size;rank++){
+        const overall=proRatingTarget(country,2,rank,size)
+        if(overall>=80)continue
+        const club=proWorldClubIdentity(country,2,rank)
+        fallback.push({country,tier:2,rank,label:'Development opportunity · second division',overall,name:club.name})
+      }
+    }
+    fallback.sort((a,b)=>a.overall-b.overall)
+    addFrom(fallback,4-selected.length)
+  }
   if(selected.length!==4)throw new Error('Senior scouting failed to supply four affordable offers')
   return selected
 }

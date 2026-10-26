@@ -682,7 +682,8 @@ for(const points of [0,2,4,6,7,9])for(const ovr of [55,60,65,70]){
   assert.equal(offers.length,4)
   assert.equal(new Set(offers.map(o=>o.id)).size,4)
   assert.ok(offers.every(o=>o.overall<80),'Elite clubs must not invite youth trialists')
-  assert.ok(offers.every(o=>o.overall<=Math.min(points>=7&&ovr>=57?79:76,ovr+(points>=7&&ovr>=57?14:10))))
+  assert.ok(offers.every(o=>o.overall-ovr<9 || o.squadRole==='Development prospect'),
+    'A player signing above their current ability must have a development role')
   assert.ok(points>=7 || offers.every(o=>o.tier===2||!['eng','esp','ger','ita','fra'].includes(o.associationId)))
   assert.ok(offers.filter(o=>o.tier===1&&['eng','esp','ger','ita','fra'].includes(o.associationId)).length<=1)
 }

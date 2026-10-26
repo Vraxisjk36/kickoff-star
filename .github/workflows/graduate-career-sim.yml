@@ -1,0 +1,31 @@
+name: Graduate Career Simulations
+on:
+  push:
+    branches: [codex/v32-v4-unified]
+    paths:
+      - 'scripts/auditGraduateCareers.ts'
+      - 'src/engine/proTrialOffers.ts'
+      - 'src/engine/proRatings.ts'
+      - 'src/store/careerStore.ts'
+      - 'package.json'
+      - '.github/workflows/graduate-career-sim.yml'
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  simulate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Run 288 graduate career scenarios
+        run: npm run audit:graduate-careers
+      - name: Run professional career regression audits
+        run: npm run audit:pro-career
+      - name: Typecheck and production build
+        run: npm run build

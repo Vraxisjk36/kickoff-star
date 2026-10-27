@@ -189,7 +189,7 @@ export default function ProTabs({ player, tab, onGoTo, onOpenInbox, onOpenEnergy
       </Section>
     </> : tab === 'people' ? <>
       <PeopleTab player={player} />
-      {cards('YOUR REPRESENTATION', <>{stat('Agent', getAgent(player.agentId)?.name ?? 'Unrepresented')}{stat('Coach trust', `${Math.round(player.coachTrust ?? 0)} / 10`)}</>)}
+      {cards('YOUR REPRESENTATION', <>{stat('Agent', getAgent(player.agentId)?.name ?? 'Unrepresented')}{stat('Coach trust', `${Math.round(player.coachTrust ?? 0)} / 10`)}{stat('Match XP available', Math.floor(player.proMatchXp ?? 0).toLocaleString())}</>)}
       {cards('PRO DRESSING ROOM', <div className="flex flex-col gap-2">{club.notablePlayers.map(person => <div key={person.name} className="flex justify-between text-sm text-ks-ink"><span>{person.name}</span><span className="text-ks-muted">{person.position}</span></div>)}</div>)}
     </> : tab === 'club' ? <>
       <ClubTab player={player} playerTeam={club} division={division} isAcademy={false} isPro />

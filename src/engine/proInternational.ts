@@ -77,7 +77,11 @@ export function scheduleSeniorInternational(state: ProCareerState, player: Playe
   const squad = selectSeniorNationalSquad(nationId,state.season,state.week,state.backgroundWorld,player,true)
   // A national call-up is earned, not guaranteed: compare the career player's
   // actual football ability with the available squad in their positional role.
-  const playerOvr = toOvr(computeCurrentAbility(player))
+  // Legacy and audit saves can omit attributes; retain the original
+  // reputation-based estimate until a complete player is available.
+  const playerOvr = player.attributes?.values
+    ? toOvr(computeCurrentAbility(player))
+    : Math.max(35, Math.min(99, Math.round((player.reputation ?? 55) * .55 + 40)))
   const sameRole = (position: string) => position === player.position ||
     (player.position !== 'GK' && position !== 'GK' && position.slice(0,1) === player.position.slice(0,1))
   const rivals = squad.members.filter(member => member.source !== 'career' && sameRole(member.position))

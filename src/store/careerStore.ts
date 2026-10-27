@@ -1167,7 +1167,11 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     const { player } = getState()
     if (!player) return null
     const values = player.attributes.values as Record<string, number>
-    const current = values[attr] ?? 8
+    // Never let malformed requests create new attributes or mutate saves.
+    if (!Object.prototype.hasOwnProperty.call(values, attr) ||
+        !Number.isFinite(xpAmount) || xpAmount <= 0 ||
+        !Number.isFinite(player.proMatchXp ?? 0)) return null
+    const current = values[attr]
     // Same ceiling the old trial-growth clamp used — never quite reaches
     // potential itself, matching the existing locked headroom convention.
     const ceiling = Math.max(current, player.potential - 1)

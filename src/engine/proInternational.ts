@@ -1,4 +1,5 @@
 import { seniorNation } from './seniorNations'
+import { computeCurrentAbility, toOvr } from './rating'
 import { selectSeniorNationalSquad, type NationalSquadSelection } from './proNationalSquad'
 import { CONTINENTAL_WINDOWS, continentalRound } from './proContinentalNations'
 import { INTERNATIONAL_WINDOWS, internationalTournamentFixture, internationalCycle, internationalProgress, type TournamentStage } from './proInternationalTournament'
@@ -73,10 +74,18 @@ export function scheduleSeniorInternational(state: ProCareerState, player: Playe
         home: regionalPair.homeId===nationId, competition: 'continental' as const } : null
     : internationalTournamentFixture(nationId, state.season, state.week, international.fixtures)
   if (!draw) return state
+  const squad = selectSeniorNationalSquad(nationId,state.season,state.week,state.backgroundWorld,player,true)
+  // A national call-up is earned, not guaranteed: compare the career player's
+  // actual football ability with the available squad in their positional role.
+  const playerOvr = toOvr(computeCurrentAbility(player))
+  const sameRole = (position: string) => position === player.position ||
+    (player.position !== 'GK' && position !== 'GK' && position.slice(0,1) === player.position.slice(0,1))
+  const rivals = squad.members.filter(member => member.source !== 'career' && sameRole(member.position))
+  const selectionFloor = rivals.length ? Math.min(...rivals.map(member => member.overall)) : 55
+  if (playerOvr + (qualifiedFinalist ? 3 : 0) < selectionFloor - 3) return state
   const pending: SeniorInternationalFixture = {
     id: `senior-int-${nationId}-${state.season}-${state.week}`,
-    nationId, season: state.season, week: state.week, ...draw,
-    squad: selectSeniorNationalSquad(nationId,state.season,state.week,state.backgroundWorld,player,true),
+    nationId, season: state.season, week: state.week, ...draw, squad,
   }
   return { ...state, international: { ...international, pending, lastSelectionSeason: state.season } }
 }

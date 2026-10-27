@@ -24,6 +24,7 @@ export interface Player {
 
   attributes: PlayerAttributes
   potential: AttributeValue // hidden from player, drives growth ceiling
+  proMatchXp?: number
 
   confidence: BoundedState
   fitness: {

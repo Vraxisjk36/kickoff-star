@@ -6,7 +6,7 @@ import { create } from 'zustand'
 import type { Player } from '../types/player'
 import type { MatchLine, MatchRecord } from '../engine/matchLedger'
 import { leagueAwardLeaders } from '../engine/matchLedger'
-import { spendXp, positionCostMultiplier } from '../engine/xp'
+import { spendXp, positionCostMultiplier, matchXpEarned } from '../engine/xp'
 import type { CalendarState } from '../types/calendar'
 import type { DecisionResult } from '../types/decision'
 import { readSave, writeSave, EMPTY_CUPS, SAVE_SCHEMA_VERSION, type SaveSlotId, type CupWorlds } from '../engine/save'
@@ -699,6 +699,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       careerEarnings: (player.careerEarnings ?? 0) + (player.proCareer.backgroundWorld ? 0 : earned), fitness: { stamina: Math.max(0, result.energy) },
       injury: result.injury?.weeksOut ? { severity: result.injury.severity, weeksRemaining: result.injury.weeksOut, description: result.injury.description } : player.injury,
       suspensionMatches: result.redCarded ? 2 : player.suspensionMatches,
+      proMatchXp: (player.proMatchXp ?? 0) + (result.minutes > 0 ? matchXpEarned('grassroots',result.rating,result.goals,result.assists) : 0),
       seasonAppearances: (player.seasonAppearances ?? 0) + (result.minutes > 0 ? 1 : 0), seasonGoals: player.seasonGoals + result.goals,
       seasonAssists: player.seasonAssists + result.assists, matchRatings: [...player.matchRatings, result.rating].slice(-10),
       matchLedger: [...(player.matchLedger ?? []), resolved.record],
@@ -716,7 +717,8 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     if (!completed) return
     setState({ player: { ...completed.player, proCareer: completed.state,
       fitness: { stamina: Math.max(0, result.energy) },
-      matchRatings: [...player.matchRatings, result.rating].slice(-10) } })
+      matchRatings: [...player.matchRatings, result.rating].slice(-10),
+      proMatchXp: (player.proMatchXp ?? 0) + (result.minutes > 0 ? matchXpEarned('international',result.rating,result.goals,result.assists) : 0) } })
     void getState().saveCurrent()
   },
   completeProCupMatch: (fixtureId, result) => {
@@ -730,6 +732,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       fitness: { stamina: Math.max(0, result.energy) },
       injury: result.injury?.weeksOut ? { severity: result.injury.severity, weeksRemaining: result.injury.weeksOut, description: result.injury.description } : player.injury,
       suspensionMatches: result.redCarded ? 2 : player.suspensionMatches,
+      proMatchXp: (player.proMatchXp ?? 0) + (result.minutes > 0 ? matchXpEarned('cup',result.rating,result.goals,result.assists) : 0),
       seasonAppearances: (player.seasonAppearances ?? 0) + (result.minutes > 0 ? 1 : 0), seasonGoals: player.seasonGoals + result.goals,
       seasonAssists: player.seasonAssists + result.assists, matchRatings: [...player.matchRatings, result.rating].slice(-10),
       matchLedger: [...(player.matchLedger ?? []), resolved.record],
@@ -1175,7 +1178,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
     // faster over a real 6-year career. Effective XP is scaled down at the
     // spend point rather than changing the cost table itself, so the same
     // xp.ts cost curve stays the single source of truth for every position.
-    const effectiveXp = xpAmount / positionCostMultiplier(player.position === 'GK')
+    const effectiveXp = Math.min(Math.max(0, xpAmount), player.proMatchXp ?? 0) / positionCostMultiplier(player.position === 'GK')
     const result = spendXp(current, effectiveXp, ceiling)
     // xpUsed/leftover came back in scaled "effective" units — convert back to
     // real pool units before returning, or the caller's on-screen "XP left"
@@ -1186,6 +1189,7 @@ export const useCareerStore = create<CareerStore>((setState, getState) => ({
       player: {
         ...player,
         attributes: { ...player.attributes, values: { ...values, [attr]: result.newLevel } } as Player['attributes'],
+        proMatchXp: Math.max(0, (player.proMatchXp ?? 0) - realResult.xpUsed),
       },
     })
     void getState().saveCurrent()

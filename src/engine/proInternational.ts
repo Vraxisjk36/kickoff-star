@@ -101,6 +101,9 @@ export function completeSeniorInternational(state: ProCareerState, player: Playe
       pending.nationId !== player.nationality || result.minutes < 0 ||
       ![result.scored, result.conceded, result.goals, result.assists, result.rating, result.minutes]
         .every(Number.isFinite)) return null
+  if (result.scored < 0 || result.conceded < 0 || result.goals < 0 || result.assists < 0 ||
+      result.goals > result.scored || result.minutes > 120 || result.rating < 0 || result.rating > 10 ||
+      (result.minutes === 0 && (result.goals > 0 || result.assists > 0))) return null
   const record: SeniorInternationalRecord = { ...pending, ...result }
   const caps = result.minutes > 0 ? 1 : 0
   const nextInternational: SeniorInternationalCareer = {

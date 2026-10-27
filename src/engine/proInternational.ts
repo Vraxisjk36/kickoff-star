@@ -82,8 +82,9 @@ export function scheduleSeniorInternational(state: ProCareerState, player: Playe
   const playerOvr = player.attributes?.values
     ? toOvr(computeCurrentAbility(player))
     : Math.max(35, Math.min(99, Math.round((player.reputation ?? 55) * .55 + 40)))
-  const sameRole = (position: string) => position === player.position ||
-    (player.position !== 'GK' && position !== 'GK' && position.slice(0,1) === player.position.slice(0,1))
+  const playerPosition = player.position ?? 'CM'
+  const sameRole = (position: string) => position === playerPosition ||
+    (playerPosition !== 'GK' && position !== 'GK' && position.slice(0,1) === playerPosition.slice(0,1))
   const rivals = squad.members.filter(member => member.source !== 'career' && sameRole(member.position))
   const selectionFloor = rivals.length ? Math.min(...rivals.map(member => member.overall)) : 55
   if (playerOvr + (qualifiedFinalist ? 3 : 0) < selectionFloor - 3) return state

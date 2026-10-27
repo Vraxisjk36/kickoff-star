@@ -103,7 +103,9 @@ export const MIN_PLAYER_CHANCES = 3
 export function initStreetGame(player: Player, variant: StreetVariant, formationId: string, squadNames: string[] = []): StreetGameState {
   const formation = formationById(formationId)
   const size = variant === 'street' ? 4 : 6
-  const ability = Math.round(((player.attributes.values as Record<string, number>).finishing ?? 10) * 4)
+  const ability = Math.round((player.attributes.kind === 'goalkeeper'
+    ? (player.attributes.values.reflexes + player.attributes.values.distribution) / 2
+    : player.attributes.values.shooting) * 4)
 
   const mates: StreetPlayer[] = [{ name: 'You', quality: Math.max(20, ability), isYou: true }]
   for (let i = 1; i < size; i++) {

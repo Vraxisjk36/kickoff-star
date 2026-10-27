@@ -1,3 +1,5 @@
+import { getRegion, regionalSchoolNames } from './regions'
+
 // Locked spec: school choice has REAL mechanical differences, not flavor.
 // Differences: trial difficulty (harder = higher bar to make XI), scout exposure
 // (how much reputation/scouting the school attracts), and squad-place odds.
@@ -53,5 +55,15 @@ export const SCHOOLS: School[] = [
 ]
 
 export function getSchool(id: string): School | undefined {
-  return SCHOOLS.find((s) => s.id === id)
+  const legacy = SCHOOLS.find((s) => s.id === id)
+  if (legacy) return legacy
+  const regionId = id.replace(/-(westview|greenwood|riverside)$/, '')
+  return schoolsForRegion(regionId).find(s => s.id === id)
+}
+
+export function schoolsForRegion(regionId: string | null | undefined): School[] {
+  const region = getRegion(regionId)
+  if (!region) return SCHOOLS
+  const names = regionalSchoolNames(region.id)
+  return SCHOOLS.map((school, index) => ({ ...school, id: `${region.id}-${school.id}`, name: names[index] }))
 }

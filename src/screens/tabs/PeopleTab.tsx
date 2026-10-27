@@ -4,7 +4,6 @@ import { useCareerStore } from '../../store/careerStore'
 import {
   activeCast, bondLabel, bondColor, interactionsFor, interactedThisWeek, KIND_LABEL, type Relationship,
 } from '../../engine/relationships'
-import { arcProgressText, weeksLeft } from '../../engine/storylines'
 import { standingOf, standingLabel, standingColor, STANDING_LABEL, type StandingGroup } from '../../engine/standing'
 import { Panel, EmptyNote } from '../../components/ui'
 
@@ -98,7 +97,6 @@ function PersonCard({ person, player }: { person: Relationship; player: Player }
 
 export default function PeopleTab({ player }: { player: Player }) {
   const cast = activeCast(player.relationships ?? [])
-  const arcs = player.activeArcs ?? []
   const sorted = [...cast].sort((a, b) => b.bond - a.bond)
 
   return (
@@ -131,27 +129,6 @@ export default function PeopleTab({ player }: { player: Player }) {
           The dressing room cares about results and doing your job. The supporters care about goals and moments.
           Both move a little after every match you play.
         </p>
-      </Panel>
-
-      <Panel title={`storylines — ${arcs.length} live`}>
-        {arcs.length === 0 ? (
-          <EmptyNote>Nothing hanging over you right now. Storylines start from the choices you make.</EmptyNote>
-        ) : (
-          <div className="flex flex-col gap-2.5">
-            {arcs.map((arc) => (
-              <div key={arc.id} className="rounded-md border border-ks-gold/35 bg-ks-gold/5 px-3 py-2.5">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-display tracking-wide text-ks-gold text-[11px] uppercase">{arc.title}</span>
-                  <span className="text-[9px] text-ks-muted uppercase tracking-wider">
-                    {weeksLeft(arc, player)} week{weeksLeft(arc, player) === 1 ? '' : 's'} left
-                  </span>
-                </div>
-                <p className="text-[11px] text-ks-ink leading-relaxed mb-1.5">{arc.brief}</p>
-                <p className="text-[10px] text-ks-muted">{arcProgressText(arc, player)}</p>
-              </div>
-            ))}
-          </div>
-        )}
       </Panel>
 
       <Panel title={`people — ${cast.length}`}>

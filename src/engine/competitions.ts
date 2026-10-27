@@ -14,6 +14,8 @@ export interface GenericFixture {
   played: boolean
   homeGoals: number | null
   awayGoals: number | null
+  /** Shootout winner; goals remain the score at full time. */
+  winnerTeamId?: string
 }
 
 function id() { return crypto.randomUUID() }
@@ -105,5 +107,5 @@ export function generateKnockoutRound(teamIds: string[], round: number): Generic
 export function knockoutWinners(fixtures: GenericFixture[]): string[] {
   return fixtures
     .filter((f) => f.played && f.homeGoals !== null && f.awayGoals !== null)
-    .map((f) => (f.homeGoals! >= f.awayGoals! ? f.homeTeamId : f.awayTeamId))
+    .map((f) => f.winnerTeamId ?? (f.homeGoals! >= f.awayGoals! ? f.homeTeamId : f.awayTeamId))
 }

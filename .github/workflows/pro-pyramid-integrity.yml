@@ -1,0 +1,64 @@
+name: Pro Pyramid Integrity
+
+on:
+  push:
+    branches: [codex/v32-v4-unified]
+    paths:
+      - 'src/engine/pro*.ts'
+      - 'src/engine/seniorNations.ts'
+      - 'src/engine/nations.ts'
+      - 'scripts/audit*Pyramid*.ts'
+      - 'scripts/auditAllProLeagues.ts'
+      - 'scripts/auditPromotionPlayoffs.ts'
+      - 'scripts/auditLeagueRules.ts'
+      - 'scripts/auditWorldwideInternational.ts'
+      - 'scripts/auditProLifestyle.ts'
+      - 'scripts/auditProSponsorship.ts'
+      - 'scripts/auditProCareerPhase2.ts'
+      - 'scripts/auditProRelationships.ts'
+      - 'scripts/auditProPress.ts'
+      - 'scripts/auditProCareerLegacy.ts'
+      - 'scripts/auditProInternationalMoments.ts'
+      - 'scripts/auditProWorld.ts'
+      - 'scripts/auditSeniorContinental.ts'
+      - 'scripts/auditProXpBalance.ts'
+      - 'src/screens/ProCareer.tsx'
+      - 'src/screens/ProMilestoneScreen.tsx'
+      - 'src/screens/MatchDayScreen.tsx'
+      - 'src/screens/MatchScreen.tsx'
+      - 'src/screens/MatchSummary.tsx'
+      - 'src/screens/tabs/Pro*.tsx'
+      - 'src/store/careerStore.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/pro-pyramid-integrity.yml'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      # Phase 4 UI safety gate: validate long saves, football systems and compile all matchday and career screens.
+      - run: node --import tsx scripts/auditSeniorContinental.ts
+      - run: node --import tsx scripts/auditProXpBalance.ts
+      - run: node --import tsx scripts/auditProWorld.ts
+      - run: npm run audit:pro-pyramids
+      - run: node --import tsx scripts/auditWorldwideInternational.ts
+      - run: node --import tsx scripts/auditProLifestyle.ts
+      - run: node --import tsx scripts/auditProRelationships.ts
+      # Phase 5 gate: protect the original school-to-academy route as well as the pro career.
+      - run: npm run audit:v4
+      - run: npm run audit:season
+      - run: npm run audit:pro-career
+      # Extended world-save regression: 20 seasons, deterministic resume, finances and save budget.
+      - run: node --import tsx scripts/auditProWorld.ts
+      # Economy regression: salary bands, luxury ownership and sponsor payment continuity.
+      - run: node --import tsx scripts/auditProSponsorship.ts
+      - run: npm run build

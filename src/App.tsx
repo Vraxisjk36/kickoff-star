@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import SplashScreen from './screens/SplashScreen'
+import LanguageSelect from './screens/LanguageSelect'
 import MainMenu from './screens/MainMenu'
 import PlayerCreation from './screens/PlayerCreation'
 import StoryIntro from './screens/StoryIntro'
 import SchoolSelection from './screens/SchoolSelection'
 import TrialsScreen from './screens/TrialsScreen'
 import Career from './screens/Career'
+import ProTrialScreen from './screens/ProTrialScreen'
 import SettingsScreen from './screens/SettingsScreen'
 import CreditsScreen from './screens/CreditsScreen'
 import HelpScreen from './screens/HelpScreen'
@@ -15,14 +17,17 @@ import { listSaves, type SaveSlotId } from './engine/save'
 import type { School } from './engine/schools'
 import type { SquadRole } from './engine/trials'
 import { installMusicLifecycle, pauseMusic } from './engine/music'
+import { useLanguage } from './i18n'
+import { observeTranslation, prepareTranslation, supportsLiveTranslation } from './engine/liveTranslation'
 
-type Screen = 'splash' | 'menu' | 'create' | 'story' | 'school' | 'trials' | 'career' | 'settings' | 'credits' | 'help' | 'load'
+type Screen = 'splash' | 'language' | 'menu' | 'create' | 'story' | 'school' | 'trials' | 'pro-trial' | 'career' | 'settings' | 'credits' | 'help' | 'load'
 
 // Native-shell validation touch: navigation contract is intentionally centralized here.
-const SCREEN_VALUES: Screen[] = ['splash', 'menu', 'create', 'story', 'school', 'trials', 'career', 'settings', 'credits', 'help', 'load']
+const SCREEN_VALUES: Screen[] = ['splash', 'language', 'menu', 'create', 'story', 'school', 'trials', 'pro-trial', 'career', 'settings', 'credits', 'help', 'load']
 const isScreen = (value: unknown): value is Screen => typeof value === 'string' && SCREEN_VALUES.includes(value as Screen)
 
 export default function App() {
+  const language = useLanguage()
   const [screen, setScreen] = useState<Screen>('splash')
   const [chosenSchool, setChosenSchool] = useState<School | null>(null)
   const screenRef = useRef<Screen>(screen)
@@ -58,6 +63,16 @@ export default function App() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!supportsLiveTranslation() || language === 'en' || screen === 'splash' || screen === 'language') return
+    let stopped = false
+    let stopObserver: (() => void) | undefined
+    void prepareTranslation(language).then(() => {
+      if (!stopped) stopObserver = observeTranslation(document.getElementById('root')!, language)
+    }).catch(error => console.warn('[kickoff-star] language pack unavailable', error))
+    return () => { stopped = true; stopObserver?.() }
+  }, [language, screen])
+
   const navigate = (next: Screen) => {
     window.history.pushState({ screen: next }, '')
     setScreen(next)
@@ -82,7 +97,9 @@ export default function App() {
       replace('menu')
       return
     }
-    if (p.trialWeekCompleted < 3) {
+    if (p.proTrial) {
+      ;(push ? navigate : replace)('pro-trial')
+    } else if (p.trialWeekCompleted < 3) {
       setChosenSchool(null)
       ;(push ? navigate : replace)('school')
     } else {
@@ -104,16 +121,12 @@ export default function App() {
   }
 
   const handleTrialsComplete = (role: SquadRole, performance: number) => {
-    if (role === 'released') {
-      setChosenSchool(null)
-      replace('school')
-      return
-    }
     completeTrials(role, performance)
     replace('career')
   }
 
-  if (screen === 'splash') return <SplashScreen onDone={() => replace('menu')} />
+  if (screen === 'splash') return <SplashScreen onDone={() => replace('language')} />
+  if (screen === 'language') return <LanguageSelect onContinue={() => replace('menu')} />
   if (screen === 'menu') {
     return (
       <MainMenu
@@ -130,7 +143,8 @@ export default function App() {
   if (screen === 'settings') return <SettingsScreen onBack={goBackToMenu} />
   if (screen === 'credits') return <CreditsScreen onBack={goBackToMenu} />
   if (screen === 'help') return <HelpScreen onBack={goBackToMenu} />
-  if (screen === 'create') return <PlayerCreation onComplete={() => replace('story')} onBack={goBackToMenu} />
+  if (screen === 'create') return <PlayerCreation onComplete={route => replace(route === 'pro' ? 'pro-trial' : 'story')} onBack={goBackToMenu} />
+  if (screen === 'pro-trial') return <ProTrialScreen onComplete={() => replace('career')} onExitToMenu={goBackToMenu} />
   if (screen === 'story') return <StoryIntro onComplete={() => replace('school')} />
   if (screen === 'school') return <SchoolSelection onChoose={handleSchoolChosen} />
   if (screen === 'trials' && player && chosenSchool) {

@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict'
+import { pressMomentForSeason, resolvePressChoice } from '../src/engine/proPress'
+assert.equal(pressMomentForSeason(1, 1, 'Manchester Sky', 0), null)
+const first = pressMomentForSeason(1, 8, 'Manchester Sky', 2)
+assert.ok(first)
+assert.equal(first.id, 'press:1:8')
+assert.equal(pressMomentForSeason(2, 8, 'Manchester Sky', 2)?.id, 'press:2:8')
+const humble = resolvePressChoice(first, 'humble')
+const bold = resolvePressChoice(first, 'confident')
+const controversy = resolvePressChoice(first, 'controversial')
+assert.ok(humble.trustDelta > bold.trustDelta)
+assert.ok(controversy.reputationDelta > bold.reputationDelta)
+assert.ok(controversy.trustDelta < 0)
+assert.equal(controversy.history.id, first.id)
+console.log('Phase 3 press: scheduling, consequences and season-specific persistence pass')

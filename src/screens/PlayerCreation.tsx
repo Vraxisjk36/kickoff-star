@@ -4,10 +4,13 @@ import type { Player } from '../types/player'
 import type { Position } from '../types/attributes'
 import { OUTFIELD_ATTRIBUTES, GOALKEEPER_ATTRIBUTES, isGoalkeeperPosition } from '../types/attributes'
 import type { CalendarState } from '../types/calendar'
+import { generateWeek } from '../engine/calendar'
 import { useCareerStore } from '../store/careerStore'
 import { NATIONS } from '../engine/nations'
+import { regionsFor } from '../engine/regions'
 import { ARCHETYPES, archetypeAttributeDeltas, getArchetype } from '../engine/archetypes'
 import Avatar, { AVATAR_IMAGES } from '../components/Avatar'
+import { useTranslate } from '../i18n'
 
 const POSITIONS: { code: Position; name: string }[] = [
   { code: 'GK', name: 'Goalkeeper' },
@@ -35,7 +38,7 @@ function randomBetween(min: number, max: number) {
   return Math.round(min + rand() * (max - min))
 }
 
-function buildNewPlayer(name: string, position: Position, foot: 'left' | 'right', nationality: string, avatarId: number, archetypeId: string): Player {
+function buildNewPlayer(name: string, position: Position, foot: 'left' | 'right', nationality: string, regionId: string, avatarId: number, archetypeId: string): Player {
   const isGK = isGoalkeeperPosition(position)
   const potential = randomBetween(8, 16)
   const attributes = isGK
@@ -61,7 +64,7 @@ function buildNewPlayer(name: string, position: Position, foot: 'left' | 'right'
     confidence: { value: 0, baseline: 0 },
     fitness: { stamina: 100 },
     careerClock: { ageYears: 14, phase: 'grassroots-trials', grassrootsSeason: 1 },
-    nationality, avatarId, archetype: archetypeId,
+    nationality, regionId, avatarId, archetype: archetypeId,
     schoolId: null, trialWeekCompleted: 0, squadRole: null, trainingMomentum: 0, matchRatings: [], seasonGoals: 0, seasonAssists: 0, injury: null, recentInjuryCount: 0, matchesSinceReturn: 3, coachTrust: 0, reputation: 5, scoutWatchers: [], contractOffers: [], totalWeeksElapsed: 0, academyClubName: null, turnedPro: null,
   }
 }
@@ -69,38 +72,43 @@ function buildNewPlayer(name: string, position: Position, foot: 'left' | 'right'
 function buildInitialCalendar(): CalendarState {
   return {
     currentWeek: {
-      weekNumber: 1, seasonYear: 1,
-      events: [{ id: crypto.randomUUID(), day: 'mon', type: 'school', title: 'first day at your new school', resolved: false }],
+      weekNumber: 4, seasonYear: 1,
+      events: generateWeek(4, 1, 'grassroots-season', false, 'school').events,
     },
     history: [],
   }
 }
 
-export default function PlayerCreation({ onComplete, onBack }: { onComplete: () => void; onBack: () => void }) {
+export default function PlayerCreation({ onComplete, onBack }: { onComplete: (route: 'school' | 'pro') => void; onBack: () => void }) {
+  const t = useTranslate()
   const [step, setStep] = useState(0)
+  const [route, setRoute] = useState<'school' | 'pro'>('school')
   const [name, setName] = useState('')
   const [position, setPosition] = useState<Position | null>(null)
   const [foot, setFoot] = useState<'left' | 'right' | null>(null)
   const [avatarId, setAvatarId] = useState<number | null>(null)
   const [nation, setNation] = useState<string | null>(null)
+  const [regionId, setRegionId] = useState<string | null>(null)
   const [archetype, setArchetype] = useState<string | null>(null)
   const startNewCareer = useCareerStore((s) => s.startNewCareer)
 
-  const LAST_STEP = 5
+  const LAST_STEP = 6
   const canProceed =
     step === 0 ? name.trim().length > 0
     : step === 1 ? position !== null
     : step === 2 ? foot !== null
     : step === 3 ? avatarId !== null
     : step === 4 ? nation !== null
+    : step === 5 ? regionId !== null
     : archetype !== null
 
   const handleNext = async () => {
     if (step < LAST_STEP) { setStep(step + 1); return }
-    if (!name.trim() || !position || !foot || avatarId === null || !nation || !archetype) return
-    const player = buildNewPlayer(name.trim(), position, foot, nation, avatarId, archetype)
+    if (!name.trim() || !position || !foot || avatarId === null || !nation || !regionId || !archetype) return
+    const player = buildNewPlayer(name.trim(), position, foot, nation, regionId, avatarId, archetype)
+    if (route === 'pro') player.proTrial = { week: 0, points: 0 }
     await startNewCareer(player, buildInitialCalendar(), 0)
-    onComplete()
+    onComplete(route)
   }
 
   return (
@@ -111,9 +119,9 @@ export default function PlayerCreation({ onComplete, onBack }: { onComplete: () 
 
       {/* top bar */}
       <div className="relative z-10 flex items-center justify-between px-6 pt-6">
-        <button onClick={() => (step === 0 ? onBack() : setStep(step - 1))} className="text-ks-muted text-sm">← back</button>
+        <button onClick={() => (step === 0 ? onBack() : setStep(step - 1))} className="text-ks-muted text-sm">← {t('back')}</button>
         <div className="flex gap-1.5">
-          {[0, 1, 2, 3, 4, 5].map((i) => (
+          {[0, 1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className={`h-1 rounded-full transition-all ${i === step ? 'w-6 bg-ks-gold' : i < step ? 'w-3 bg-ks-gold/50' : 'w-3 bg-ks-border'}`} />
           ))}
         </div>
@@ -122,23 +130,24 @@ export default function PlayerCreation({ onComplete, onBack }: { onComplete: () 
 
       <div className="relative z-10 flex-1 flex flex-col px-6 py-8 max-w-md mx-auto w-full">
         <h1 className="font-display text-ks-ink text-2xl tracking-wide mb-1">
-          {step === 0 ? 'what\'s your name?' : step === 1 ? 'pick your position' : step === 2 ? 'preferred foot' : step === 3 ? 'pick your look' : step === 4 ? 'where are you from?' : 'what kind of player are you?'}
+          {t(step === 0 ? 'what\'s your name?' : step === 1 ? 'pick your position' : step === 2 ? 'preferred foot' : step === 3 ? 'pick your look' : step === 4 ? 'choose your country' : step === 5 ? 'choose your region' : 'what kind of player are you?')}
         </h1>
         <p className="text-ks-muted text-xs mb-8">
-          {step === 0 ? 'every legend needs a name.'
+          {t(step === 0 ? 'every legend needs a name.'
             : step === 1 ? 'where do you want to make your mark?'
             : step === 2 ? 'which foot do you trust?'
             : step === 3 ? 'this is the face of your career.'
             : step === 4 ? 'your nation — one day they might come calling.'
-            : 'one defining trait. it shapes your attributes and how you play, permanently.'}
+            : step === 5 ? 'your first schools and clubs come from here.'
+            : 'one defining trait. it shapes your attributes and how you play, permanently.')}
         </p>
 
         {step === 0 && (
-          <input
+          <><div className="grid grid-cols-2 gap-2 mb-4">{(['school', 'pro'] as const).map(option => <button key={option} type="button" onClick={() => setRoute(option)} className={`rounded-xl border p-3 text-left text-sm ${route === option ? 'border-ks-gold bg-ks-gold/10 text-ks-gold' : 'border-ks-border text-ks-ink'}`}><b>{option === 'school' ? 'SCHOOL CAREER' : 'PRO TRIAL'}</b><small className="block mt-1 text-ks-muted">{option === 'school' ? 'The original journey from age 14' : 'Start at 18 · earn a first-team deal'}</small></button>)}</div><input
             autoFocus value={name} onChange={(e) => setName(e.target.value)}
             className="bg-[#0f0f0d] border border-ks-border rounded-xl px-4 py-4 text-ks-ink text-lg outline-none focus:border-ks-gold"
-            placeholder="your name"
-          />
+            placeholder={t('your name')}
+          /></>
         )}
 
         {step === 1 && (
@@ -172,7 +181,7 @@ export default function PlayerCreation({ onComplete, onBack }: { onComplete: () 
           </div>
         )}
         {step === 1 && position && (
-          <p className="text-center text-[11px] text-ks-muted mt-2">{POSITIONS.find((p) => p.code === position)?.name}</p>
+          <p className="text-center text-[11px] text-ks-muted mt-2">{t(POSITIONS.find((p) => p.code === position)?.name ?? '')}</p>
         )}
 
         {step === 2 && (
@@ -181,7 +190,7 @@ export default function PlayerCreation({ onComplete, onBack }: { onComplete: () 
               <button key={f} onClick={() => setFoot(f)}
                 className={`border rounded-xl py-8 font-display text-xl tracking-widest capitalize transition-all ${
                   foot === f ? 'border-ks-gold bg-ks-gold/10 text-ks-gold' : 'border-ks-border bg-[#0f0f0d] text-ks-ink'
-                }`}>{f}</button>
+                }`}>{t(f)}</button>
             ))}
           </div>
         )}
@@ -202,7 +211,7 @@ export default function PlayerCreation({ onComplete, onBack }: { onComplete: () 
         {step === 4 && (
           <div className="grid grid-cols-2 gap-2 overflow-y-auto max-h-[52vh] pr-1">
             {NATIONS.map((n) => (
-              <button key={n.id} onClick={() => setNation(n.id)}
+              <button key={n.id} onClick={() => { setNation(n.id); setRegionId(null) }}
                 className={`border rounded-xl px-3 py-3 flex items-center gap-2.5 transition-all ${
                   nation === n.id ? 'border-ks-gold bg-ks-gold/10' : 'border-ks-border bg-[#0f0f0d]'
                 }`}>
@@ -214,6 +223,18 @@ export default function PlayerCreation({ onComplete, onBack }: { onComplete: () 
         )}
 
         {step === 5 && (
+          <div className="grid grid-cols-2 gap-2 overflow-y-auto max-h-[56vh] pr-1">
+            {regionsFor(nation ?? '').map((region) => (
+              <button key={region.id} onClick={() => setRegionId(region.id)}
+                className={`border rounded-xl px-3 py-4 text-left transition-all ${regionId === region.id ? 'border-ks-gold bg-ks-gold/10 text-ks-gold' : 'border-ks-border bg-[#0f0f0d] text-ks-ink'}`}>
+                <span className="font-display text-sm">{region.name}</span>
+                <span className="block text-[10px] text-ks-muted mt-1">{region.localities.join(' · ')}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {step === 6 && (
           <div className="flex flex-col gap-2 overflow-y-auto max-h-[56vh] pr-1">
             {ARCHETYPES.map((a) => (
               <button key={a.id} onClick={() => setArchetype(a.id)}
@@ -236,7 +257,7 @@ export default function PlayerCreation({ onComplete, onBack }: { onComplete: () 
       <div className="relative z-10 px-6 pb-8 max-w-md mx-auto w-full">
         <button onClick={handleNext} disabled={!canProceed}
           className="w-full bg-ks-gold text-ks-black font-display tracking-wide rounded-xl py-4 text-base disabled:opacity-25 shadow-[0_0_25px_rgba(212,175,55,0.2)]">
-          {step < LAST_STEP ? 'continue' : 'begin your career'}
+          {t(step < LAST_STEP ? 'continue' : 'begin your career')}
         </button>
       </div>
     </div>

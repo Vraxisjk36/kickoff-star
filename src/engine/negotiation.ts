@@ -19,9 +19,9 @@
 //              surfaces — and it can cost you terms or the deal.
 //   SIGNING    paperwork, photos, and a scholarship.
 //
-// Every stage advances on the WEEKLY tick, so a full negotiation runs roughly
-// 5-9 weeks and lives alongside your season rather than pausing it. It can
-// collapse at several points; that's the price of it being a real process.
+// Academy talks put the meeting, terms and agreement in the first week; the
+// medical and signature follow after one weekly tick. Renewal and pro deals
+// keep their longer stage-by-stage clock.
 // ============================================================================
 import { rand } from './rng'
 import type { Player } from '../types/player'
@@ -238,10 +238,11 @@ export interface NegotiationOutcome {
 }
 
 /**
- * Resolve the player's choice. Advancing a stage always costs at least one
- * week — the weekly tick moves things on, so nothing here resolves instantly.
+ * Resolve the player's choice. Academy talks can move through several
+ * decisions in the first week, but the medical requires the next weekly tick.
  */
 export function resolveChoice(negotiation: Negotiation, choiceId: string, player: Player): NegotiationOutcome {
+  if (!negotiation.awaitingPlayer) return { negotiation, beat: '' }
   const agent = getAgent(player.agentId)
   const skill = agent?.negotiation ?? 0.15
   const blunder = agent?.blunderChance ?? 0.22
@@ -274,12 +275,14 @@ export function resolveChoice(negotiation: Negotiation, choiceId: string, player
         n.log.push(`You kept your cards close. They left knowing they'll have to work for this.`)
       }
       n.stage = 'terms'
+      if (n.kind === 'academy') n.awaitingPlayer = true
       return { negotiation: n, beat: n.log[n.log.length - 1] }
     }
 
     case 'terms': {
       if (choiceId === 'accept') {
         n.stage = 'agreement'
+        if (n.kind === 'academy') n.awaitingPlayer = true
         n.log.push(`Your agent accepted the terms. ${n.clubName} are drawing up a scholarship.`)
         return { negotiation: n, beat: n.log[n.log.length - 1] }
       }
@@ -364,6 +367,7 @@ export function resolveChoice(negotiation: Negotiation, choiceId: string, player
           ? `You were straight with the doctors and everything checked out. Contracts are being printed.`
           : `You said nothing and nothing showed up. Contracts are being printed.`)
       }
+      if (n.kind === 'academy' && n.stage === 'signing') n.awaitingPlayer = true
       return { negotiation: n, beat: n.log[n.log.length - 1] }
     }
 

@@ -1,0 +1,42 @@
+name: Five Direct Pro Retirement Simulations
+on:
+  push:
+    branches: [codex/v32-v4-unified]
+    paths:
+      - 'scripts/simFiveDirectProCareers.ts'
+      - '.github/workflows/five-direct-pro-careers.yml'
+  workflow_dispatch: {}
+jobs:
+  simulate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - index: 0
+            name: Alex-ST
+          - index: 1
+            name: Sam-GK
+          - index: 2
+            name: Jordan-CM
+          - index: 3
+            name: Casey-CB
+          - index: 4
+            name: Morgan-WG
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Simulate one full direct pro career
+        env:
+          SIM_INDEX: ${{ matrix.index }}
+        run: node --import tsx scripts/simFiveDirectProCareers.ts | tee direct-pro-results.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: direct-pro-${{ matrix.name }}
+          path: direct-pro-results.txt

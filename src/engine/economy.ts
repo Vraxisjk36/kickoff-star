@@ -111,6 +111,26 @@ export const SHOP_ITEMS: ShopItem[] = [
   },
 ]
 
+/** Recovery costs and optional rewarded cash scale with professional income.
+ * Youth players keep affordable grassroots prices; growth is deliberately
+ * sublinear so recovery never becomes an unreasonable salary tax. */
+export function careerEconomyScale(player:Player):number {
+  if (!player.turnedPro || !player.proCareer) return 1
+  const wage=Math.max(0,player.contract?.terms.weeklyWage??0)
+  return Math.max(1,Math.max(350,wage)*0.4/18)
+}
+export function recoveryPrice(player:Player,basePrice:number):number {
+  if (!player.turnedPro || !player.proCareer) return basePrice
+  return Math.ceil(basePrice*careerEconomyScale(player)/5)*5
+}
+export function rewardedCashAmount(player:Player):number {
+  if (!player.turnedPro || !player.proCareer) return 10
+  const wage=Math.max(350,player.contract?.terms.weeklyWage??350)
+  return Math.max(225,Math.round(wage*.65/25)*25)
+}
+export function playerShopPrice(player:Player,item:ShopItem):number {
+  return item.kind==='consumable'?recoveryPrice(player,item.price):item.price
+}
 export function shopFor(player: Player): ShopItem[] {
   const isGK = player.position === 'GK'
   const age = player.careerClock.ageYears
@@ -129,6 +149,8 @@ export function itemById(id: string): ShopItem | undefined {
 export interface OwnedEquipment {
   itemId: string
   weeksRemaining: number
+  /** V4: physical condition is visible separately from the old expiry timer. */
+  condition?: number
 }
 
 export type Consumables = Record<string, number>
@@ -160,9 +182,12 @@ export function ageEquipment(equipment: OwnedEquipment[] | undefined): { equipme
   const expired: string[] = []
   const next: OwnedEquipment[] = []
   for (const owned of equipment ?? []) {
+    const item = itemById(owned.itemId)
     const weeksRemaining = owned.weeksRemaining - 1
-    if (weeksRemaining <= 0) expired.push(owned.itemId)
-    else next.push({ ...owned, weeksRemaining })
+    const weeklyWear = 100 / Math.max(1, item?.durationWeeks ?? owned.weeksRemaining)
+    const condition = Math.max(0, Math.round((owned.condition ?? Math.min(100, owned.weeksRemaining * weeklyWear)) - weeklyWear))
+    if (weeksRemaining <= 0 || condition <= 0) expired.push(owned.itemId)
+    else next.push({ ...owned, weeksRemaining, condition })
   }
   return { equipment: next, expired }
 }

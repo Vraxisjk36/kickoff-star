@@ -105,7 +105,7 @@ export function spendXp(startLevel: number, xpPool: number, ceiling: number): Sp
 // ---------------------------------------------------------------------------
 
 /** Base XP per drill before the execution multiplier. Tuned in P49 sim pass. */
-export const XP_PER_DRILL_BASE = 60
+export const XP_PER_DRILL_BASE = 35
 
 /**
  * P49 fix for the "perfect but missed" complaint: execution grade barely
@@ -143,23 +143,23 @@ export type CompetitionTier = 'grassroots' | 'academy' | 'cup' | 'international'
 
 /** Base match XP by competition tier — a bigger stage genuinely means more development, not just more prestige. */
 export const MATCH_XP_BASE: Record<CompetitionTier, number> = {
-  grassroots: 250,
-  academy: 600,
-  cup: 900,
-  international: 1500,
+  grassroots: 150,
+  academy: 350,
+  cup: 520,
+  international: 850,
 }
 
 /** Performance scales the base — a poor game still teaches you something, a great one teaches you a lot more. */
 export function matchPerformanceMultiplier(rating: number): number {
-  if (rating >= 8.5) return 2.0
-  if (rating >= 7.5) return 1.6
-  if (rating >= 6.5) return 1.2
-  if (rating >= 5.5) return 0.9
-  return 0.5
+  if (rating >= 8.5) return 1.6
+  if (rating >= 7.5) return 1.35
+  if (rating >= 6.5) return 1.05
+  if (rating >= 5.5) return 0.8
+  return 0.45
 }
 
-export const XP_GOAL_BONUS = 150
-export const XP_ASSIST_BONUS = 80
+export const XP_GOAL_BONUS = 75
+export const XP_ASSIST_BONUS = 45
 
 export function matchXpEarned(tier: CompetitionTier, rating: number, goals: number, assists: number): number {
   const base = MATCH_XP_BASE[tier] * matchPerformanceMultiplier(rating)
